@@ -2211,6 +2211,14 @@ for _clamp_op in ("clamp", "clamp_min", "clamp_max"):
 #  Shape rules for the minted ``synop*`` primitives
 # ---------------------------------------------------------------------------
 #
+# NOTE (eqsat substrate fix): ``mlopt_core.laws.minted`` now seats this
+# same denotation-evaluating shape rule at record materialize time
+# (``prim_fold`` / ``_materialize_rec`` — covering live
+# ``admit_prim_record`` promotions too), first-seat-wins.  Once the
+# pinned eqsat carries it this pass is a no-op — every name is already
+# in ``_SHAPE_RULES`` — and can be deleted at the next pin bump.  It
+# stays for pins predating the substrate seating (v0.1.2).
+#
 # A ``prim:synop_*`` fold is a proved equality, so the op's output shape
 # is exactly its ``.expand`` denotation's — but ``_SHAPE_RULES`` has no
 # entry for minted names and the substrate default reports ``None``.
