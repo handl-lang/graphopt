@@ -50,13 +50,14 @@ class TestVocabulary:
         assert ("select", "index") in vocab["attrs"]
         assert ("chunk", "chunks") in vocab["attrs"]
         assert set(vocab["handlers"]) == {"silu", "square", "swiglu"}
-        # DEFAULT + the 22 scan-tier laws
-        assert len(vocab["rules"]) == 154
+        # DEFAULT (134: +2 AUTO_TIER admits synop_f0576b5150 /
+        # synop_0b304215b3, eqsat 535daeb) + the 22 scan-tier laws
+        assert len(vocab["rules"]) == 156
 
     def test_scan_rules(self):
         rs = cc.scan_rules()
         assert isinstance(rs, RuleSet)
-        assert len(rs) == 154
+        assert len(rs) == 156
         assert cc.scan_rules() is rs  # cached
 
     def test_rule_ops_and_spec_ops(self):
@@ -101,7 +102,7 @@ class TestPatternOccurs:
 class TestRulesetNames:
     def test_none_is_default(self):
         names = cc._ruleset_names(None)
-        assert "silu_fold" in names and len(names) == 132
+        assert "silu_fold" in names and len(names) == 134
 
     def test_ruleset_and_list(self):
         sans = DEFAULT - DEFAULT.named("silu_fold")
@@ -124,7 +125,7 @@ class TestCoverageGaps:
             "swiglu",
         ]
         assert rep["rules"]["armed"] == []
-        assert len(rep["rules"]["unarmed"]) == 154
+        assert len(rep["rules"]["unarmed"]) == 156
 
     def test_spelled_silu_arms_fold_and_handler(self):
         site = Op.make("mul", _X, Op.make("sigmoid", _X))

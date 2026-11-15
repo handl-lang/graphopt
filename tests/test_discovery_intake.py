@@ -9,7 +9,9 @@ to the census through the cached ``intake_corpus.json`` +
 
 These tests exercise the real boundary on a handful of the
 registry's own candidates — ``nn.LayerNorm``/``AngleLog`` ingest,
-``nn.MaxPool1d`` is census-only (``max_pool1d`` is unbound),
+``nn.MaxPool1d`` ingests as an ``opaque`` leaf (``max_pool1d`` has
+no named binding; opaque-leaf lifting, f7619ea, mints the
+passthrough term and verify replays ``aten::max_pool1d``),
 ``nn.CTCLoss`` is rejected by ``torch.export`` — plus the side-file
 round-trip, the probe-eligibility filter, the census delta, the
 report tables and ``main``'s flag surface with the corpus loaders
@@ -69,8 +71,9 @@ def tiny_ingest(sink):
     """Run four registry candidates through the real boundary.
 
     ``nn.LayerNorm`` and ``AngleLog`` (a two-input feed) ingest;
-    ``nn.MaxPool1d`` exports but ``max_pool1d`` has no binding
-    (census-only); ``nn.CTCLoss`` is rejected by ``torch.export``.
+    ``nn.MaxPool1d`` has no named ``max_pool1d`` binding but lifts
+    to an ``opaque`` passthrough leaf (f7619ea) and verifies, so it
+    ingests too; ``nn.CTCLoss`` is rejected by ``torch.export``.
     """
     torch.manual_seed(0)
     return li.ingest(
@@ -305,15 +308,38 @@ def test_ingest_one_two_input_feed(sink):
     assert len(case.feed) == len(case.inputs) == 2
 
 
-def test_ingest_one_census_only_unbound_op(sink):
+def test_ingest_one_unbound_op_lifts_opaque(sink):
+    """``max_pool1d`` has no named binding — it lifts ``opaque``.
+
+    Since f7619ea (opaque-leaf lifting) every ``call_function`` op
+    mints an ``opaque`` term whose denotation replays the original
+    callable, so an unbound aten op is *ingested*, not census-only:
+    ``opaque`` is in ``supported_ops`` and verify passes.  The
+    census-only branch still exists for ops outside the supported
+    set — exercised below by narrowing ``supported``.
+    """
     case, rec, rej = li._ingest_one(
         _CANDS["nn.MaxPool1d"], sink, sink.supported_ops
     )
     assert rej is None
+    assert rec["status"] == "ingested"
+    assert rec["verify"] == "pass"
+    assert rec["unsupported_ops"] == []
+    assert rec["ops"] == ["opaque"]
+    assert "aten::max_pool1d" in str(rec["term"])
+    assert case is not None and case.term is not None
+
+
+def test_ingest_one_census_only_unbound_op(sink):
+    """Census-only still fires when the lifted ops miss ``supported``."""
+    case, rec, rej = li._ingest_one(
+        _CANDS["nn.MaxPool1d"], sink, frozenset()
+    )
+    assert rej is None
     assert rec["status"] == "census-only"
     assert rec["verify"] == "skipped"
-    assert rec["unsupported_ops"] == ["max_pool1d"]
-    assert "max_pool1d" in rec["verify_note"]
+    assert rec["unsupported_ops"] == ["opaque"]
+    assert "opaque" in rec["verify_note"]
     # Census-only still yields a TermCase — the term feeds the census.
     assert case is not None and case.term is not None
 
@@ -377,12 +403,13 @@ def test_verify_pass_fail_and_error(sink):
 def test_ingest_collects_outcomes(tiny_ingest, sink, monkeypatch):
     cases, records, rejections = tiny_ingest
     assert len(records) == 3 and len(rejections) == 1
-    # The rejected candidate leaves no record or case; the
-    # census-only one leaves both.
+    # The rejected candidate leaves no record or case; the other
+    # three — MaxPool1d included, via its opaque leaf — leave both.
     assert len(cases) == 3
     by_name = {r["name"]: r for r in records}
     assert by_name["intake:nn.LayerNorm"]["status"] == "ingested"
-    assert by_name["intake:nn.MaxPool1d"]["status"] == "census-only"
+    assert by_name["intake:nn.MaxPool1d"]["status"] == "ingested"
+    assert by_name["intake:nn.MaxPool1d"]["ops"] == ["opaque"]
     assert rejections[0].stage == "export"
     # ``cands=None`` reads the registry — patched to stay tiny.
     monkeypatch.setattr(
@@ -393,7 +420,7 @@ def test_ingest_collects_outcomes(tiny_ingest, sink, monkeypatch):
     assert j2 == [] and len(c2) == 1
     # And ``sink=None`` builds the default sink.
     c3, r3, j3 = li.ingest(cands=[_CANDS["nn.MaxPool1d"]])
-    assert [r["status"] for r in r3] == ["census-only"]
+    assert [r["status"] for r in r3] == ["ingested"]
     assert len(c3) == 1 and j3 == []
 
 
@@ -443,11 +470,13 @@ def test_probe_cases_eligibility(tiny_ingest, tmp_path):
         records, rejections, li._tensors_of(cases), jpath, tpath
     )
     probe = li.probe_cases(jpath, tpath)
-    # Only the verified, in-budget workloads qualify — census-only
-    # keeps feeding the census but never the firing probe.
+    # Only the verified, in-budget workloads qualify — since
+    # f7619ea the opaque-leaf MaxPool1d verifies too, so all three
+    # survivors are probe-eligible.
     assert sorted(c.name for c in probe) == [
         "intake:AngleLog",
         "intake:nn.LayerNorm",
+        "intake:nn.MaxPool1d",
     ]
     assert all(c.feed for c in probe)
     assert li.probe_cases(jpath, tpath, max_nodes=0) == []
@@ -744,8 +773,8 @@ def test_main_no_write_skip_pipeline(
     assert "--no-write: side files not written" in text
     payload = json.loads(out.read_text())
     assert payload["n_exported"] == 3
-    assert payload["n_ingested"] == 2
-    assert payload["n_census_only"] == 1
+    assert payload["n_ingested"] == 3
+    assert payload["n_census_only"] == 0
     assert payload["n_verify_failed"] == 0
     assert len(payload["rejections"]) == 1
     cd = payload["census_delta"]
@@ -772,6 +801,7 @@ def test_main_writes_side_files(tiny_ingest, monkeypatch, tmp_path):
     assert sorted(p.name for p in probe) == [
         "intake:AngleLog",
         "intake:nn.LayerNorm",
+        "intake:nn.MaxPool1d",
     ]
 
 
@@ -812,7 +842,7 @@ def test_main_runs_pipeline_delta(
     assert seen == {"vocab": "hand", "holdout": "select_mul"}
     text = capsys.readouterr().out
     assert "pipeline delta" in text
-    assert "probe-eligible intake cases: 2" in text
+    assert "probe-eligible intake cases: 3" in text
     payload = json.loads(out.read_text())
     assert payload["pipeline"]["new_proposals"] == ["census:mul_x"]
     assert payload["pipeline"]["shippable"] == ["census:mul_x"]

@@ -139,16 +139,24 @@ def test_proposal_main_small_pool(monkeypatch, tmp_path, capsys):
     """``main`` on a hand-shrunk pool: real evaluation and ranking,
     tiny candidate list."""
     by = {c.label: c for c in pp.schema_candidates()}
+    # ``mul_distribute`` is the useful member: ``mul_factor`` no
+    # longer pays (its cost delta is 0 under the current bank/cost
+    # model — base == cand), while ``mul_distribute`` still strictly
+    # lowers cost.  The FALSE/duplicate controls are kept.
     pool = [
-        by["mul_factor"],
+        by["mul_distribute"],
         by["FALSE_square_add"],
         by["sub_to_add_dup"],
     ]
+    # ``pp.main`` lives in ``discoverykit.proposal_core`` (plan
+    # 0034 extraction) — its globals are that module's, so the
+    # generators must be patched there, not on the ``pp`` shim.
+    core = pp._proposal_core
     monkeypatch.setattr(
-        pp, "near_miss_candidates", lambda seeds: pool
+        core, "near_miss_candidates", lambda seeds: pool
     )
-    monkeypatch.setattr(pp, "composite_candidates", lambda: [])
-    monkeypatch.setattr(pp, "schema_candidates", lambda: [])
+    monkeypatch.setattr(core, "composite_candidates", lambda: [])
+    monkeypatch.setattr(core, "schema_candidates", lambda: [])
 
     out = tmp_path / "pp.json"
     rc = pp.main(["--json", str(out)])
@@ -159,7 +167,7 @@ def test_proposal_main_small_pool(monkeypatch, tmp_path, capsys):
     printed = capsys.readouterr().out
     assert "yield per strategy" in printed
     assert "genuinely-new" in printed
-    # mul_factor is useful, so both ranking rows print precisions.
+    # mul_distribute is useful, so both ranking rows print precisions.
     assert printed.count("average precision") == 2
     assert "wrote" in printed
 
@@ -167,9 +175,10 @@ def test_proposal_main_small_pool(monkeypatch, tmp_path, capsys):
 def test_proposal_main_empty_pool_is_honest(monkeypatch, capsys):
     """No candidates at all: the ranking section says 'undefined'
     rather than fabricating a precision."""
-    monkeypatch.setattr(pp, "near_miss_candidates", lambda seeds: [])
-    monkeypatch.setattr(pp, "composite_candidates", lambda: [])
-    monkeypatch.setattr(pp, "schema_candidates", lambda: [])
+    core = pp._proposal_core  # see test_proposal_main_small_pool
+    monkeypatch.setattr(core, "near_miss_candidates", lambda seeds: [])
+    monkeypatch.setattr(core, "composite_candidates", lambda: [])
+    monkeypatch.setattr(core, "schema_candidates", lambda: [])
     assert pp.main([]) == 0
     printed = capsys.readouterr().out
     assert "no useful candidate — undefined" in printed

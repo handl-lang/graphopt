@@ -205,12 +205,13 @@ def test_operand_shape_kinds():
     assert (
         vo._operand_shape(_p("frobnicate", _p("neg", Const(1)))) == ()
     )
-    # ``_shape_of`` may raise on unresolved attrs — that currently
-    # propagates (see the nested-view boundary test below).
+    # ``_shape_of`` reports unresolved attr metavars as unknown
+    # (``None``) rather than raising — ``_operand_shape`` then falls
+    # back to the first tensor leaf's declared shape, same contract
+    # as the ``reshape`` case above.
     u2 = _v("u2", 2, 4)
     nested = _p("transpose", u2, dim0="A", dim1="B")
-    with pytest.raises(TypeError):
-        vo._operand_shape(nested)
+    assert vo._operand_shape(nested) == (2, 4)
 
 
 def test_chain_domain_resolves_through_view_outputs():

@@ -2407,12 +2407,15 @@ class TestCumsumSites:
     """
 
     def _term(self, op: str = "cumsum", dim: int = 1):
-        from mlopt_core.ir import Op
+        from mlopt_core.ir import Const, Op
 
         x = _v("x", 2, 5, 3)
+        # Scalars spell as ``Const`` — a raw ``1.0`` arg is not a term
+        # (``shape_of`` reports unknown and the broadcast-binop decline
+        # in eqsat be47cf1 keeps the whole child unshaped).
         return Op.make(
             op,
-            Op.make("mul", x, Op.make("add", x, 1.0)),
+            Op.make("mul", x, Op.make("add", x, Const(1.0))),
             dim=dim,
         )
 
