@@ -48,7 +48,15 @@ and the handl-native saturation seat (:mod:`.handl_egraph` — plan
 0033 phase 5: the ``vocab/`` declarative rewrite bank encoded to the
 ``egraph-run`` spec so ``handl-egraph``'s ``EGraph::run`` saturates
 natively; opt-in ``saturate()``, the perf-parity gate is measured
-open — see ``docs/reports/fragment_tower_phase5.md``).
+open — see ``docs/reports/fragment_tower_phase5.md``),
+and the ``.hnl`` codec pair (ADR-0172 — ``.hnl`` is the canonical
+wire format): :mod:`.hnl_surface` renders a term as a ``.hnl``
+program over ``tensor.*`` (:func:`~mlopt_discovery.hnl_surface.emit`
+/ :func:`~mlopt_discovery.hnl_surface.emit_program`), and
+:mod:`.hnl_import` parses ``.hnl`` source back into a term
+(:func:`~mlopt_discovery.hnl_import.hnl_to_term`) — both deliberately
+light: stdlib + ``mlopt_core.ir`` only, no torch/discoverykit/gamekit
+imports, so a downstream consumer can pin the codec cheaply.
 Formerly the ``tools/law_*.py``
 scripts; every module keeps its CLI — invoke as
 ``python -m mlopt_discovery.<module>``.

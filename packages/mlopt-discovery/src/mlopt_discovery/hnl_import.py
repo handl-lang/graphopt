@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Sequence
 from typing import Any, cast
 
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
@@ -55,8 +56,15 @@ from mlopt_discovery.hnl_surface import UnsupportedOpError
 #: runtime contract without touching the eqsat-owned signature.
 _WILDCARD_SHAPE = cast("tuple[int | None, ...]", None)
 
+#: Accepted *leaves* value spellings for :func:`hnl_to_term`: a
+#: :class:`TensorType` (wildcard ``shape=None`` included), a shape
+#: tuple/list of ints (``None`` entries allowed), or ``None`` for the
+#: wildcard.  Anything else is a type error at the boundary.
+LeafShape = TensorType | Sequence[int | None] | None
+
 __all__ = [
     "HnlImportError",
+    "LeafShape",
     "covered_ops",
     "hnl_to_term",
 ]
@@ -1229,7 +1237,7 @@ def covered_ops() -> frozenset[str]:
 def hnl_to_term(
     src: str,
     *,
-    leaves: dict[str, Any] | None = None,
+    leaves: dict[str, LeafShape] | None = None,
 ) -> Any:
     """Parse ``.hnl`` *src* into an mlopt term over the ``tensor.*`` surface.
 
@@ -1237,7 +1245,8 @@ def hnl_to_term(
     program, or a module fragment — directive lines (``---`` comments,
     ``import``/``from``/``cap``/``op``/``handle``) are stripped first.
     *leaves* optionally maps free identifier names to shapes —
-    ``TensorType``, a shape tuple/list, or ``None`` for the wildcard;
+    ``TensorType``, a shape sequence of ints (``None`` entries
+    allowed), or ``None`` for the wildcard;
     unlisted names get ``TensorType(None)``.
 
     Raises :class:`HnlImportError` on syntax the grammar does not
