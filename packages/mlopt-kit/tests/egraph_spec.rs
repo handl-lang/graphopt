@@ -135,6 +135,7 @@ fn kernel_terms_saturate_through_the_bridge() {
         args: vec![],
         source: ArrSource::Native,
         lit: None,
+        attrs: None,
     };
     let proj = KTerm::First {
         inner: Box::new(kt.clone()),
