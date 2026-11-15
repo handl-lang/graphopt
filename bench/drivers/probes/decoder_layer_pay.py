@@ -53,7 +53,10 @@ def main() -> None:
     iters = int(sys.argv[1]) if len(sys.argv) > 1 else 3
     import mlopt_carriers  # noqa: F401 — registers carriers + new laws
     import mlopt_torch  # noqa: F401
-    from mlopt_orchestrator.optimize import Optimizer
+    from mlopt_orchestrator.optimize import (
+        Optimizer,
+        VerifyDeclinedError,
+    )
     from mlopt_torch.backend import TorchBackend
     from transformers import WhisperForConditionalGeneration
 
@@ -88,7 +91,12 @@ def main() -> None:
         )
 
     t0 = time.time()
-    low = optz.lower(res, (hs,), verify=True, runner=None)
+    try:
+        low = optz.lower(res, (hs,), verify=True, runner=None)
+    except VerifyDeclinedError as e:
+        # declined verify still carries the LowerResult — record
+        # verified=False and keep measuring, as pre-gate lower did
+        low = e.result
     ok = low.verified.passed if low.verified else None
     print(f"[lower+verify] {time.time() - t0:.1f}s verified={ok}", flush=True)
 

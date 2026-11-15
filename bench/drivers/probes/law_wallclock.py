@@ -63,7 +63,7 @@ from typing import Any
 
 import torch
 from mlopt_core.cost import dag_cost
-from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator import Optimizer, VerifyDeclinedError
 from mlopt_orchestrator.optimize import default_rules
 from mlopt_torch.backend import TorchBackend
 from mlopt_torch.models import ManualSoftmaxAttention
@@ -249,7 +249,12 @@ def _optimize(
         max_iterations=_MAX_ITERS,
         max_enodes=_MAX_ENODES,
     )
-    low = opt.lower(res, x, verify=True)
+    try:
+        low = opt.lower(res, x, verify=True)
+    except VerifyDeclinedError as e:
+        # declined verify still carries the LowerResult — the row
+        # records verified_*="FAIL" and keeps timing, as before
+        low = e.result
     return res, low
 
 

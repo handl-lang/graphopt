@@ -81,7 +81,7 @@ from mlopt_core.ir import op_repr
 from mlopt_core.pareto import CostVector, pareto_frontier
 from mlopt_core.perf_model import AnalyticalPerformanceModel
 from mlopt_core.profile import TargetProfile
-from mlopt_orchestrator import Optimizer
+from mlopt_orchestrator import Optimizer, VerifyDeclinedError
 from mlopt_orchestrator.criteria import (
     PredictedCriterion,
     criteria_cost,
@@ -397,10 +397,21 @@ def _build_case(
         r = opt.search(
             model, x, criteria=PredictedCriterion(_MODEL, hardware=tgt)
         )
-        lr = opt.lower(r, x)
+        try:
+            lr = opt.lower(r, x)
+        except VerifyDeclinedError as e:
+            # declined verify still carries the LowerResult — record
+            # verified=False, as the pre-gate lower did
+            lr = e.result
         row = _pick_row(r.term)
-        row["verified"] = bool(lr.verified.passed)
-        row["max_rel"] = float(lr.verified.max_rel)
+        row["verified"] = bool(
+            lr.verified is not None and lr.verified.passed
+        )
+        row["max_rel"] = (
+            float(lr.verified.max_rel)
+            if lr.verified is not None
+            else None
+        )
         picks[tname] = row
     distinct = len(
         {default["sig"]} | {p["sig"] for p in picks.values()}

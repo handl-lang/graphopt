@@ -75,6 +75,7 @@ from mlopt_core.profile import TargetProfile, shape_bucket
 from mlopt_orchestrator import Optimizer
 from mlopt_orchestrator.optimize import (
     Autotuned,
+    VerifyDeclinedError,
     _carrier_plans,
     _carrier_upgrade,
     _delivered_cost,
@@ -376,7 +377,12 @@ def _counterfactual(
         max_enodes=_MAX_ENODES,
         cost_fn=_delivered_cost_fn(factors, profile=prof),
     )
-    low = opt.lower(res, x, verify=True)
+    try:
+        low = opt.lower(res, x, verify=True)
+    except VerifyDeclinedError as e:
+        # declined verify still carries the LowerResult — the row
+        # records verified=False and keeps timing, as before
+        low = e.result
     root = res.term.op if isinstance(res.term, Op) else str(res.term)
     spec = _route_spec(res.term, sink)
     xc = x.to(_DEV_CUDA)

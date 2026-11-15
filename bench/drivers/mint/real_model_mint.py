@@ -844,7 +844,11 @@ def _pay_arm(
     raised.  Only the marginal ``withlaw`` vs ``default`` search is
     the law's own effect — ``spelled``/``tape`` arms are context.
     """
-    from mlopt_orchestrator.optimize import lower, search
+    from mlopt_orchestrator.optimize import (
+        VerifyDeclinedError,
+        lower,
+        search,
+    )
     from mlopt_torch.adapters import TorchSink, TorchSource
 
     mod, feed = mod_feed
@@ -862,7 +866,12 @@ def _pay_arm(
                 max_iterations=6,
                 max_enodes=100_000,
             )
-            lr = lower(res, feeds, sink=TorchSink(), verify=True)
+            try:
+                lr = lower(res, feeds, sink=TorchSink(), verify=True)
+            except VerifyDeclinedError as e:
+                # declined verify still carries the LowerResult —
+                # record verified=False and keep timing, as before
+                lr = e.result
         row[tag] = {
             "search_s": round(time.time() - t0, 1),
             "verified": bool(

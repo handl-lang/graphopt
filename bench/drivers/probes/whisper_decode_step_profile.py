@@ -97,7 +97,10 @@ def main() -> None:
     import mlopt_carriers  # noqa: F401
     import mlopt_torch  # noqa: F401
     from mlopt_cuda import CudaGraphRunner
-    from mlopt_orchestrator.optimize import Optimizer
+    from mlopt_orchestrator.optimize import (
+        Optimizer,
+        VerifyDeclinedError,
+    )
     from mlopt_torch.backend import TorchBackend
 
     HARVEST = min(8, ntok - 2)
@@ -132,7 +135,12 @@ def main() -> None:
     gc.collect()
     torch.cuda.empty_cache()
 
-    low = optz.lower(res, inputs, verify=True, runner=None)
+    try:
+        low = optz.lower(res, inputs, verify=True, runner=None)
+    except VerifyDeclinedError as e:
+        # declined verify still carries the LowerResult — record
+        # verified=False and keep measuring, as pre-gate lower did
+        low = e.result
     print(
         f"[lower] verified={low.verified.passed if low.verified else None}",
         flush=True,

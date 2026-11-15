@@ -82,6 +82,7 @@ from mlopt_core.ir import IR, Op
 from mlopt_core.laws import minted
 from mlopt_core.laws.ruleset import RuleSet
 from mlopt_orchestrator.optimize import (
+    VerifyDeclinedError,
     default_rules,
     lower,
     search,
@@ -351,7 +352,12 @@ def measure_module(
         rules=_noprim_rules(),
         max_iterations=_MAX_ITERS,
     )
-    lr_np = lower(res_np, feeds, sink=sink, verify=True)
+    try:
+        lr_np = lower(res_np, feeds, sink=sink, verify=True)
+    except VerifyDeclinedError as e:
+        # declined verify still carries the LowerResult — the row
+        # records verified["noprim"]="FAIL" and keeps timing, as before
+        lr_np = e.result
     lr_np.module = _align(lr_np.module, device, dtype)
     row.n_ops_noprim = sum(_ops_of(res_np.term).values())
     row.verified["noprim"] = (
@@ -385,7 +391,10 @@ def measure_module(
         max_iterations=_MAX_ITERS,
     )
     row.search_s = time.perf_counter() - t0
-    lr_syn = lower(res_syn, feeds, sink=sink, verify=True)
+    try:
+        lr_syn = lower(res_syn, feeds, sink=sink, verify=True)
+    except VerifyDeclinedError as e:
+        lr_syn = e.result
     lr_syn.module = _align(lr_syn.module, device, dtype)
     ops = _ops_of(res_syn.term)
     row.n_ops_synop = sum(ops.values())

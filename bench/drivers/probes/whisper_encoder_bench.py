@@ -513,7 +513,10 @@ def e2e(model: str, iters: int, ntok: int) -> None:
     import mlopt_carriers  # noqa: F401
     import mlopt_torch  # noqa: F401
     from mlopt_cuda import CudaGraphRunner
-    from mlopt_orchestrator.optimize import Optimizer
+    from mlopt_orchestrator.optimize import (
+        Optimizer,
+        VerifyDeclinedError,
+    )
     from mlopt_torch.backend import TorchBackend
 
     if model != "turbo":
@@ -550,7 +553,12 @@ def e2e(model: str, iters: int, ntok: int) -> None:
     del enc, wrap, m.model.encoder
     gc.collect()
     torch.cuda.empty_cache()
-    low = optz.lower(res, feats, verify=True, runner=None)
+    try:
+        low = optz.lower(res, feats, verify=True, runner=None)
+    except VerifyDeclinedError as e:
+        # declined verify still carries the LowerResult — record
+        # verified=False and keep measuring, as pre-gate lower did
+        low = e.result
     print(
         f"[e2e] enc lower+verify "
         f"verified={low.verified.passed if low.verified else None}",
@@ -615,7 +623,10 @@ def e2e(model: str, iters: int, ntok: int) -> None:
     res2.source = None
     gc.collect()
     torch.cuda.empty_cache()
-    low2 = optz.lower(res2, inputs_s, verify=True, runner=None)
+    try:
+        low2 = optz.lower(res2, inputs_s, verify=True, runner=None)
+    except VerifyDeclinedError as e:
+        low2 = e.result
     print(
         f"[e2e] dec lower+verify "
         f"verified={low2.verified.passed if low2.verified else None}",

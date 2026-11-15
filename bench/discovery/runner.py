@@ -42,7 +42,11 @@ from mlopt_core.cost import (
 )
 from mlopt_core.egraph import verify_certificate
 from mlopt_core.ir import Op
-from mlopt_orchestrator.optimize import lower, search
+from mlopt_orchestrator.optimize import (
+    VerifyDeclinedError,
+    lower,
+    search,
+)
 from mlopt_torch.adapters import TorchSink, TorchSource
 
 from bench.discovery.cases import DiscoveryCase
@@ -197,6 +201,11 @@ def _measure_arms(
     # The delivered form — the pipeline's own lower+verify path.
     try:
         lr = lower(sr, feed, sink=sink, verify=True)
+    except VerifyDeclinedError as e:
+        # declined verify still carries the LowerResult — record
+        # verified=False and keep timing it, as pre-gate lower did
+        lr = e.result
+    try:
         delivered = lr.module
         result.verified = (
             bool(lr.verified.passed) if lr.verified else None

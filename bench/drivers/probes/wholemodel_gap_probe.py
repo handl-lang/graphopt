@@ -74,7 +74,11 @@ from mlopt_core.laws.tensor import (
 )
 from mlopt_discovery.play import _time_module
 from mlopt_discovery.zoo import _ChunkedRetention
-from mlopt_orchestrator.optimize import Optimizer, _lower_extracted
+from mlopt_orchestrator.optimize import (
+    Optimizer,
+    VerifyDeclinedError,
+    _lower_extracted,
+)
 from mlopt_torch.adapters import TorchSink, TorchSource
 from mlopt_torch.backend import TorchBackend
 
@@ -588,7 +592,12 @@ def _mlp_case(reps: int) -> None:
 
     opt = Optimizer(backend=TorchBackend())
     res = opt.search(model, x64, max_iterations=8)
-    low = opt.lower(res, x64, verify=True)
+    try:
+        low = opt.lower(res, x64, verify=True)
+    except VerifyDeclinedError as e:
+        # declined verify still carries the LowerResult — record
+        # verified=False and keep measuring, as pre-gate lower did
+        low = e.result
     delivered = cast(nn.Module, low.module)
     n_ops = _count_ops(res.term)
     ex_ir = IR(
@@ -610,7 +619,11 @@ def _mlp_case(reps: int) -> None:
 
     model32 = copy.deepcopy(model).float()
     res32 = opt.search(model32, x32, max_iterations=8)
-    del32 = cast(nn.Module, opt.lower(res32, x32, verify=True).module)
+    try:
+        low32 = opt.lower(res32, x32, verify=True)
+    except VerifyDeclinedError as e:
+        low32 = e.result
+    del32 = cast(nn.Module, low32.module)
 
     hand = _HandFolded(model).to("cuda").double()
     hand32 = _HandFolded(model32).to("cuda")

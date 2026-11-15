@@ -33,7 +33,11 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from mlopt_orchestrator.optimize import lower, search
+from mlopt_orchestrator.optimize import (
+    VerifyDeclinedError,
+    lower,
+    search,
+)
 from mlopt_torch.adapters import TorchSink, TorchSource
 
 from bench.discovery.cases import DiscoveryCase
@@ -232,6 +236,11 @@ def run_case(
 
     try:
         lr = lower(sr, feed, sink=sink, verify=True)
+    except VerifyDeclinedError as e:
+        # declined verify still carries the LowerResult — record
+        # verified=False and keep timing it, as pre-gate lower did
+        lr = e.result
+    try:
         delivered = lr.module
         out.verified = bool(lr.verified.passed) if lr.verified else None
         out.verify_max_abs = (
