@@ -313,6 +313,13 @@ def _torch_deliver(board: ma.MetaArena, case: Any, traj: Any) -> dict:
     On a verified CUDA deliverable the ``CudaGraphRunner`` arm
     (:func:`_deliver_runner_arm`) additionally attempts graph
     capture — additive keys only, eager module on any decline.
+
+    Honesty contract: this is a measurement arm, not the enforced
+    ``Optimizer.lower(verify=True)`` shipping gate — it reports the
+    verdict rather than raising on it.  ``delivered`` is therefore
+    ``rep.passed``: a lowered-but-unverified module is marked
+    ``delivered_unverified`` (the module stays on the record for
+    timing/inspection) and is NEVER reported as ``delivered``.
     """
     from mlopt_core.ir import IR
     from mlopt_torch.adapters import TorchSink
@@ -333,7 +340,7 @@ def _torch_deliver(board: ma.MetaArena, case: Any, traj: Any) -> dict:
     rep = sink.verify(ex["model"], module, (ex["input"],))
     t = traj.terminal
     out = {
-        "delivered": True,
+        "delivered": bool(rep.passed),
         "module": module,
         "verified": rep.passed,
         "max_abs": rep.max_abs,
@@ -343,4 +350,6 @@ def _torch_deliver(board: ma.MetaArena, case: Any, traj: Any) -> dict:
     }
     if rep.passed:
         out.update(_deliver_runner_arm(module, ex))
+    else:
+        out["delivered_unverified"] = True
     return out

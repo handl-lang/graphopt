@@ -370,6 +370,32 @@ class TestEdges:
         )
         assert res == {"delivered": False, "reward": 0.0}
 
+    def test_deliver_verify_fail_is_unverified_not_delivered(self):
+        # a failed verify verdict must never read as a delivered
+        # artifact — the record reports delivered_unverified and
+        # keeps the module for measurement
+        pytest.importorskip("torch")
+        from mlopt_torch.report import VerifyReport
+
+        cases = play._torch_cases(0, 1)
+        case = cases[0]
+
+        class _FailSink:
+            def lower(self, ir, params=None):
+                return case[5]["model"]
+
+            def verify(self, *a):
+                return VerifyReport(max_abs=1.0, max_rel=1.0, passed=False)
+
+        case[5]["sink"] = _FailSink()
+        board = play._torch_board(case)
+        traj = engine.run_episode(board, ma.ScriptedPlayer(), 6)
+        res = play._torch_deliver(board, case, traj)
+        assert res["delivered"] is False
+        assert res["verified"] is False
+        assert res["delivered_unverified"] is True
+        assert res["module"] is case[5]["model"]
+
     def test_main_deliver_flag(self, capsys):
         pytest.importorskip("torch")
         rc = play.main(
