@@ -160,7 +160,7 @@ def _verify_vs_hf(ref, feats, delivered, tag: str) -> None:
     )
 
 
-def opt(model: str, iters: int) -> None:
+def opt(model: str, iters: int, exclude: str = "") -> None:
     import mlopt_carriers  # noqa: F401
     import mlopt_torch  # noqa: F401
     from mlopt_cuda import CudaGraphRunner
@@ -182,10 +182,17 @@ def opt(model: str, iters: int) -> None:
 
     # ---- search + lower ----
     optz = Optimizer(backend=TorchBackend())
+    search_kw = {}
+    if exclude:
+        from mlopt_orchestrator.optimize import DEFAULT_RULES
+        rules = [r for r in DEFAULT_RULES if exclude not in r.name]
+        print(f"[{model}] rules={len(rules)} (excluded '*{exclude}*')",
+              flush=True)
+        search_kw["rules"] = rules
     torch.cuda.reset_peak_memory_stats()
     t0 = time.time()
     try:
-        res = optz.search(wrap, feats, max_iterations=iters)
+        res = optz.search(wrap, feats, max_iterations=iters, **search_kw)
     except Exception as e:  # noqa: BLE001
         print(
             f"[{model}] search FAILED {type(e).__name__}: {e}",
@@ -440,10 +447,14 @@ def termtest(model: str, mode: str, dtype: str = "") -> None:
     # feats dtype must match param dtype
     dt = next(iter(params.values())).dtype
     if dtype == "fp32":
-        params = {k: v.float() for k, v in params.items()}
+        # cast in place — a dict comprehension would hold the bf16
+        # source AND the fp32 copy (~3.8 GiB) and OOM the 4 GB card
+        for k in list(params):
+            params[k] = params.pop(k).float()
         dt = torch.float32
     elif dtype == "fp64":
-        params = {k: v.double() for k, v in params.items()}
+        for k in list(params):
+            params[k] = params.pop(k).double()
         dt = torch.float64
     if dtype == "cpu":
         params = {k: v.cpu() for k, v in params.items()}
@@ -479,7 +490,10 @@ def termtest(model: str, mode: str, dtype: str = "") -> None:
     d = (out_del.float() - out_ref.float()).abs().max().item()
     rel = d / out_ref.float().abs().max().item()
     print(f"[termtest:{model}:{mode}] delivered-vs-IRref "
-          f"max|diff|={d:.3e} rel={rel:.3e}", flush=True)
+          f"max|diff|={d:.3e} rel={rel:.3e} "
+          f"del_dtype={out_del.dtype} ref_dtype={out_ref.dtype} "
+          f"param_dtype={next(iter(params.values())).dtype}",
+          flush=True)
 
     # does the term contain sdpa? count + scale attrs
     from mlopt_core.ir import Op, _dag_postorder
@@ -648,6 +662,10 @@ def main() -> None:
     elif mode == "opt":
         iters = int(sys.argv[3]) if len(sys.argv) > 3 else 3
         opt(model, iters)
+    elif mode == "optx":
+        iters = int(sys.argv[3]) if len(sys.argv) > 3 else 3
+        excl = sys.argv[4] if len(sys.argv) > 4 else ""
+        opt(model, iters, excl)
     elif mode == "diag":
         iters = int(sys.argv[3]) if len(sys.argv) > 3 else 3
         excl = sys.argv[4] if len(sys.argv) > 4 else ""
