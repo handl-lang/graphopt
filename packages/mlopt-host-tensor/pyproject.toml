@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlopt-host-tensor"
+version = "0.1.0dev"
+description = "host-tensor backend for mlopt (plan 0036 phase 1): mlopt_core.ports.Sink over the handl-lang/host-tensor f64 tensor.* op surface via its PyO3 binding."
+requires-python = ">=3.11"
+dependencies = [
+    "mlopt-core",
+    "numpy>=1.24",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

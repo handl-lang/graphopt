@@ -17,6 +17,7 @@ dependencies = [
     "mlopt-discovery",
     "discoverykit",
     "mlopt-onnx",
+    "mlopt-host-tensor",
     "mlopt-dtypes",
     "gamekit",
     "benchkit",
@@ -141,6 +142,7 @@ mlopt-carriers = { workspace = true }
 mlopt-cuda = { workspace = true }
 mlopt-discovery = { workspace = true }
 mlopt-onnx = { workspace = true }
+mlopt-host-tensor = { workspace = true }
 mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-dtypes", tag = "v0.1.0" }
 
 [tool.pytest.ini_options]
@@ -177,6 +179,7 @@ root_packages = [
     "mlopt_discovery",
     "mlopt_onnx",
     "mlopt_dtypes",
+    "mlopt_host_tensor",
 ]
 include_external_packages = true
 
@@ -197,7 +200,7 @@ layers = [
     "mlopt_discovery",
     "mlopt_cuda",
     "mlopt_torch : mlopt_carriers",
-    "mlopt_onnx",
+    "mlopt_onnx : mlopt_host_tensor",
     # The dtype registry is a leaf every backend reads — it sits below
     # the whole stack and nothing may depend back on it.
     "mlopt_dtypes",
@@ -237,6 +240,7 @@ extra-paths = [
     "packages/mlopt-cuda/src",
     "packages/mlopt-discovery/src",
     "packages/mlopt-onnx/src",
+    "packages/mlopt-host-tensor/src",
     # mlopt-core/-orchestrator (eqsat) and gamekit resolve through the
     # installed git deps — no src path needed.
 ]
