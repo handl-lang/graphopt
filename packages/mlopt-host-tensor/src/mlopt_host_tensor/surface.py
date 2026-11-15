@@ -18,7 +18,7 @@ Every entry is ``{"op": "tensor.<name>", "signature": …,
 
 * :func:`host_ops` — this package's own readers (drift guards, the
   ``hnl_import`` covered-set check);
-* ``mlopt_host_tensor.bindings.HOST_BINDINGS`` — the 137-op IR→host
+* ``mlopt_host_tensor.bindings.HOST_BINDINGS`` — the 138-op IR→host
   table's *target* names are validated against it (every binding key
   must be a real ``tensor.*`` op);
 * a future ``emit.py``-style renderer — the mlopt-side signature

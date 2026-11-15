@@ -3,7 +3,7 @@
 Phase 1 of plan 0036 (``docs/reports/host_tensor_sink_phase0.md``):
 a *second* concrete backend behind the port the torch and ONNX
 adapters already implement.  The sink declares its op surface
-(:attr:`HostTensorSink.supported_ops` — exactly the 137 liftable-now
+(:attr:`HostTensorSink.supported_ops` — exactly the 138 liftable-now
 ops), lowers an IR to a :class:`~mlopt_host_tensor.executor.
 HostTensorExecutor`, and verifies two lowered programs against each
 other in its own runtime (the Rust op registry + NumPy).
@@ -66,7 +66,7 @@ class HostTensorSink:
     def supported_ops(self) -> frozenset[str]:
         """Every IR op name this sink can lower.
 
-        The 137 liftable-now ops of the phase-0 split.  The bound
+        The 138 liftable-now ops of the phase-0 split.  The bound
         ``mlopt_core.cost.backend_cost`` prices extraction against it:
         any member using an op outside it is priced at ``+inf`` and
         can never win extraction.

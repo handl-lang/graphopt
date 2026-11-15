@@ -586,6 +586,7 @@ HOST_BINDINGS: dict[str, Callable[..., Any]] = {
     "erf": _u1("erf"),
     "erfc": _u1("erfc"),
     "sinc": _u1("sinc"),
+    "tan": _u1("tan"),
     "isnan": _u1("isnan"),
     "isinf": _u1("isinf"),
     "isfinite": _u1("isfinite"),
