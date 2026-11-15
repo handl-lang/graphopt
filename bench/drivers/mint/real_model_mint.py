@@ -845,7 +845,7 @@ def _pay_arm(
     the law's own effect — ``spelled``/``tape`` arms are context.
     """
     from mlopt_orchestrator.optimize import lower, search
-    from mlopt_torch.adapters import TorchSink
+    from mlopt_torch.adapters import TorchSink, TorchSource
 
     mod, feed = mod_feed
     feeds = feed if isinstance(feed, tuple) else (feed,)
@@ -857,6 +857,7 @@ def _pay_arm(
             res = search(
                 mod,
                 feeds,
+                source=TorchSource(),
                 rules=rules,
                 max_iterations=6,
                 max_enodes=100_000,
