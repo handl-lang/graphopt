@@ -36,9 +36,11 @@ python`:
   the sink never degrades silently.
 - `wire.py` — the `{"__tensor__": {shape, data, dtype}}` f64
   row-major codec, identical to `host-tensor/src/ops/codec.rs` and
-  `lib-tensor/src/codec.hnl`.  Non-finite *inputs* are refused at
-  encode (serde_json has no NaN/Inf literals); non-finite *outputs*
-  decode `null` → `nan`, the codec's documented hole.
+  `lib-tensor/src/codec.hnl`.  Since host-tensor `0528649`,
+  non-finite elements cross as `{"__nonfinite__": "nan"|"inf"|"-inf"}`
+  tag objects in `data` — encode and decode both round-trip exactly;
+  a literal `null` element (the pre-tag serde_json spelling) is
+  rejected loudly, matching `decode_f64`.
 - `bindings.py` — `HOST_BINDINGS`: the IR-op → host positional-arg
   table, exactly the 137 liftable names.  Attr spellings follow the
   torch adapter's convention (canonical names, `argN` fallbacks,
@@ -63,9 +65,11 @@ Workspace wiring: root `pyproject.toml` gained the dependency, the
 
 ## Honest boundaries (unchanged from Phase 0)
 
-- **f64-only wire.** dtype casts, bf16, int dtypes: declined.
-- **Non-finite values** cannot be *inputs* (encode-time refusal);
-  NaN/Inf *outputs* decode as `nan`.
+- **f64-only wire.** dtype casts, bf16, int dtypes: declined.  The
+  `"dtype": "f64"` stamp is true of the payload — `to_wire` upcasts
+  to `float64` — but the *source* dtype is not preserved: a
+  non-`float64` ndarray input warns at encode rather than casting
+  silently.
 - **`split` with int `sizes`** declines — torch's split-*size* vs the
   host's equal-count port; a sizes *list* works.
 - **`var`/`std` `correction`** outside {0, 1} declines — the host

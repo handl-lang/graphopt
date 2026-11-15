@@ -140,10 +140,12 @@ def test_pointwise_unary(sink: HostTensorSink, op: str, np_fn) -> None:
     x = Var("x", TensorType((2, 3)))
     a = np.linspace(-1.0, 1.0, 6).reshape(2, 3)
     if op == "sqrt":
-        # sqrt of a negative is NaN — the wire decodes it as nan;
-        # keep the comparison on the non-negative half.
-        a = np.abs(a) + 0.25
-        expected = np.sqrt(a)
+        # sqrt of a negative is NaN — since host-tensor 0528649 the
+        # wire carries it as a {"__nonfinite__": "nan"} tag, so the
+        # decode is an honest nan (assert_allclose's equal_nan
+        # compares them).
+        with np.errstate(invalid="ignore"):
+            expected = np.sqrt(a)
     elif op == "relu":
         expected = np.maximum(a, 0.0)
     else:
@@ -399,12 +401,16 @@ def test_pack_root_multi_output(sink: HostTensorSink) -> None:
     np.testing.assert_allclose(out[1], a.max())
 
 
-def test_nonfinite_input_declines(sink: HostTensorSink) -> None:
-    """NaN/Inf cannot cross the JSON wire — refused at encode."""
-    x = Var("x", TensorType((2,)))
+def test_nonfinite_input_round_trips(sink: HostTensorSink) -> None:
+    """NaN/±inf cross the wire as ``__nonfinite__`` tags (host-tensor
+    0528649) — ``neg`` preserves them exactly."""
+    x = Var("x", TensorType((3,)))
     ex = _lower(sink, Op.make("neg", x), x)
-    with pytest.raises(HostTensorError, match="non-finite"):
-        ex.forward(np.array([1.0, np.inf]))
+    got = ex.forward(np.array([1.0, np.inf, -np.inf]))
+    assert not np.isnan(got[0])
+    np.testing.assert_allclose(got, [-1.0, -np.inf, np.inf])
+    got_nan = ex.forward(np.array([np.nan, 1.0, 2.0]))
+    assert np.isnan(got_nan[0])
 
 
 # ---------------------------------------------------------------------------

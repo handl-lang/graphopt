@@ -7,12 +7,22 @@ the only accepted value.
 
 Known holes, handled honestly rather than silently:
 
-* **Non-finite inputs.** ``serde_json`` has no NaN/Inf literals, so a
-  non-finite *input* tensor cannot cross ``call`` — :func:`to_wire`
-  refuses it loudly.  (Rust-side ``f64`` ops *can* produce
-  inf/NaN — ``serde_json`` then emits ``null`` in ``data``; the
-  decoder maps ``null`` back to ``nan``, which is the closest honest
-  reading and matches the codec's documented finite-only wire.)
+* **Non-finite elements.** ``serde_json`` has no NaN/Inf literals, so
+  non-finite ``f64`` elements cross the wire as tagged objects —
+  ``{"__nonfinite__": "nan" | "inf" | "-inf"}`` inside ``data``
+  (host-tensor ``codec.rs`` since commit ``0528649``).  Both
+  directions round-trip exactly: :func:`to_wire` emits the tags and
+  :func:`from_wire` decodes them back to ``np.nan``/``np.inf``/
+  ``-np.inf``.  A literal ``null`` element — the pre-tag serde_json
+  spelling of a non-finite — is *rejected* loudly, matching the Rust
+  decoder's ``decode_f64`` (old finite payloads still decode
+  unchanged).
+* **Dtype.** The codec carries ``f64`` only.  :func:`to_wire` upcasts
+  any array-like to ``float64`` and stamps ``"dtype": "f64"`` — the
+  stamp is true of the payload but the *source* dtype is not
+  preserved: a non-``float64`` ndarray input warns at encode time
+  (there is no int/bf16/f16 dtype on the wire — see
+  :func:`to_wire`).
 * **Index dtypes.** ``argmax``/``argsort``-family results are f64 on
   the wire (no int dtype); consumers must not dtype-check them.
 """
@@ -20,6 +30,7 @@ Known holes, handled honestly rather than silently:
 from __future__ import annotations
 
 import json
+import warnings
 from typing import Any
 
 import numpy as np
@@ -27,40 +38,93 @@ import numpy as np
 from mlopt_host_tensor.errors import HostTensorError
 
 WIRE_TAG = "__tensor__"
+NONFINITE_TAG = "__nonfinite__"
+
+_NONFINITE_VALUES = {"nan": np.nan, "inf": np.inf, "-inf": -np.inf}
+
+
+def _encode_f64(x: float) -> Any:
+    """Encode one ``data`` element for the wire.
+
+    Finite ``f64``s stay numbers; NaN/±inf become the
+    ``{"__nonfinite__": …}`` tag — the same spelling host-tensor's
+    ``codec.rs::encode_f64`` emits.
+    """
+    if np.isnan(x):
+        return {NONFINITE_TAG: "nan"}
+    if x == np.inf:
+        return {NONFINITE_TAG: "inf"}
+    if x == -np.inf:
+        return {NONFINITE_TAG: "-inf"}
+    return float(x)
+
+
+def _decode_f64(x: Any) -> float:
+    """Decode one ``data`` element.
+
+    A JSON number or a ``{"__nonfinite__": …}`` tag — mirroring
+    ``codec.rs::decode_f64``.  Anything else (``null``, a string, a
+    bool, an unknown tag) is a loud :class:`HostTensorError`, not a
+    silent coercion.
+    """
+    if isinstance(x, bool):
+        pass  # JSON true/false is not a number — fall through to the error
+    elif isinstance(x, (int, float)):
+        return float(x)
+    elif isinstance(x, dict):
+        tag = x.get(NONFINITE_TAG)
+        if isinstance(tag, str) and tag in _NONFINITE_VALUES:
+            return float(_NONFINITE_VALUES[tag])
+    raise HostTensorError(
+        "tensor data element is neither a number nor a valid "
+        f"{NONFINITE_TAG!r} tag: {x!r}"
+    )
 
 
 def to_wire(a: Any) -> dict[str, Any]:
     """Encode an array-like as the ``{"__tensor__": …}`` wire record.
 
-    Values are upcast to ``float64`` (lossless for f32/bf16 sources).
-    Non-finite elements raise :class:`HostTensorError` — the JSON wire
-    cannot carry them (see module docstring).
+    Values are upcast to ``float64`` — the only dtype the codec
+    carries.  The upcast is lossless for f16/bf16/f32 sources, but the
+    wire records ``"dtype": "f64"`` and the source dtype is *not*
+    preserved; a non-``float64`` ndarray input warns once per call
+    site so the cast is never silent.
+
+    Non-finite elements (NaN, ±inf) encode as
+    ``{"__nonfinite__": "nan"|"inf"|"-inf"}`` tag objects, matching
+    host-tensor's ``codec.rs`` — they round-trip exactly.
     """
-    arr = np.asarray(a, dtype=np.float64)
-    if arr.size and not np.isfinite(arr).all():
-        raise HostTensorError(
-            "non-finite values cannot cross the host-tensor wire "
-            "(serde_json has no NaN/Inf literals)"
+    if isinstance(a, np.ndarray) and a.dtype != np.float64:
+        warnings.warn(
+            f"to_wire upcasts {a.dtype} input to f64 — the wire carries "
+            "no dtype beyond 'f64', so the source dtype is not preserved",
+            stacklevel=2,
         )
+    arr = np.asarray(a, dtype=np.float64)
+    flat = arr.reshape(-1)
+    data: list[Any] = flat.tolist()
+    for i in np.nonzero(~np.isfinite(flat))[0]:
+        data[int(i)] = _encode_f64(float(flat[int(i)]))
     return {
         WIRE_TAG: {
             "shape": [int(d) for d in arr.shape],
-            "data": arr.reshape(-1).tolist(),
+            "data": data,
             "dtype": "f64",
         }
     }
 
 
 def from_wire(v: Any) -> np.ndarray:
-    """Decode a wire record (or array-like) to a float64 ndarray."""
+    """Decode a wire record (or array-like) to a float64 ndarray.
+
+    ``data`` elements may be JSON numbers or ``{"__nonfinite__": …}``
+    tags; ``null`` and anything else raise :class:`HostTensorError`.
+    """
     if isinstance(v, dict) and WIRE_TAG in v:
         rec = v[WIRE_TAG]
         data = rec["data"]
-        # `null` is the wire's non-finite marker (serde_json emits it
-        # for NaN/±inf) — decode as nan, the documented hole.
         flat = np.array(
-            [np.nan if x is None else float(x) for x in data],
-            dtype=np.float64,
+            [_decode_f64(x) for x in data], dtype=np.float64
         )
         return flat.reshape([int(d) for d in rec["shape"]])
     return np.asarray(v, dtype=np.float64)
