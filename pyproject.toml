@@ -129,21 +129,21 @@ exclude = [
 # pinned git deps on ``packages/`` subdirectories at the ``v0.1.0``
 # tag (git-URL-at-tag distribution; see
 # docs/reports/git_url_distribution.md).  Bump the tag on releases.
-mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", tag = "v0.1.0" }
-mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", tag = "v0.1.0" }
-gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.0" }
-benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", tag = "v0.1.0" }
+mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", tag = "v0.1.1" }
+mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", tag = "v0.1.1" }
+gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.1" }
+benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", tag = "v0.1.1" }
 # discoverykit (plan 0034 phase 1): the domain-free mining core
 # extracted from mlopt-discovery — local path dep while the repo is
 # pre-remote; Phase 2 flips this to the git+tag pin.
-discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.0" }
+discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.1" }
 mlopt-torch = { workspace = true }
 mlopt-carriers = { workspace = true }
 mlopt-cuda = { workspace = true }
 mlopt-discovery = { workspace = true }
 mlopt-onnx = { workspace = true }
 mlopt-host-tensor = { workspace = true }
-mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-dtypes", tag = "v0.1.0" }
+mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-dtypes", tag = "v0.1.1" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
