@@ -2211,121 +2211,12 @@ for _clamp_op in ("clamp", "clamp_min", "clamp_max"):
 #  Shape rules for the minted ``synop*`` primitives
 # ---------------------------------------------------------------------------
 #
-# NOTE (eqsat substrate fix): ``mlopt_core.laws.minted`` now seats this
-# same denotation-evaluating shape rule at record materialize time
-# (``prim_fold`` / ``_materialize_rec`` — covering live
-# ``admit_prim_record`` promotions too), first-seat-wins.  Once the
-# pinned eqsat carries it this pass is a no-op — every name is already
-# in ``_SHAPE_RULES`` — and can be deleted at the next pin bump.  It
-# stays for pins predating the substrate seating (v0.1.2).
-#
-# A ``prim:synop_*`` fold is a proved equality, so the op's output shape
-# is exactly its ``.expand`` denotation's — but ``_SHAPE_RULES`` has no
-# entry for minted names and the substrate default reports ``None``.
-# Since eqsat be47cf1 an unknown operand makes every broadcast consumer
-# honestly ``None`` too, so one shape-blind synop poisons every guard
-# downstream: the r4 AUTO_TIER admits ``prim:synop_0b304215b3`` /
-# ``prim:synop_f0576b5150`` started folding ``detach_(contiguous …)`` /
-# ``transpose(reshape …)`` sites and the ``zoo_time_cond_conv``
-# ``mul_unsq_pad_*`` strips declined on the fabricated-``None`` chain.
-# Substituting the call's leaf/attr metavars into the denotation and
-# reading ``shape_of`` recovers the folded term's shape for every
-# shipped *and* auto-admitted synop; anything unresolvable declines to
-# ``None`` like any other unknown op.
-
-_SYNOP_SHAPE_UNBOUND = object()
-
-
-def _seat_synop_shape_rules() -> None:
-    """Register a denotation-evaluating shape rule per ``synop*`` op."""
-    from mlopt_core import typing as _typing
-    from mlopt_core.ir import Param, TensorType
-    from mlopt_core.laws import minted as _minted
-
-    for _name in _minted.synop_shipped():
-        if _name in _typing._SHAPE_RULES:
-            continue
-        try:
-            _fold, _expand = _minted.prim_fold(_name)
-        except Exception:
-            continue  # no materialized pair — leave the default None
-        _call, _den = _fold.rhs, _expand.rhs
-        # leaf metavar -> position in the call's arg list; attr
-        # metavar -> the op-attr name carrying it (call.attrs maps
-        # op-attr name -> metavar name).
-        _leaf_pos = {
-            m: i for i, m in enumerate(_call.args) if isinstance(m, str)
-        }
-        _attr_key = {
-            m: k for k, m in _call.attrs.items() if isinstance(m, str)
-        }
-
-        def _rule(
-            op: Op,
-            shapes: list,
-            *,
-            _den: Any = _den,
-            _leaf_pos: Any = _leaf_pos,
-            _attr_key: Any = _attr_key,
-            _Param: Any = Param,
-            _TensorType: Any = TensorType,
-        ) -> Any:
-            leaf_map: dict[str, Any] = {}
-            for m, i in _leaf_pos.items():
-                if i >= len(op.args):
-                    return None
-                s = shapes[i] if i < len(shapes) else None
-                # A known operand shape rides a cheap Param placeholder
-                # — ``shape_of`` answers it without re-walking the arg
-                # term; anything else falls back to the real term.
-                leaf_map[m] = (
-                    _Param(m, _TensorType(s))
-                    if isinstance(s, tuple)
-                    else op.args[i]
-                )
-
-            def _attr_val(v: Any) -> Any:
-                if isinstance(v, str):
-                    key = _attr_key.get(v)
-                    if key is None:
-                        return v  # literal string attr, not a metavar
-                    return op.attrs.get(key, _SYNOP_SHAPE_UNBOUND)
-                if isinstance(v, (tuple, list)):
-                    return type(v)(_attr_val(x) for x in v)
-                return v
-
-            def _subst(node: Any) -> Any:
-                if isinstance(node, str):
-                    return leaf_map.get(node, _SYNOP_SHAPE_UNBOUND)
-                if isinstance(node, Op):
-                    args = tuple(_subst(a) for a in node.args)
-                    attrs = {
-                        k: _attr_val(v) for k, v in node.attrs.items()
-                    }
-                    if any(
-                        a is _SYNOP_SHAPE_UNBOUND for a in args
-                    ) or any(
-                        v is _SYNOP_SHAPE_UNBOUND
-                        for v in attrs.values()
-                    ):
-                        return _SYNOP_SHAPE_UNBOUND
-                    return Op.make(node.op, *args, **attrs)
-                if isinstance(node, (tuple, list)):
-                    return type(node)(_subst(x) for x in node)
-                return node
-
-            try:
-                term = _subst(_den)
-                if term is _SYNOP_SHAPE_UNBOUND or term is None:
-                    return None
-                return _typing.shape_of(term)
-            except Exception:
-                return None  # honest decline, never a guess
-
-        _typing.register_shape_rule(_name, _rule)
-
-
-_seat_synop_shape_rules()
+# No pass needed here: ``mlopt_core.laws.minted`` seats the
+# denotation-evaluating shape rule substrate-side at record
+# materialize time (``prim_fold`` / ``_materialize_rec`` — covering
+# live ``admit_prim_record`` promotions too; eqsat v0.1.3, commit
+# 500002d).  First seat wins, so a domain rule registered under a
+# synop name is kept.
 
 
 class _AmbientTorchBindings(dict):
