@@ -155,6 +155,7 @@ class TestNativeOps:
             ("tensor.add(x, 2)", "add"),
             ("tensor.pow(x, 2)", "pow"),
             ("tensor.eq(x, y)", "eq"),
+            ("tensor.tan(x)", "tan"),
         ],
     )
     def test_unary_binary(self, src: str, op: str) -> None:
@@ -526,7 +527,6 @@ class TestDeclines:
             "tensor.glu(x)",
             "tensor.prelu(x, y)",
             "tensor.threshold(x, 0, 1)",
-            "tensor.tan(x)",
             "tensor.signbit(x)",
             "tensor.hypot(x, y)",
             "tensor.floor_divide(x, y)",

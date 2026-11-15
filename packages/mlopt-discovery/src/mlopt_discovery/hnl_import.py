@@ -1069,6 +1069,7 @@ _UNARY_OPS = frozenset(
         "square",
         "sin",
         "cos",
+        "tan",
         "asin",
         "acos",
         "atan",
