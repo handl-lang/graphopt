@@ -1379,6 +1379,7 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "type_as": lambda x, t, *a, **kw: x.type_as(t),
     "cos": torch.cos,
     "sin": torch.sin,
+    "tan": torch.tan,
     "float": lambda x, *a, **kw: x.to(
         getattr(torch, str(kw.get("dtype", "float32")))
         if isinstance(kw.get("dtype"), str)
@@ -1845,6 +1846,36 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     ),
     "hstack": lambda *ts, **kw: torch.hstack(list(ts)),
     "vstack": lambda *ts, **kw: torch.vstack(list(ts)),
+    # ``multinomial`` samples indices from the last-dim distribution —
+    # stochastic, so parity rides the RNG-state alignment in
+    # ``report.py`` (same footing as ``randn``).  ``num_samples`` /
+    # ``replacement`` arrive as ``argN`` attrs on the unschemed
+    # positional spelling (the semantic-ops argN contract); the named
+    # spellings cover hand-minted terms.
+    "multinomial": lambda t, *a, **kw: torch.multinomial(
+        t,
+        int(attr_of(kw, "num_samples", "arg1", default=1)),
+        replacement=bool(
+            attr_of(kw, "replacement", "arg2", default=False)
+        ),
+    ),
+    # ``repeat_interleave`` — ``repeats`` is a scalar attr (``arg1``)
+    # on the ``Tensor`` overload or a second tensor operand on the
+    # ``Tensor_Tensor`` spelling; prefer the bound operand when one
+    # is present (the IR term cannot tell the channels apart
+    # positionally).  ``dim``/``output_size`` ride the same argN
+    # channel — torch.export emits them POSITIONALLY
+    # (``arg2``/``arg3``), the named spellings cover hand-minted terms.
+    "repeat_interleave": lambda t, *a, **kw: torch.repeat_interleave(
+        t,
+        (
+            a[0]
+            if a and torch.is_tensor(a[0])
+            else attr_of(kw, "repeats", "arg1", default=1)
+        ),
+        dim=attr_of(kw, "dim", "arg2", default=None),
+        output_size=attr_of(kw, "output_size", "arg3", default=None),
+    ),
     # --- creators / casts / export artifacts ------------------------------
     "arange": _arange_torch,
     "zeros": lambda *a, **kw: torch.zeros(
@@ -2175,6 +2206,62 @@ for _shape_op, _shape_fn in {
 register_shape_rule(
     "weight_norm", lambda _op, shapes: shapes[0] if shapes else None
 )
+
+
+def _multinomial_shape(op: Op, shapes: list) -> Any:
+    """``multinomial(p, num_samples)`` — ``(..., n) → (..., num_samples)``.
+
+    The last (category) dim is replaced by the draw count; anything
+    not cheaply readable off the attrs reports unknown.
+    """
+    x = shapes[0] if shapes else None
+    if x is None or isinstance(x, str):
+        return x
+    if not isinstance(x, tuple) or not x:
+        return None
+    n = attr_of(op, "num_samples", "arg1")
+    if isinstance(n, bool) or not isinstance(n, int):
+        return None
+    return (*x[:-1], n)
+
+
+def _repeat_interleave_shape(op: Op, shapes: list) -> Any:
+    """``repeat_interleave(x, repeats, dim)`` shape rule.
+
+    The ``dim`` extent is multiplied by the scalar ``repeats`` count
+    (``dim=None`` flattens first, so the result is
+    ``(numel * repeats,)``).  A tensor-valued ``repeats`` operand or
+    an unreadable count reports unknown.
+    """
+    x = shapes[0] if shapes else None
+    if x is None or isinstance(x, str):
+        return x
+    if not isinstance(x, tuple):
+        return None
+    repeats = attr_of(op, "repeats", "arg1")
+    if isinstance(repeats, bool) or not isinstance(repeats, int):
+        return None
+    dim = attr_of(op, "dim", "arg2", default=None)
+    if dim is None:
+        total = 1
+        for d in x:
+            if d is None:
+                return None
+            total *= d
+        return (total * repeats,)
+    try:
+        i = int(dim) % len(x)
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+    out = list(x)
+    if out[i] is None:
+        return None
+    out[i] *= repeats
+    return tuple(out)
+
+
+register_shape_rule("multinomial", _multinomial_shape)
+register_shape_rule("repeat_interleave", _repeat_interleave_shape)
 
 
 def _clamp_shape(op: Op, shapes: list) -> Any:
