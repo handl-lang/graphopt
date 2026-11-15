@@ -53,8 +53,11 @@ __all__ = [
 _SURFACE_JSON = Path(__file__).with_name("host_surface.json")
 
 #: ``op "tensor.conv2d" : Value... -> Tensor`` — the handwritten decls.
+#: The result side is ``(.+?)$`` (rest of line), NOT ``\S+$``:
+#: ``tensor.shape`` returns ``(List Int)`` — a two-token composite type
+#: a single-token pattern silently drops (237 ops → 238).
 _OP_DECL = re.compile(
-    r'^op "(tensor\.[A-Za-z0-9_]+)"\s*:\s*(.+?)\s*->\s*(\S+)\s*$',
+    r'^op "(tensor\.[A-Za-z0-9_]+)"\s*:\s*(.+?)\s*->\s*(.+?)\s*$',
     re.MULTILINE,
 )
 

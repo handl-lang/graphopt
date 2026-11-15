@@ -1859,6 +1859,15 @@
       "reason": ""
     },
     {
+      "op": "tensor.shape",
+      "signature": "Tensor -> (List Int)",
+      "min_args": null,
+      "max_args": null,
+      "status": "Handwritten",
+      "kind": "handwritten",
+      "reason": ""
+    },
+    {
       "op": "tensor.sigmoid",
       "signature": "Tensor -> Tensor",
       "schema": "aten::sigmoid(Tensor self) -> Tensor",

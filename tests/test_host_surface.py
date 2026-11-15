@@ -55,8 +55,20 @@ class TestArtifact:
             "tensor.softmax",
             "tensor.layer_norm",
             "tensor.from_list",
+            "tensor.shape",
         ):
             assert name in ops, name
+
+    def test_tensor_shape_composite_result(self) -> None:
+        """``tensor.shape : Tensor -> (List Int)`` — the multi-token
+        result type that a single-``\\S+`` decl regex silently drops."""
+        entry = host_ops()["tensor.shape"]
+        assert entry["signature"] == "Tensor -> (List Int)"
+        assert entry["kind"] == "handwritten"
+
+    def test_op_count(self) -> None:
+        """238 ops — the full host-tensor ``index.hnl`` decl surface."""
+        assert len(host_ops()) == 238
 
     def test_generated_and_handwritten_split(self) -> None:
         kinds = {e["kind"] for e in host_ops().values()}
