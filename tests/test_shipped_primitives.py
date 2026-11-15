@@ -39,13 +39,24 @@ from mlopt_core.ir import Const, Op, generator
 from mlopt_core.laws import DEFAULT, tags
 from mlopt_discovery import shipped_primitives as sp
 
-_N_PRIM = 58  # 21 depth-1 + 2 depth-2 + 34 depth-3 admitted folds
-# (the depth-1 pool minted 24; 3 declined) + 1 AUTO_TIER admission
-# (synop_6ed0a07c7d — overnight --auto-admit, paid 6/72 cases)
+_N_PRIM = 60  # 21 depth-1 + 2 depth-2 + 34 depth-3 + 3 AUTO_TIER folds
+# (the depth-1 pool minted 24; 3 declined) + 3 AUTO_TIER admissions
+# (synop_6ed0a07c7d — overnight --auto-admit, paid 6/72 cases;
+# synop_0b304215b3 + synop_f0576b5150 — mint r4, bound to
+# t5:decoder/whisper:decoder per each record's ``mods``)
 
-#: One bound module per prim family — GatedLinearAttention binds all
-#: 58 admitted folds (the reports' ``mods`` lists); it exports once
-#: per session here and every per-fold pin runs against its term.
+#: AUTO_TIER admits the GLA fixture does NOT bind — the mint's own
+#: ``mods`` gate paid them on the t5/whisper decoders, which the
+#: unit fixtures don't build.  They still get the registration pin
+#: (``test_register_seats_ambient_bindings`` covers every op) and
+#: the direct denotation eval in ``TestRegistration``.
+_GLA_UNBOUND = frozenset({"synop_0b304215b3", "synop_f0576b5150"})
+
+#: One bound module per prim family — GatedLinearAttention binds 58
+#: of the 60 admitted folds (the reports' ``mods`` lists; the two
+#: r4 AUTO_TIER admits bind t5/whisper instead — ``_GLA_UNBOUND``);
+#: it exports once per session here and every bound fold's pin runs
+#: against its term.
 _GLA = "GatedLinearAttention"
 
 
@@ -107,8 +118,11 @@ class TestRecords:
 
     def test_every_record_carries_its_mint_measurements(self):
         for rec in sp.records().values():
-            # the fp64 denotation check the mint ran — all sites equal
-            assert rec["sites"] == rec["equal_sites"] >= 1
+            # the fp64 denotation check the mint ran — every evaluated
+            # site equal; ``sites >= equal_sites`` is the emit-gate
+            # tri-state (a site the checker could not evaluate is NOT
+            # a disagreement — synop_f0576b5150 ships 8/16 evaluated)
+            assert rec["sites"] >= rec["equal_sites"] >= 1
             assert len(rec["mods"]) >= 2  # the k=2 bind gate
             assert rec["alpha"].startswith("(")
             # the grammar-minter verdict rides the record — minted or
@@ -243,6 +257,28 @@ class TestRegistration:
         )
         assert torch.allclose(got, want)
 
+    def test_auto_tier_denotations_eval(self):
+        """The r4 AUTO_TIER admits replay their spelled denotations.
+
+        ``synop_0b304215b3`` = ``detach_(contiguous v)`` and
+        ``synop_f0576b5150`` = ``transpose(reshape(v, shape), d0, d1)``
+        — depth-1 records with no embedded ``expand``, so the
+        premise's RHS IS the fold LHS and the binding replays it.
+        """
+        sp.register()
+        import mlopt_torch.torch_bridge as tb
+
+        x = torch.randn(2, 3, 4, dtype=torch.float64)
+        got = tb._IR_TO_TORCH["synop_f0576b5150"](
+            x, a12=(2, 12), a5=0, a6=1
+        )
+        assert torch.equal(got, x.reshape(2, 12).transpose(0, 1))
+
+        y = torch.randn(3, 4, dtype=torch.float64, requires_grad=True)
+        got = tb._IR_TO_TORCH["synop_0b304215b3"](y)
+        assert torch.equal(got, y.detach().contiguous())
+        assert not got.requires_grad
+
 
 class TestSpecHelpers:
     """The spec render/bind helpers the bindings dispatch through."""
@@ -296,6 +332,26 @@ class TestSpecHelpers:
 class TestDeliver:
     """Each fold fires on its bound module and wins extraction."""
 
+    @staticmethod
+    def _gla_folds():
+        """The folds the GLA fixture binds — ``mods``-gated.
+
+        The two r4 AUTO_TIER admits paid on the t5/whisper decoders
+        (``_GLA_UNBOUND``); every other shipped fold lists
+        ``GatedLinearAttention`` in its record's ``mods``.
+        """
+        recs = sp.records()
+        folds = [
+            f
+            for f in sp.folds()
+            if _GLA in recs[f.rhs.op].get("mods", ())
+        ]
+        unbound = {f.rhs.op for f in sp.folds()} - {
+            f.rhs.op for f in folds
+        }
+        assert unbound == _GLA_UNBOUND
+        return folds
+
     def test_every_fold_fires_and_extracts(self, gla_term):
         import mlopt_torch.torch_bridge as tb
 
@@ -304,7 +360,7 @@ class TestDeliver:
         priced = backend_cost(count_cost, supported)
         by_op = {f.rhs.op: f for f in sp.folds()}
         recs = sp.records()
-        for fold in sp.folds():
+        for fold in self._gla_folds():
             eg = EGraph()
             eid = eg.add_term(gla_term)
             # deeper tiers: the LHS is a synop-carrying skeleton — a
@@ -352,7 +408,7 @@ class TestDeliver:
         from mlopt_discovery.oracle import eval_instance
 
         sp.register()
-        for fold in sp.folds():
+        for fold in self._gla_folds():
             # the site pattern is the definitional premise's RHS —
             # the manual denotation spelling: identical to the fold
             # LHS at depth-1, its expansion at depth-2 (real subterms

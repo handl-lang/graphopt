@@ -131,6 +131,11 @@ class TestBackward:
         arena.step(ma.Action.saturate(budget=512))
         _, rep = arena.step(ma.Action.extract())
         assert rep.applied and rep.certificate_ok
+        # extraction may commit a shipped ``synop_*`` fold — the op's
+        # denotation is the domain-side binding registry, not ambient
+        from mlopt_discovery import shipped_primitives as sp
+
+        sp.register()
         # the certified extraction stays numerically the gradient
         env = _env(fwd)
         best = arena.eg.extract_best(arena.root, arena.feasible_cost)

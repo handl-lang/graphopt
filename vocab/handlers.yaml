@@ -7864,6 +7864,63 @@
         "a123",
         "a320"
       ]
+    },
+    {
+      "op": "synop_f0576b5150",
+      "source": "prim",
+      "pattern": {
+        "spec": "transpose",
+        "args": [
+          {
+            "spec": "reshape",
+            "args": [
+              {
+                "mvar": "v50"
+              }
+            ],
+            "attrs": {
+              "shape": "a12"
+            }
+          }
+        ],
+        "attrs": {
+          "dim0": "a5",
+          "dim1": "a6"
+        }
+      },
+      "kernel": "synop_f0576b5150",
+      "args": [
+        "v50"
+      ],
+      "attr_mvars": [
+        "a12",
+        "a5",
+        "a6"
+      ]
+    },
+    {
+      "op": "synop_0b304215b3",
+      "source": "prim",
+      "pattern": {
+        "spec": "detach_",
+        "args": [
+          {
+            "spec": "contiguous",
+            "args": [
+              {
+                "mvar": "v269"
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {}
+      },
+      "kernel": "synop_0b304215b3",
+      "args": [
+        "v269"
+      ],
+      "attr_mvars": []
     }
   ],
   "minted": [

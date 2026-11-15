@@ -15659,56 +15659,56 @@
       "missing_hooks": []
     },
     {
-      "bound_norm": "spectral",
-      "cert": null,
-      "cond": null,
-      "derivation": [],
-      "dspec": null,
-      "error_bound": null,
+      "version": 2,
       "kind": "law",
-      "law": "",
+      "name": "prim:synop_0b304215b3",
+      "law": "machine-minted primitive fold \u2014 the manual subgraph collapses to the synop_0b304215b3 primitive (zoo-prim mint; admitted by the full gauntlet, machine-original; denotation definitional \u2014 the op's torch binding IS the spelled subgraph)",
       "lhs": {
+        "op": "detach_",
         "args": [
           {
+            "op": "contiguous",
             "args": [
               {
                 "mvar": "v269"
               }
             ],
-            "attrs": {},
-            "op": "contiguous"
+            "attrs": {}
           }
         ],
-        "attrs": {},
-        "op": "detach_"
+        "attrs": {}
       },
-      "missing_hooks": [],
-      "name": "prim:synop_0b304215b3",
       "rhs": {
+        "op": "synop_0b304215b3",
         "args": [
           {
             "mvar": "v269"
           }
         ],
-        "attrs": {},
-        "op": "synop_0b304215b3"
+        "attrs": {}
       },
+      "cond": null,
+      "dspec": null,
+      "tags": [
+        "fusion"
+      ],
+      "derivation": [],
+      "cert": null,
+      "error_bound": null,
+      "bound_norm": "spectral",
       "serializable": true,
-      "tags": [],
-      "version": 2
+      "missing_hooks": []
     },
     {
-      "bound_norm": "spectral",
-      "cert": null,
-      "cond": null,
-      "derivation": [],
-      "dspec": null,
-      "error_bound": null,
+      "version": 2,
       "kind": "law",
-      "law": "",
+      "name": "prim:synop_f0576b5150",
+      "law": "machine-minted primitive fold \u2014 the manual subgraph collapses to the synop_f0576b5150 primitive (zoo-prim mint; admitted by the full gauntlet, machine-original; denotation definitional \u2014 the op's torch binding IS the spelled subgraph)",
       "lhs": {
+        "op": "transpose",
         "args": [
           {
+            "op": "reshape",
             "args": [
               {
                 "mvar": "v50"
@@ -15716,19 +15716,16 @@
             ],
             "attrs": {
               "shape": "a12"
-            },
-            "op": "reshape"
+            }
           }
         ],
         "attrs": {
           "dim0": "a5",
           "dim1": "a6"
-        },
-        "op": "transpose"
+        }
       },
-      "missing_hooks": [],
-      "name": "prim:synop_f0576b5150",
       "rhs": {
+        "op": "synop_f0576b5150",
         "args": [
           {
             "mvar": "v50"
@@ -15738,12 +15735,19 @@
           "a12": "a12",
           "a5": "a5",
           "a6": "a6"
-        },
-        "op": "synop_f0576b5150"
+        }
       },
+      "cond": null,
+      "dspec": null,
+      "tags": [
+        "fusion"
+      ],
+      "derivation": [],
+      "cert": null,
+      "error_bound": null,
+      "bound_norm": "spectral",
       "serializable": true,
-      "tags": [],
-      "version": 2
+      "missing_hooks": []
     }
   ]
 }
