@@ -57,6 +57,9 @@ program over ``tensor.*`` (:func:`~mlopt_discovery.hnl_surface.emit`
 (:func:`~mlopt_discovery.hnl_import.hnl_to_term`) — both deliberately
 light: stdlib + ``mlopt_core.ir`` only, no torch/discoverykit/gamekit
 imports, so a downstream consumer can pin the codec cheaply.
+:mod:`.hnl_codec` is the JSON half of the same codec (ADR-0173):
+mlopt term ↔ serde-shaped handl ``Term`` JSON with the
+``__nonfinite__`` scalar tag and the ``dag.program`` sharing record.
 Formerly the ``tools/law_*.py``
 scripts; every module keeps its CLI — invoke as
 ``python -m mlopt_discovery.<module>``.
