@@ -129,19 +129,82 @@ traffic repetition (spec option B).
    `verify=True` fails the same way.  `KPS_EXCLUDE_RULES=transpose_noop`
    → delivered module **bit-exact (0.0)**.  The decoder arm alone
    never triggered it — the bug needs the F0N→decoder composition.
-   Probable law bug in `mlopt_core.laws.tensor.TRANSPOSE_NOOP`
-   (or an extraction/non-local-pass interaction); the conditional
-   "swapped extents both 1" clause looks guilty.
+   **ROOT-CAUSED + FIXED in eqsat** (see below §4): the law and its
+   `axes-noop` guard were correct — the guard's *evidence* was
+   fabricated.  `_infer_op_shape`'s partial-unknown fallback
+   reported a known broadcast operand's shape for `add`/`mul`/…
+   even when the sibling operand's shape was `None` (the
+   `nn.LSTM` inside `F0Ntrain.shared` is unshapeable).  The
+   fabricated `(1,256,1)` cascaded through `conv1d` → `(1,1,1)`,
+   and `transpose(1,2)` on that fake shape satisfied
+   `axes-noop`'s "both swapped extents are 1" clause.
+   Verified end-to-end: `arm m2 64 0` with the patched core is
+   **bit-exact (0.0)** with no rule exclusions.
 2. **Carrier shape-inference crash on M1 (T=42).**  `optz.search`
    dies inside `eg.run → apply_rule → mlopt_carriers.xcarrier._xshape`
-   building `TensorType(dim=-1)` — the DurationEncoder/bert term
-   has a shape the carrier pass can't infer.  M1 delivery is
-   therefore **off by default** in the driver (it measured no win
-   anyway: 19.7 vs 21.4 ms — launch-bound like f0n).
+   building `TensorType(dim=-1)` — reproduced 2026-11-14:
+   `KPS_M1DELIVER=1 KPS_NOVERIFY=1 .venv/bin/python
+   bench/drivers/probes/kokoro_split_probe.py arm m1 3`.
+   **ROOT-CAUSED (report only — carriers/typing lane):** the
+   `_M1Wrap` respell contains `x.expand(ids.shape[0], -1)`
+   (probe line ~108; torch `expand` accepts `-1` = keep-dim).
+   `_infer_op_shape`'s `case "expand" | "broadcast_to"` returns
+   the `shape` attr **verbatim** — `(1, -1)` — and
+   `xcarrier._xshape_rec` (xcarrier.py:305) wraps it in
+   `Var("_xs", TensorType(tuple(s)))`, which since eqsat e18b7ef
+   rejects negative dims → `ValueError: TensorType dim must be
+   >= 0, got -1`.  Candidate fixes (other lane): resolve `-1`
+   dims against the operand shape in the `expand` arm (like
+   `reshape` does), or sanitize negatives → `None` in `_xshape`'s
+   surrogate construction.  M1 delivery stays **off by default**
+   (it measured no win anyway: 19.7 vs 21.4 ms — launch-bound
+   like f0n).
 3. **Bundled M2 defeats RegionFusionRunner's output gate**:
    fused-vs-unfused max_rel ~7e-2 > 2e-3 → `applied=False`.  The
    three-module decomposition sidesteps it (decoder alone fuses
-   at 1.1e-3).
+   at 1.1e-3).  Still reproduces post-fix (max_rel 4.8e-2 at
+   W=64) — unrelated to `transpose_noop`.
+
+## 4. The `transpose_noop` root cause (eqsat fix, pending retag)
+
+* **Symptom:** `transpose(upsample_nearest1d(…), dim0=1, dim1=2)`
+  before `multiply(f0, harmonics(1,1,9))` deleted at
+  `max_iterations=0` → `(1,1,38400) × (1,1,9)` broadcast crash.
+* **Mechanism:** `F0Ntrain` contains `nn.LSTM`
+  (`predictor.shared`); `lstm.input`/`getitem` infer `None`.
+  Inside `AdainResBlk1d` the AdaIN tail computes
+  `(1+gamma)*x + beta` where `gamma`/`beta` are style chunks of
+  concrete shape `(1,C,1)`.  `_infer_op_shape`'s early return
+  answered the KNOWN operand's shape for the broadcast `mul`/`add`
+  (the `_ARG0_SHAPE_OPS` + `_COMMUTATIVE_BROADCAST` fallback added
+  in eqsat e18b7ef), fabricating `(1,256,1)` for a tensor that is
+  really `(1,256,64)`.  `F0_proj`'s `conv1d` then computed output
+  length `conv_window(1,…) = 1` → `(1,1,1)`; `squeeze`/`unsqueeze`/
+  opaque-`upsample` propagated it; `axes-noop` saw both swapped
+  extents `== 1` and fired.
+* **Why the law was innocent:** `transpose(u,d0,d1) == u` when the
+  swapped extents are both 1 is a true semantic no-op — the guard
+  simply cannot prove it from a fabricated shape.
+* **Fix (eqsat `packages/mlopt-core/src/mlopt_core/typing.py`):**
+  new `_BROADCAST_BINOPS` frozenset (the 27 ops whose match arm is
+  `_broadcast`); the partial-unknown early return now declines to
+  `None` for them on ANY unknown operand — the output can exceed
+  every known operand, so borrowing one fabricates a too-small
+  concrete shape.  Removed from `_ARG0_SHAPE_OPS`; the
+  `_COMMUTATIVE_BROADCAST` alias is gone.  Shape-preserving unary
+  ops (`relu`, `contiguous`, `masked_fill`, scatter/index family,
+  `sdpa`, …) keep the operand-0 answer — it IS their output shape.
+* **Regression pins:** `tests/test_typing.py::
+  test_broadcast_binop_unknown_operand_declines` (the kokoro chain:
+  `mul(param(1,256,1), unshapeable) → conv1d → transpose(1,2)` now
+  infers `None` and `axes-noop` declines) and updated
+  `test_partial_unknown_shape_not_operand0` /
+  `test_typing_edges.py::mixed/first-shaped` which had pinned the
+  old fabrication.
+* **Verification:** eqsat `pytest -m "not slow"` 1699 passed;
+  ruff/format/ty/lint-imports clean; graphopt law/export slice
+  215 passed (one consumer-identity test updated for the retired
+  alias); `arm m2 64 0` bit-exact.
 
 ## Honest bottom line
 
