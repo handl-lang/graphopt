@@ -30,7 +30,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from mlopt_core.egraph import EGraph
+from mlopt_core.egraph import EGraph, _leaf_key
 from mlopt_core.ir import Const, Op, Var
 from mlopt_discovery import handl_egraph as he
 
@@ -94,7 +94,7 @@ def _sample_terms() -> list:
     """Concrete + pattern terms covering every wire form."""
     x, y = Var("x", "f64"), Var("y", "f64")
     return [
-        x,  # leaf -> {"leaf": repr}
+        x,  # leaf -> {"leaf": kind-tagged _leaf_key}
         "a",  # pattern metavar -> {"mvar"}
         Const(2),
         Const(2.5),
@@ -353,7 +353,7 @@ def test_saturate_extracts_the_folded_form(egraph_bin: Path) -> None:
         costs={"default": 1.0, "leaf": 0.0},
     )
     assert rep["stop"] == "fixed_point"
-    assert rep["best"] == {"leaf": repr(x)}
+    assert rep["best"] == {"leaf": _leaf_key(x)}
     # the Python oracle has the same member in the root class
     g = EGraph()
     root = g.add_term(term)

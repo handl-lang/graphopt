@@ -64,6 +64,7 @@ Usage::
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import os
@@ -74,8 +75,8 @@ from pathlib import Path
 from typing import Any
 
 from mlopt_core.egraph import EGraph
-from mlopt_core.egraph.types import ENode, _member_key
-from mlopt_core.ir import Const, Op, Var
+from mlopt_core.egraph.types import ENode, _leaf_key, _member_key
+from mlopt_core.ir import Const, Op, Param, Var
 from mlopt_core.laws import ALL_RULES
 
 _REPO = Path(__file__).resolve().parents[3]
@@ -134,7 +135,7 @@ def _spec_term(t: Any, pattern: bool) -> dict:
         }
     if isinstance(t, str):
         return {"mvar": t}
-    return {"leaf": repr(t)}
+    return {"leaf": _leaf_key(t)}
 
 
 def _rep_attr(v: Any) -> Any:
@@ -158,22 +159,29 @@ def _rep_data(t: Any) -> dict | None:
         }
     if isinstance(t, str):
         return {"mvar": t}
-    return {"leaf": repr(t)}
+    return {"leaf": _leaf_key(t)}
 
 
 def _leaf_for(key: str) -> Any:
-    """Return a Python leaf object whose ``repr`` is *key*.
+    """Return a Python leaf whose ``_leaf_key`` is *key*.
 
-    Used for membership probes of Rust-reported terms.
+    Used for membership probes of Rust-reported terms.  The key is
+    kind-tagged (``var:``/``param:``/``const:``/``type:repr`` —
+    ``egraph.types._leaf_key``); the leaf *kind* round-trips, the
+    ``Var``/``Param`` dtype does not (dropped by design — probes only
+    need the e-class, and ``_locate`` compares the kind-tagged key).
     """
-    try:
-        return Const(int(key))
-    except ValueError:
-        pass
-    try:
-        return Const(float(key))
-    except ValueError:
-        pass
+    kind, sep, rest = key.partition(":")
+    if sep:
+        if kind == "var":
+            return Var(rest, "f64")
+        if kind == "param":
+            return Param(rest, "f64")
+        if kind == "const":
+            try:
+                return Const(ast.literal_eval(rest))
+            except (TypeError, ValueError, SyntaxError):
+                pass
     return Var(key, "f64")
 
 

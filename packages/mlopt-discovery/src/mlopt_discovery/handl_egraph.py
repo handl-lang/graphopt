@@ -49,9 +49,12 @@ phase 1 already carry):
   catalogue boundary is unchanged: they are vocabulary data
   (AST shapes, ``.hnl`` denotations, mint provenance), not rewrite
   fragments, so they never enter a saturation spec.
-* **Leaf identity is ``repr`` on both sides** — ``EGraph.add_term``
-  keys leaves on ``repr(term)`` and the wire's ``{"leaf": key}`` is
-  the same string, so typed ``Var``/``Param`` leaves stay consistent
+* **Leaf identity is the kind-tagged ``_leaf_key`` on both sides** —
+  ``EGraph.add_term`` keys leaves on ``egraph.types._leaf_key``
+  (``var:``/``param:``/``const:``/``type:repr`` — kind-tagged since
+  eqsat ``e18b7ef``, because ``repr`` is not injective across leaf
+  kinds) and the wire's ``{"leaf": key}`` carries that same string,
+  so typed ``Var``/``Param``/``Const`` leaves stay consistent
   (``Const``'s spelling-strict identity is preserved verbatim).
 * **ε-laws (``error_bound``)** ride the spec as metadata-free rules —
   the bound does not change firing; it is provenance the report does
@@ -74,7 +77,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from mlopt_core.egraph import Rewrite
+from mlopt_core.egraph import Rewrite, _leaf_key
 
 from mlopt_discovery import vocabdir
 
@@ -150,9 +153,10 @@ def spec_term(t: Any, *, pattern: bool = False) -> dict:
     """Encode a term (concrete or pattern) in the ``egraph-run`` wire form.
 
     ``{"mvar": name}`` for a pattern metavariable (a bare ``str``
-    leaf), ``{"leaf": repr(t)}`` for any other leaf — ``repr`` is the
-    Python e-graph's own leaf key (``EGraph.add_term``), so the wire
-    form is faithful by construction — and ``{"op", "args", "attrs"}``
+    leaf), ``{"leaf": key}`` for any other leaf — *key* is
+    :func:`mlopt_core.egraph.types._leaf_key`, the Python e-graph's
+    own kind-tagged leaf key (``EGraph.add_term``), so the wire form
+    is faithful by construction — and ``{"op", "args", "attrs"}``
     for :class:`~mlopt_core.ir.Op` nodes.  In pattern position a
     ``str`` attr encodes ``{"amvar": name}`` and composite attrs ride
     ``{"__tuple__": [...]}`` (the Rust side's untuple normalisation
@@ -171,7 +175,7 @@ def spec_term(t: Any, *, pattern: bool = False) -> dict:
         }
     if isinstance(t, str):
         return {"mvar": t}
-    return {"leaf": repr(t)}
+    return {"leaf": _leaf_key(t)}
 
 
 # ---------------------------------------------------------------------------
