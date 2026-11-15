@@ -38,6 +38,7 @@ from mlopt_core.metrics import (
     MaxRel,
     TopKAgreement,
 )
+from mlopt_orchestrator import VerifyDeclinedError
 from mlopt_orchestrator import optimize as opt_mod
 from mlopt_orchestrator.optimize import (
     Compositional,
@@ -300,8 +301,12 @@ def test_task_accept_bounded_member_pointwise_atol_declined():
     assert "__bl" in op_repr(res.term)
 
     # The pointwise gate declines: measured drift >> atol, though the
-    # propagated bound is honored.
-    declined = opt.lower(res, x, atol=1e-6)
+    # propagated bound is honored.  ``lower(verify=True)`` enforces the
+    # gate — the decline raises VerifyDeclinedError carrying the
+    # declined LowerResult.
+    with pytest.raises(VerifyDeclinedError) as ei:
+        opt.lower(res, x, atol=1e-6)
+    declined = ei.value.result
     assert not declined.verified.passed
     assert declined.verified.max_abs > 1e-6
     assert declined.stats["verify_metric"] == "bound"
@@ -395,7 +400,9 @@ def test_task_accept_exact_member_under_tight_rtol():
         model, x, detect_factors=True, cost_fn=flops_cost
     )
     assert "__lr" in op_repr(res.term)
-    declined = opt.lower(res, x, rtol=1e-18)
+    with pytest.raises(VerifyDeclinedError) as ei:
+        opt.lower(res, x, rtol=1e-18)
+    declined = ei.value.result
     assert declined.verified.max_rel > 1e-18
     assert not declined.verified.passed
     assert declined.stats["verify_metric"] == "max_rel"
@@ -429,7 +436,9 @@ def test_task_decline_on_distribution_shift():
     # the reference argmax lands on a row the member zeroed.
     shifted = torch.zeros(8, 32, dtype=torch.float64)
     shifted[:, 3] = 1e6
-    bad = opt.lower(res, shifted)
+    with pytest.raises(VerifyDeclinedError) as ei:
+        opt.lower(res, shifted)
+    bad = ei.value.result
     assert not bad.verified.passed
     assert bad.stats["task"]["distance"] == 1.0
     assert bad.stats["task"]["passed"] is False
@@ -457,7 +466,9 @@ def test_task_tol_override_changes_verdict():
     assert low.stats["task"]["name"] == "max_rel"
     assert low.stats["task"]["tolerance"] == 1e-3
     assert low.stats["verify_metric"] == "max_rel"
-    tight = opt.lower(res, x, task=MaxRel(), task_tol=1e-9)
+    with pytest.raises(VerifyDeclinedError) as ei:
+        opt.lower(res, x, task=MaxRel(), task_tol=1e-9)
+    tight = ei.value.result
     assert not tight.verified.passed
     assert tight.stats["accepted_by"] == "declined"
 

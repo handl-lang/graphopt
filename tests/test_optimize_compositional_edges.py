@@ -235,12 +235,15 @@ def test_discover_alternatives_fires_pairing_and_lifts():
 
 
 def test_verbose_verify_warning_arm(monkeypatch):
-    """verify reports failure → the ✗ warning arm prints and optimize
-    still returns a module (verify failure is non-fatal).
+    """verify reports failure → the ✗ warning arm prints and the
+    substrate-enforced gate raises :class:`VerifyDeclinedError`
+    (``lower(verify=True)`` declines rather than returning the
+    unverified module).
 
     ``optimize_model`` now verifies through the sink, so the torch
     sink's ``verify_module`` is the patched seam (plan 0004).
     """
+    from mlopt_orchestrator import VerifyDeclinedError
     from mlopt_torch.report import VerifyReport
 
     def fake_verify(*a, **kw):
@@ -249,9 +252,8 @@ def test_verbose_verify_warning_arm(monkeypatch):
     monkeypatch.setattr("mlopt_torch.adapters.verify_module", fake_verify)
     torch.manual_seed(0)
     x = torch.randn(2, 8)
-    opt, _s = Optimizer(backend=TorchBackend()).optimize(_MLP(), x, max_iterations=1, verify=True, verbose=True)
-
-    assert opt is not None
+    with pytest.raises(VerifyDeclinedError, match="delivery declined"):
+        Optimizer(backend=TorchBackend()).optimize(_MLP(), x, max_iterations=1, verify=True, verbose=True)
 
 
 def test_hook_dedup_repeated_block():
