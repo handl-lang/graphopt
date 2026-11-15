@@ -578,12 +578,15 @@ class OptReport:
 class BlockReport:
     """Typed view of one ``stats["blocks"][name]`` entry.
 
-    ``status`` is one of ``"optimized"`` / ``"failed"`` / ``"skipped"``
-    / ``"not_executed"``; which of the remaining keys an entry carries
-    depends on it (today: ``not_executed`` has only ``status``;
-    ``skipped`` adds ``reason``; ``failed`` adds ``error`` — plus
-    ``reason == "resource_limit"`` and a ``rel_diff`` when it failed at
-    verification — and ``time_s``; ``optimized`` adds ``rel_diff``,
+    ``status`` is one of ``"optimized"`` / ``"failed"`` / ``"declined"``
+    / ``"skipped"`` / ``"not_executed"``; which of the remaining keys
+    an entry carries depends on it (today: ``not_executed`` has only
+    ``status``; ``skipped`` adds ``reason``; ``failed`` adds
+    ``error`` — plus ``reason == "resource_limit"`` and a ``rel_diff``
+    when it failed at verification — and ``time_s``; ``declined`` is a
+    verify-gate refusal — the ``VerifyDeclinedError`` path — the same
+    keep-original outcome as ``failed`` under the gate's own label,
+    carrying ``error`` + ``time_s``; ``optimized`` adds ``rel_diff``,
     ``stats``, ``param_report``, ``time_s``).  ``None`` fields are
     omitted by :meth:`to_dict`, reproducing each shape exactly.
     ``name`` is the dotted block path — the dict key, not an entry

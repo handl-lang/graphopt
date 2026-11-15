@@ -23,7 +23,12 @@ from bench.discovery.cases import (
 )
 from bench.discovery.fixtures import SOURCES
 from bench.discovery.refs import REFS
-from bench.discovery.runner import run_case, run_suite
+from bench.discovery.runner import (
+    ArmResult,
+    CaseResult,
+    run_case,
+    run_suite,
+)
 from bench.discovery.scorecard import render_markdown, write_outputs
 
 
@@ -449,3 +454,56 @@ def test_scorecard_markdown_and_json(tmp_path: Path):
     assert data["env"]["git_sha"]
     assert data["cases"][0]["name"] == "mul_unsq_nat"
     assert payload["cases"] == data["cases"]
+
+
+def test_scorecard_full_lane_annotates_unverified_beat():
+    """F10: a timed-but-unverified row must not read as a clean win.
+
+    The runner keeps timing a declined verify (``verified=False``),
+    so ``beat (measured)`` is annotated rather than suppressed —
+    "beat: yes / verified: no" stays honest in one cell.
+    """
+    rows = [
+        CaseResult(
+            name="unverified_beat",
+            title="t",
+            category="c",
+            citation="",
+            verified=False,
+            verify_max_abs=0.5,
+            beat_best_measured=True,
+            detail={"mlopt_ms": 1.5},
+            baselines=[
+                ArmResult(name="floor", kind="ref", median_s=0.002),
+            ],
+        ),
+        CaseResult(
+            name="verified_beat",
+            title="t",
+            category="c",
+            citation="",
+            verified=True,
+            verify_max_abs=0.0,
+            beat_best_measured=True,
+            detail={"mlopt_ms": 1.0},
+            baselines=[
+                ArmResult(name="floor", kind="ref", median_s=0.002),
+            ],
+        ),
+    ]
+    md = render_markdown(rows, lane="full")
+    measured = md.split("## Measured (full lane)", 1)[1]
+    assert "yes (unverified)" in measured
+    unverified_line = next(
+        line
+        for line in measured.splitlines()
+        if "`unverified_beat`" in line
+    )
+    assert unverified_line.rstrip().endswith("| yes (unverified) |")
+    # The verified row's beat cell stays bare.
+    verified_line = next(
+        line
+        for line in measured.splitlines()
+        if "`verified_beat`" in line
+    )
+    assert verified_line.rstrip().endswith("| yes |")

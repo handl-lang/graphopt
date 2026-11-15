@@ -152,12 +152,18 @@ def render_markdown(
                 default=None,
             )
             mlopt_ms = r.detail.get("mlopt_ms")
+            # A declined/missing verify still gets timed (the runner
+            # keeps the row honest), so a bare "yes" here could be
+            # misread as a *verified* win — annotate it instead.
+            beat = _bool(r.beat_best_measured)
+            if r.verified is not True:
+                beat += " (unverified)"
             lines.append(
                 f"| `{r.name}` | {_bool(r.verified)} | "
                 f"{r.verify_max_abs if r.verify_max_abs is not None else '—'} | "
                 f"{f'{mlopt_ms:.3f}' if mlopt_ms is not None else '—'} | "
                 f"{f'{best_ms * 1e3:.3f}' if best_ms is not None else '—'} | "
-                f"{_bool(r.beat_best_measured)} |"
+                f"{beat} |"
             )
     lines += [
         "",
