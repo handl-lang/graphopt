@@ -3,11 +3,10 @@
 Phase 1 of plan 0036 (``docs/reports/host_tensor_sink_phase0.md``).
 The sink lowers the 137 liftable-now IR ops onto the sibling
 ``handl-lang/host-tensor`` repo's ``tensor.*`` registry through its
-PyO3 binding (``handl_host_tensor``).  The extension is a local cargo
-artifact, not a pip package — every test that touches it skips when
-the .so isn't built (``cargo build --features python`` in the
-host-tensor checkout; ``_binding`` resolves
-``../host-tensor/target/<profile>/``).
+PyO3 binding (``handl_host_tensor``).  The extension resolves a
+maturin-installed wheel first, then the sibling-checkout cargo
+dev artifact (``../host-tensor/target/<profile>/``); every test that
+touches it skips when neither resolves.
 """
 
 from __future__ import annotations

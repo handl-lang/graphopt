@@ -1,12 +1,12 @@
-"""Load the ``handl_host_tensor`` PyO3 extension built from host-tensor.
+"""Load the ``handl_host_tensor`` PyO3 extension.
 
-The binding is a cargo cdylib (``cargo build --features python`` in the
-``handl-lang/host-tensor`` checkout), not a pip package.  Resolution
-order:
+Resolution order:
 
-1. ``import handl_host_tensor`` — works when the .so's directory is on
-   ``sys.path`` (e.g. copied next to a driver, or a maturin install).
-2. ``$MLOPT_HOST_TENSOR_LIB`` — explicit path to the ``.so``.
+1. ``$MLOPT_HOST_TENSOR_LIB`` — explicit path to the ``.so`` (highest
+   priority: pins the binding for a run).
+2. ``import handl_host_tensor`` — a normally-installed wheel
+   (``pip install`` of the host-tensor repo's maturin build) or any
+   ``.so`` already on ``sys.path``.
 3. The sibling-checkout convention: ``<repo>/../host-tensor/target/
    {release,debug}/handl_host_tensor.so`` — the dev layout this repo
    assumes (graphopt and host-tensor are siblings under
@@ -32,9 +32,9 @@ from mlopt_host_tensor.errors import HostTensorError
 
 _BUILD_HINT = (
     "build the binding: cd <host-tensor checkout> && "
-    "cargo build --features python, then copy "
+    "maturin build (or cargo build --features python, then copy "
     "target/<profile>/libhandl_host_tensor.so to "
-    "handl_host_tensor.so (or set MLOPT_HOST_TENSOR_LIB)"
+    "handl_host_tensor.so; or set MLOPT_HOST_TENSOR_LIB)"
 )
 
 #: ``packages/mlopt-host-tensor/src/mlopt_host_tensor/_binding.py`` →
@@ -43,10 +43,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[4]
 
 
 def _candidate_paths() -> list[Path]:
-    """Return the .so locations to try, in order."""
-    env = os.environ.get("MLOPT_HOST_TENSOR_LIB")
-    if env:
-        return [Path(env)]
+    """Return the sibling-checkout .so locations to try, in order."""
     repo = Path(
         os.environ.get(
             "MLOPT_HOST_TENSOR_REPO", _REPO_ROOT.parent / "host-tensor"
@@ -82,6 +79,16 @@ def load() -> ModuleType:
     Raises :class:`HostTensorError` listing what was tried when no
     candidate resolves.
     """
+    env = os.environ.get("MLOPT_HOST_TENSOR_LIB")
+    if env:
+        path = Path(env)
+        try:
+            return _load_from_path(path)
+        except Exception as exc:
+            raise HostTensorError(
+                f"handl_host_tensor extension at {path} failed to "
+                f"load: {exc} — {_BUILD_HINT}"
+            ) from exc
     try:
         return importlib.import_module("handl_host_tensor")
     except ImportError:
