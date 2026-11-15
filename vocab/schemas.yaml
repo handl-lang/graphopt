@@ -745,6 +745,93 @@
       "bound_norm": "spectral",
       "serializable": true,
       "missing_hooks": []
+    },
+    {
+      "bound_norm": "spectral",
+      "cert": null,
+      "cond": null,
+      "derivation": [],
+      "dspec": null,
+      "error_bound": null,
+      "kind": "law",
+      "law": "synop_0b304215b3 as a fold-class schema \u2014 the mined shape's corpus-derived recognizer (plan 0033 phase 3)",
+      "lhs": {
+        "args": [
+          {
+            "args": [
+              {
+                "mvar": "v269"
+              }
+            ],
+            "attrs": {},
+            "op": "contiguous"
+          }
+        ],
+        "attrs": {},
+        "op": "detach_"
+      },
+      "missing_hooks": [],
+      "name": "fold:synop_0b304215b3",
+      "rhs": {
+        "args": [
+          {
+            "mvar": "v269"
+          }
+        ],
+        "attrs": {},
+        "op": "synop_0b304215b3"
+      },
+      "serializable": true,
+      "tags": [],
+      "version": 2
+    },
+    {
+      "bound_norm": "spectral",
+      "cert": null,
+      "cond": null,
+      "derivation": [],
+      "dspec": null,
+      "error_bound": null,
+      "kind": "law",
+      "law": "synop_f0576b5150 as a fold-class schema \u2014 the mined shape's corpus-derived recognizer (plan 0033 phase 3)",
+      "lhs": {
+        "args": [
+          {
+            "args": [
+              {
+                "mvar": "v50"
+              }
+            ],
+            "attrs": {
+              "shape": "a12"
+            },
+            "op": "reshape"
+          }
+        ],
+        "attrs": {
+          "dim0": "a5",
+          "dim1": "a6"
+        },
+        "op": "transpose"
+      },
+      "missing_hooks": [],
+      "name": "fold:synop_f0576b5150",
+      "rhs": {
+        "args": [
+          {
+            "mvar": "v50"
+          }
+        ],
+        "attrs": {
+          "a12": "a12",
+          "a5": "a5",
+          "a6": "a6"
+        },
+        "op": "synop_f0576b5150"
+      },
+      "serializable": true,
+      "tags": [],
+      "version": 2
     }
   ],
   "premises": {
@@ -1209,6 +1296,101 @@
           "check",
           "derive"
         ]
+      }
+    ],
+    "fold:synop_0b304215b3": [
+      {
+        "version": 2,
+        "kind": "law",
+        "name": "synop_0b304215b3.expand",
+        "law": "synop_0b304215b3 unfolds to its mined denotation \u2014 the definitional premise the cert leg's anchored derivation unions in when the bare bank cannot derive the fold",
+        "lhs": {
+          "op": "synop_0b304215b3",
+          "args": [
+            {
+              "mvar": "v269"
+            }
+          ],
+          "attrs": {}
+        },
+        "rhs": {
+          "op": "detach_",
+          "args": [
+            {
+              "op": "contiguous",
+              "args": [
+                {
+                  "mvar": "v269"
+                }
+              ],
+              "attrs": {}
+            }
+          ],
+          "attrs": {}
+        },
+        "cond": null,
+        "dspec": null,
+        "tags": [
+          "simplification"
+        ],
+        "derivation": [],
+        "cert": null,
+        "error_bound": null,
+        "bound_norm": "spectral",
+        "serializable": true,
+        "missing_hooks": []
+      }
+    ],
+    "fold:synop_f0576b5150": [
+      {
+        "version": 2,
+        "kind": "law",
+        "name": "synop_f0576b5150.expand",
+        "law": "synop_f0576b5150 unfolds to its mined denotation \u2014 the definitional premise the cert leg's anchored derivation unions in when the bare bank cannot derive the fold",
+        "lhs": {
+          "op": "synop_f0576b5150",
+          "args": [
+            {
+              "mvar": "v50"
+            }
+          ],
+          "attrs": {
+            "a12": "a12",
+            "a5": "a5",
+            "a6": "a6"
+          }
+        },
+        "rhs": {
+          "op": "transpose",
+          "args": [
+            {
+              "op": "reshape",
+              "args": [
+                {
+                  "mvar": "v50"
+                }
+              ],
+              "attrs": {
+                "shape": "a12"
+              }
+            }
+          ],
+          "attrs": {
+            "dim0": "a5",
+            "dim1": "a6"
+          }
+        },
+        "cond": null,
+        "dspec": null,
+        "tags": [
+          "simplification"
+        ],
+        "derivation": [],
+        "cert": null,
+        "error_bound": null,
+        "bound_norm": "spectral",
+        "serializable": true,
+        "missing_hooks": []
       }
     ]
   }

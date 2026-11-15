@@ -38941,6 +38941,213 @@
         "unsqueeze"
       ],
       "sites": 12
+    },
+    "synop_0b304215b3": {
+      "alpha": "(detach_ (contiguous 'v0'))",
+      "depth": 1,
+      "equal_sites": 16,
+      "fold": {
+        "bound_norm": "spectral",
+        "cert": null,
+        "cond": null,
+        "derivation": [],
+        "dspec": null,
+        "error_bound": null,
+        "kind": "law",
+        "law": "",
+        "lhs": {
+          "args": [
+            {
+              "args": [
+                {
+                  "mvar": "v269"
+                }
+              ],
+              "attrs": {},
+              "op": "contiguous"
+            }
+          ],
+          "attrs": {},
+          "op": "detach_"
+        },
+        "missing_hooks": [],
+        "name": "prim:synop_0b304215b3",
+        "rhs": {
+          "args": [
+            {
+              "mvar": "v269"
+            }
+          ],
+          "attrs": {},
+          "op": "synop_0b304215b3"
+        },
+        "serializable": true,
+        "tags": [],
+        "version": 2
+      },
+      "handler": {
+        "best_err": "inf",
+        "domain": [
+          {
+            "v269": [
+              0
+            ]
+          },
+          {
+            "v269": [
+              0
+            ]
+          },
+          {
+            "v269": [
+              0
+            ]
+          },
+          {
+            "v269": [
+              0
+            ]
+          }
+        ],
+        "note": "grammar exhausted: none of 1804 candidates verified",
+        "spec": [
+          "detach_",
+          [
+            "contiguous",
+            "v269"
+          ]
+        ],
+        "tried": 1804,
+        "verdict": "refused"
+      },
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "ops": 2,
+      "opset": [
+        "contiguous",
+        "detach_"
+      ],
+      "sites": 16
+    },
+    "synop_f0576b5150": {
+      "alpha": "(transpose (reshape 'v0', shape=a2), dim0=a0, dim1=a1)",
+      "depth": 1,
+      "equal_sites": 8,
+      "fold": {
+        "bound_norm": "spectral",
+        "cert": null,
+        "cond": null,
+        "derivation": [],
+        "dspec": null,
+        "error_bound": null,
+        "kind": "law",
+        "law": "",
+        "lhs": {
+          "args": [
+            {
+              "args": [
+                {
+                  "mvar": "v50"
+                }
+              ],
+              "attrs": {
+                "shape": "a12"
+              },
+              "op": "reshape"
+            }
+          ],
+          "attrs": {
+            "dim0": "a5",
+            "dim1": "a6"
+          },
+          "op": "transpose"
+        },
+        "missing_hooks": [],
+        "name": "prim:synop_f0576b5150",
+        "rhs": {
+          "args": [
+            {
+              "mvar": "v50"
+            }
+          ],
+          "attrs": {
+            "a12": "a12",
+            "a5": "a5",
+            "a6": "a6"
+          },
+          "op": "synop_f0576b5150"
+        },
+        "serializable": true,
+        "tags": [],
+        "version": 2
+      },
+      "handler": {
+        "best_err": "inf",
+        "domain": [
+          {
+            "v50": [
+              1,
+              1500,
+              512
+            ]
+          },
+          {
+            "v50": [
+              1,
+              1500,
+              512
+            ]
+          },
+          {
+            "v50": [
+              1,
+              1,
+              512
+            ]
+          },
+          {
+            "v50": [
+              1,
+              1,
+              512
+            ]
+          }
+        ],
+        "note": "grammar exhausted: none of 1804 candidates verified",
+        "spec": [
+          "transpose",
+          [
+            "reshape",
+            "v50",
+            {
+              "shape": [
+                1,
+                -1,
+                8,
+                64
+              ]
+            }
+          ],
+          {
+            "dim0": 1,
+            "dim1": 2
+          }
+        ],
+        "tried": 1804,
+        "verdict": "refused"
+      },
+      "mods": [
+        "t5:decoder",
+        "whisper:decoder"
+      ],
+      "ops": 2,
+      "opset": [
+        "reshape",
+        "transpose"
+      ],
+      "sites": 16
     }
   }
 }

@@ -12015,6 +12015,61 @@
       ],
       "hnl": null,
       "unsupported": "handler family 'gather' has no tensor.* model"
+    },
+    {
+      "id": "denotation:synop_0b304215b3",
+      "op": "synop_0b304215b3",
+      "kind": "denotation",
+      "mvars": [
+        "v269"
+      ],
+      "spec": {
+        "spec": "detach_",
+        "args": [
+          {
+            "spec": "contiguous",
+            "args": [
+              {
+                "mvar": "v269"
+              }
+            ],
+            "attrs": {}
+          }
+        ],
+        "attrs": {}
+      },
+      "hnl": null,
+      "unsupported": "op 'detach_' is not on the tensor.* model surface"
+    },
+    {
+      "id": "denotation:synop_f0576b5150",
+      "op": "synop_f0576b5150",
+      "kind": "denotation",
+      "mvars": [
+        "v50"
+      ],
+      "spec": {
+        "spec": "transpose",
+        "args": [
+          {
+            "spec": "reshape",
+            "args": [
+              {
+                "mvar": "v50"
+              }
+            ],
+            "attrs": {
+              "shape": "a12"
+            }
+          }
+        ],
+        "attrs": {
+          "dim0": "a5",
+          "dim1": "a6"
+        }
+      },
+      "hnl": "tensor.transpose(tensor.reshape(v50, a12), a5, a6)",
+      "unsupported": null
     }
   ],
   "verdicts": {

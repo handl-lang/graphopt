@@ -5138,3 +5138,63 @@
         identity: null
         law: "synthesized primitive \u2014 denotation is the mined manual subgraph (add (mul 'v0', (add (mul 'v1', (add 'v2', (mul 'v3', 'v4'))), (mul 'v5', (unsqueeze 'v6', dim=a0)))), (mul 'v7', (unsqueeze (select (linear 'v8', 'v9', 'v10'), dim=1, index=a1), dim=a0)))"
       denotation: "prim"
+- id: "ast.mlopt.synop_0b304215b3"
+  node_kind: "synop_0b304215b3"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_0b304215b3"
+      arity: 1
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (detach_ (contiguous 'v0'))"
+      denotation: "prim"
+- id: "ast.mlopt.synop_f0576b5150"
+  node_kind: "synop_f0576b5150"
+  children:
+    - role: "arg0"
+  payload_schema:
+    type: "object"
+    properties:
+      attrs:
+        type: "object"
+      children:
+        type: "array"
+        minItems: 1
+        maxItems: 1
+    required:
+      - "children"
+  mlopt:
+    op:
+      name: "synop_f0576b5150"
+      arity: 1
+      tags: []
+      attrs: []
+      required: []
+      gen:
+        n_in: 1
+        n_out: 1
+        commutative: false
+        associative: false
+        identity: null
+        law: "synthesized primitive \u2014 denotation is the mined manual subgraph (transpose (reshape 'v0', shape=a2), dim0=a0, dim1=a1)"
+      denotation: "prim"

@@ -4914,6 +4914,38 @@
       "required": [],
       "gen": null,
       "denotation": "torch"
+    },
+    {
+      "name": "synop_0b304215b3",
+      "arity": 1,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (detach_ (contiguous 'v0'))"
+      },
+      "denotation": "prim"
+    },
+    {
+      "name": "synop_f0576b5150",
+      "arity": 1,
+      "tags": [],
+      "attrs": [],
+      "required": [],
+      "gen": {
+        "n_in": 1,
+        "n_out": 1,
+        "commutative": false,
+        "associative": false,
+        "identity": null,
+        "law": "synthesized primitive \u2014 denotation is the mined manual subgraph (transpose (reshape 'v0', shape=a2), dim0=a0, dim1=a1)"
+      },
+      "denotation": "prim"
     }
   ]
 }
