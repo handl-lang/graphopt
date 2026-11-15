@@ -253,6 +253,10 @@ ignore = [
 # annotated, so `ty check` is clean with no opt-outs.  Keep it that way
 # — add annotations, not exclude entries.  New modules under
 # packages/*/src/ are checked automatically.
+# The mlopt_discovery compatibility shims (sys.modules swaps onto
+# discoverykit, plan 0034) carry sibling .pyi stubs that re-export the
+# discoverykit target plus a module __getattr__ for private names —
+# that is how ty sees through the lazy seam without changing runtime.
 [tool.ty.environment]
 python-version = "3.13"
 extra-paths = [
