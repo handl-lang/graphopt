@@ -52,7 +52,7 @@ from typing import Any
 
 from mlopt_core.egraph import EGraph
 from mlopt_core.egraph.terms import _term_instantiate
-from mlopt_core.ir import Op
+from mlopt_core.ir import Op, attr_to_data
 
 from mlopt_discovery import vocabdir
 
@@ -218,10 +218,11 @@ def _parts(node: Any) -> tuple | None:
 def term_to_ast(term: Any) -> tuple[list[dict], int]:
     """Flatten *term* post-order to the peer's node list + root index.
 
-    Node payloads carry only ``children`` — attrs are not part of the
-    comparison surface (the same scope ``bench/drivers/audit/
-    handl_differential.py`` measured: 24 laws agree, the rest are
-    classified skipped/declined/guard, never silently compared).
+    Op payloads carry ``children`` plus ``attrs`` (``attr_to_data``-
+    encoded) — the attr guards the bridge now emits
+    (``TransformCondition::AttrEq``/``SameAttr``) read exactly this
+    channel, and carrying it is what lets ``chunk_single`` decline a
+    ``chunks != 1`` match instead of over-firing.
     """
     arena: list[dict] = []
     root = _flatten(term, arena)
@@ -239,22 +240,45 @@ def _flatten(node: Any, arena: list[dict]) -> int:
         )
         return len(arena) - 1
     kids = [_flatten(a, arena) for a in parts[1]]
-    arena.append({"kind": parts[0], "payload": {"children": kids}})
+    payload: dict = {"children": kids}
+    if node.attrs:
+        payload["attrs"] = {
+            k: attr_to_data(v) for k, v in node.attrs.items()
+        }
+    arena.append({"kind": parts[0], "payload": payload})
     return len(arena) - 1
 
 
+def _render_attrs(node: Any) -> dict | None:
+    """Return the ``attrs`` channel of a comparison render, or ``None``.
+
+    ``None`` (key omitted) when the node carries no attrs — the same
+    posture on both sides keeps ``{kind, children}``-only laws
+    comparing exactly as before while attr-carrying rewrites are now
+    checked on their attr output too.
+    """
+    attrs = getattr(node, "attrs", None)
+    if not attrs:
+        return None
+    return {k: attr_to_data(v) for k, v in attrs.items()}
+
+
 def render_term(node: Any) -> dict:
-    """Render a mlopt term as ``{kind, children}`` (handl's shape)."""
+    """Render a mlopt term as ``{kind, children[, attrs]}`` (handl's shape)."""
     parts = _parts(node)
     if parts is None:
         return {
             "kind": str(getattr(node, "name", node)),
             "children": [],
         }
-    return {
+    out = {
         "kind": parts[0],
         "children": [render_term(a) for a in parts[1]],
     }
+    attrs = _render_attrs(node)
+    if attrs is not None:
+        out["attrs"] = attrs
+    return out
 
 
 def ast_result_term(result: dict) -> dict:
@@ -267,12 +291,19 @@ def ast_result_term(result: dict) -> dict:
 def _from_handl(arena: list[dict], index: int) -> dict:
     node = arena[index]
     payload = node.get("payload") or {}
-    return {
+    out = {
         "kind": node["kind"],
         "children": [
             _from_handl(arena, i) for i in payload.get("children", [])
         ],
     }
+    # Attrs ride the payload already ``attr_to_data``-encoded (the
+    # ``$attr_of`` markers copy them verbatim), so they compare
+    # directly against ``render_term``'s encoding.
+    attrs = payload.get("attrs")
+    if attrs:
+        out["attrs"] = attrs
+    return out
 
 
 def is_structural_rhs(node: Any) -> bool:

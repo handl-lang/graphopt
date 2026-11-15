@@ -160,27 +160,39 @@ class TestLawToHandl:
         assert cell is not None and cell.body.rhs == "b"
 
     def test_root_eliminating_bank_law_emits_replace(self):
-        """Every root-eliminating bank law emits ``!Replace { path }``.
+        """Root-eliminating bank laws emit ``!Replace`` *or* refuse loudly.
 
         The 5 shipped root-eliminating laws (``id_add``, ``id_mul``,
         ``double_neg``, ``transpose_noop``, ``chunk_single``) all have a
-        bare-metavar rhs *bound in the lhs*, so each maps to handl's
-        ``!Replace`` rule form (ADR-0127): the rewritten node IS the existing
-        descendant at the metavar's bound path — no node is created.  Each
-        keeps its dispatch ``node_kind`` and round-trips through the
-        ``mlopt`` record.
+        bare-metavar rhs *bound in the lhs*.  Four carry guards handl's
+        vocabulary now expresses — ``id_add``/``id_mul``/``double_neg``
+        unguarded, ``chunk_single`` guarded by ``attr-eq CK 1`` — so each
+        maps to handl's ``!Replace`` rule form (ADR-0127) *with* its
+        ``when`` clauses.  ``transpose_noop``'s ``axes-noop`` guard needs
+        mlopt's shape oracle, which handl's AST does not carry, so it
+        refuses explicitly as ``!Native "mlopt.law.transpose_noop"``
+        rather than over-fire (Phase-B report §4).  Every row keeps its
+        dispatch ``node_kind`` and round-trips through ``mlopt``.
         """
         from mlopt_core.laws import ALL_RULES
 
         eliminating = [r for r in ALL_RULES if isinstance(r.rhs, str)]
         assert len(eliminating) == 5, "bank root-eliminating set moved"
+        refused = {"transpose_noop"}
         for law in eliminating:
             paths: dict = {}
             handl._metavar_paths(law.lhs, paths)
             row = handl.law_to_handl(law, law.name)
-            assert row["rule"] == {
-                "Replace": {"path": list(paths[law.rhs])}
-            }, law.name
+            if law.name in refused:
+                assert row["rule"] == {
+                    "Native": f"mlopt.law.{law.name}"
+                }, law.name
+                assert "guard" in row["mlopt"]["handl_gaps"]
+            else:
+                assert row["rule"] == {
+                    "Replace": {"path": list(paths[law.rhs])}
+                }, law.name
+                assert row["mlopt"]["handl_gaps"] == []
             assert row["node_kind"] is not None, "dispatch kind is kept"
             cell = handl.cell_from_handl(row)
             assert cell is not None
@@ -190,7 +202,14 @@ class TestLawToHandl:
         r = R("x", Op.make("eye", n=4), Op.make("eye", n=4))
         row = handl.law_to_handl(r, "x")
         assert row["node_kind"] == "eye"
-        assert row["when"] == {"ChildCount": 0}
+        # The literal attr ``n=4`` is now a real guard clause, not
+        # silently dropped — ``eye(n=5)`` must not match.
+        assert row["when"] == {
+            "And": [
+                {"ChildCount": 0},
+                {"AttrEq": {"path": [], "attr": "n", "value": 4}},
+            ]
+        }
 
     def test_op_parts_accepts_spec_tuples(self):
         assert handl._op_parts(("matmul", "s", "v")) == (

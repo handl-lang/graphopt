@@ -36,10 +36,21 @@ Scope, stated honestly
   ``!Replace { path }`` rule form (handl ADR-0127) expresses exactly that,
   so these 5 laws are no longer classified-and-skipped: they are fired on
   both engines and compared like any other structural law.
-* **Guarded laws** are included only when their guard holds for the
-  synthesized term (otherwise the two engines agree by both declining).
-* **One term per law.**  This is a smoke-level differential, not
-  exhaustive: it looks for *disagreement*, and one is enough to matter.
+* **Guarded laws** are instantiated with *attribute* metavars bound to
+  a small candidate pool, so a law is exercised on both sides of its
+  guard — the Phase-B decline-parity arm.  Each (law, instantiation)
+  pair is classified by the *pair* of engine outcomes: ``agree`` /
+  ``disagree`` (both fired), ``overfire`` (**mlopt declined, handl
+  fired** — the bug class this arm exists to catch), ``underfire``
+  (mlopt fired, faithful handl rule declined), ``refused`` (mlopt
+  fired where the bridge emitted ``!Native`` — the honest gap), and
+  ``both_declined`` (the parity evidence).  ``overfire`` and
+  ``disagree`` fail the run; ``underfire``/``refused`` are reported.
+* **A handful of terms per law.**  Structural laws get one
+  instantiation; laws with attribute metavars get up to
+  ``_MAX_ATTR_CANDIDATES``.  This is a smoke-level differential, not
+  exhaustive: it looks for *disagreement* and *over-fire*, and one of
+  either is enough to matter.
 
 Usage::
 
@@ -111,20 +122,97 @@ def _parts(node: object) -> tuple | None:
     return None
 
 
-def _instantiate(node: object, fresh: dict) -> object:
-    """Replace every metavar with a fresh variable."""
+def _instantiate(
+    node: object, fresh: dict, attrs: dict | None = None
+) -> object:
+    """Replace every metavar with a fresh variable — attrs included.
+
+    ``attrs`` maps *attribute* metavars (the string values an ``Op``'s
+    ``attrs`` dict carries in a pattern — mlopt binds them under
+    ``"$attr:<name>"``) to the concrete values this candidate
+    instantiation chose; unbound names stay literal strings, matching
+    mlopt's own ``subst.get("$attr:" + v, v)`` fallback.  Literal attr
+    values pass through untouched, so an lhs like ``eye(n=4)`` still
+    requires ``n == 4`` on both engines.
+    """
     if isinstance(node, str):
         return fresh.setdefault(node, Var(f"v_{node}", "f64"))
     parts = _parts(node)
     if parts is None:
         return node
+    kwargs: dict = {}
+    if isinstance(node, Op) and node.attrs:
+        for k, v in node.attrs.items():
+            if isinstance(v, str):
+                kwargs[k] = (attrs or {}).get(v, v)
+            else:
+                kwargs[k] = v
     return Op.make(
-        parts[0], *[_instantiate(a, fresh) for a in parts[1]]
+        parts[0],
+        *[_instantiate(a, fresh, attrs) for a in parts[1]],
+        **kwargs,
     )
 
 
+def _attr_metavars(node: object, out: set | None = None) -> set:
+    """Collect the attribute-metavar names in an lhs pattern."""
+    if out is None:
+        out = set()
+    if isinstance(node, str):
+        return out
+    parts = _parts(node)
+    if parts is None:
+        return out
+    if isinstance(node, Op):
+        for v in node.attrs.values():
+            if isinstance(v, str):
+                out.add(v)
+    for a in parts[1]:
+        _attr_metavars(a, out)
+    return out
+
+
+#: Candidate values for attribute metavars when synthesizing inputs.
+#: Small ints cover the attr guards the bank actually carries
+#: (``attr-eq CK 1``, dim/index comparisons); anything richer shows up
+#: as a ``guard``/``skipped`` outcome, not a silent pass.
+_ATTR_POOL = (0, 1, 2)
+
+#: Cap on instantiations per law — enough to hit both sides of an
+#: ``attr-eq``-style guard without a combinatorial sweep.
+_MAX_ATTR_CANDIDATES = 8
+
+
+def _attr_candidates(rule: object) -> list[dict]:
+    """Yield up to ``_MAX_ATTR_CANDIDATES`` attr assignments for *rule*.
+
+    Laws without attr metavars yield one empty assignment (the
+    pre-attrs behavior).  Otherwise the product of ``_ATTR_POOL`` over
+    the metavars is enumerated — deduplicated and truncated — which
+    lands on both sides of literal guards like ``attr-eq CK 1`` for
+    the values the pool contains.
+    """
+    import itertools
+
+    mvars = sorted(_attr_metavars(rule.lhs))
+    if not mvars:
+        return [{}]
+    out: list[dict] = []
+    seen: set = set()
+    for combo in itertools.product(_ATTR_POOL, repeat=len(mvars)):
+        assign = dict(zip(mvars, combo, strict=True))
+        key = tuple(assign[m] for m in mvars)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(assign)
+        if len(out) >= _MAX_ATTR_CANDIDATES:
+            break
+    return out
+
+
 def _render(node: object) -> dict:
-    """Render a mlopt term as ``{kind, children}`` (handl's shape)."""
+    """Render a mlopt term as ``{kind, children[, attrs]}`` (handl's shape)."""
     return render_term(node)
 
 
@@ -142,18 +230,45 @@ def _handl_rewrite(rule_id: str, term: object) -> dict | None:
     return peer.apply_rule(rule_id, nodes, root)
 
 
-def _outcome(rule: object) -> str:
-    """Compare one law on both engines and return its outcome.
+def _handl_refused(rule: object) -> bool:
+    """Whether the bridge emitted an explicit ``!Native`` refusal.
+
+    A refused law declines on *every* input by construction — mlopt
+    firing where handl refuses is the honest gap the refusal names,
+    not an over-fire; it is bucketed ``refused`` rather than counted
+    against parity.
+    """
+    from mlopt_discovery.handl import law_to_handl
+
+    row = law_to_handl(rule, rule.name)
+    rule_body = row.get("rule") or {}
+    return "Native" in rule_body
+
+
+def _outcome(rule: object, attrs: dict) -> str:
+    """Compare one law on one instantiation; return the outcome pair's verdict.
 
     ``"skipped"`` — the rhs carries a leaf (not directly comparable yet,
-    plan 0030 step 3); ``"guard"`` — a guard raised on the synthesized term;
-    ``"declined"`` — an engine did not fire; ``"agree"``/``"disagree"`` —
-    both engines fired and the rendered results (did not) match.
+    plan 0030 step 3); ``"guard"`` — a guard raised on the synthesized
+    term; ``"overfire"`` — **mlopt declined and handl fired** (the
+    Phase-B bug class: an unguarded projection rewriting where the law
+    says no); ``"underfire"`` — mlopt fired and a *faithful* handl rule
+    declined; ``"refused"`` — mlopt fired where the bridge emitted an
+    explicit ``!Native``; ``"both_declined"`` — the decline-parity
+    evidence; ``"declined"`` — mlopt fired and handl declined on a
+    leaf-rhs-skipped path is unreachable, kept for clarity;
+    ``"agree"``/``"disagree"`` — both engines fired and the rendered
+    results (did not) match.
     """
     if not _is_structural(rule.rhs):
         return "skipped"
     fresh: dict = {}
-    term = _instantiate(rule.lhs, fresh)
+    try:
+        term = _instantiate(rule.lhs, fresh, attrs)
+    except (TypeError, ValueError):
+        # An attr assignment the op's ATTR_SCHEMA rejects — not a
+        # term either engine could see; skip the candidate.
+        return "skipped"
     graph = EGraph()
     root_eid = graph.add_term(term)
     try:
@@ -165,12 +280,15 @@ def _outcome(rule: object) -> str:
         # synthesizing one term per law, not an engine disagreement --
         # counted separately so it cannot hide a real one.
         return "guard"
-    if not fired:
-        return "declined"
-    expected = _render(_instantiate(rule.rhs, fresh))
     got = _handl_rewrite(f"transform.mlopt.{rule.name}", term)
-    if got is None:
-        return "declined"
+    handl_fired = got is not None
+    if not fired:
+        # mlopt declined — the decline-parity arm: handl must decline
+        # too.  Firing here is the over-fire Phase B measured.
+        return "overfire" if handl_fired else "both_declined"
+    if not handl_fired:
+        return "refused" if _handl_refused(rule) else "underfire"
+    expected = _render(_instantiate(rule.rhs, fresh, attrs))
     actual = ast_result_term(got)
     return "agree" if actual == expected else "disagree"
 
@@ -198,35 +316,66 @@ def main(argv: list[str] | None = None) -> int:
     outcomes = {
         "agree": 0,
         "disagree": 0,
-        "declined": 0,
+        "overfire": 0,
+        "underfire": 0,
+        "both_declined": 0,
+        "refused": 0,
         "skipped": 0,
         "guard": 0,
     }
     disagreements: list[str] = []
+    overfires: list[str] = []
+    underfires: list[str] = []
     #: (name, outcome) for every root-eliminating law — the 5 whose
     #: expression handl's `!Replace` (ADR-0127) made possible.  Reported
     #: per law so a decline cannot hide among the aggregate buckets.
     elim: list[tuple[str, str]] = []
+    #: Worst outcome seen per law across its attr candidates — a law
+    #: only "passes" when no instantiation over-fires or disagrees.
+    law_worst: dict[str, str] = {}
+    _SEVERITY = {
+        "agree": 0,
+        "both_declined": 0,
+        "skipped": 0,
+        "guard": 0,
+        "refused": 1,
+        "underfire": 2,
+        "disagree": 3,
+        "overfire": 4,
+    }
     for rule in ALL_RULES:
         if (
             limit is not None
             and outcomes["agree"] + outcomes["disagree"] >= limit
         ):
             break
-        result = _outcome(rule)
-        outcomes[result] += 1
-        if result == "disagree":
-            disagreements.append(rule.name)
+        for attrs in _attr_candidates(rule):
+            result = _outcome(rule, attrs)
+            outcomes[result] += 1
+            prev = law_worst.get(rule.name)
+            if prev is None or _SEVERITY[result] > _SEVERITY[prev]:
+                law_worst[rule.name] = result
+            if result == "disagree" and rule.name not in disagreements:
+                disagreements.append(rule.name)
+            elif result == "overfire" and rule.name not in overfires:
+                overfires.append(rule.name)
+            elif result == "underfire" and rule.name not in underfires:
+                underfires.append(rule.name)
         if _eliminates_root(rule):
-            elim.append((rule.name, result))
+            elim.append((rule.name, law_worst[rule.name]))
 
     agree, disagree = outcomes["agree"], outcomes["disagree"]
     print("differential rewrite check — mlopt vs handl")
     print(f"  laws compared      : {agree + disagree}")
     print(f"  agree              : {agree}")
     print(f"  DISAGREE           : {disagree}")
+    print(f"  OVERFIRE (mlopt no, handl yes): {outcomes['overfire']}")
+    print(
+        f"  underfire (faithful rule declined): {outcomes['underfire']}"
+    )
+    print(f"  both declined      : {outcomes['both_declined']}")
+    print(f"  refused (!Native)  : {outcomes['refused']}")
     print(f"  skipped (leaf rhs) : {outcomes['skipped']}")
-    print(f"  declined by an engine: {outcomes['declined']}")
     print(f"  guard raised (synth) : {outcomes['guard']}")
     if elim:
         print(
@@ -237,7 +386,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"    - {name}: {result}")
     if disagreements:
         print("  disagreements:", ", ".join(disagreements[:10]))
-    return 1 if disagree else 0
+    if overfires:
+        print("  overfires:", ", ".join(overfires[:10]))
+    if underfires:
+        print("  underfires:", ", ".join(underfires[:10]))
+    return 1 if (disagree or outcomes["overfire"]) else 0
 
 
 if __name__ == "__main__":

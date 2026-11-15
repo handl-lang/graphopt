@@ -186,6 +186,8 @@ _TAGS = frozenset(
         "PayloadEq",
         "ChildPayloadEq",
         "ChildCount",
+        "AttrEq",
+        "SameAttr",
         "And",
         "Or",
         "Not",

@@ -136,7 +136,7 @@ benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "
 # discoverykit (plan 0034 phase 1): the domain-free mining core
 # extracted from mlopt-discovery — local path dep while the repo is
 # pre-remote; Phase 2 flips this to the git+tag pin.
-discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.1" }
+discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.2" }
 mlopt-torch = { workspace = true }
 mlopt-carriers = { workspace = true }
 mlopt-cuda = { workspace = true }

@@ -43,6 +43,7 @@
         - 0
       b:
         - 1
+    handl_gaps: []
   when:
     !ChildCount 2
   priority: 1
@@ -91,6 +92,7 @@
         - 0
       b:
         - 1
+    handl_gaps: []
   when:
     !ChildCount 2
   priority: 1
@@ -158,6 +160,7 @@
       c:
         - 1
         - 1
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -229,6 +232,7 @@
       c:
         - 1
         - 1
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -270,8 +274,13 @@
     metavars:
       a:
         - 0
+    handl_gaps: []
   when:
-    !ChildCount 2
+    !And
+    - !KindAt
+      index: 1
+      kind: "0"
+    - !ChildCount 2
   priority: 3
 - id: "transform.mlopt.id_mul"
   pass: "mlopt"
@@ -307,8 +316,13 @@
     metavars:
       a:
         - 0
+    handl_gaps: []
   when:
-    !ChildCount 2
+    !And
+    - !KindAt
+      index: 1
+      kind: "1"
+    - !ChildCount 2
   priority: 3
 - id: "transform.mlopt.double_neg"
   pass: "mlopt"
@@ -348,6 +362,7 @@
       a:
         - 0
         - 0
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -405,6 +420,7 @@
         - 0
       b:
         - 1
+    handl_gaps: []
   when:
     !ChildCount 2
   priority: 1
@@ -455,6 +471,7 @@
     metavars:
       x:
         - 0
+    handl_gaps: []
   when:
     !ChildCount 1
   priority: 1
@@ -462,11 +479,7 @@
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "silu"
-    children:
-      - !KeepPath
-        - 0
+    !Native "mlopt.law.silu_fold"
   mlopt:
     law:
       version: 2
@@ -501,6 +514,8 @@
     metavars:
       x:
         - 0
+    handl_gaps:
+      - "repeat_mvar"
   when:
     !And
     - !KindAt
@@ -574,6 +589,7 @@
         - 0
       u:
         - 1
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -585,11 +601,7 @@
   pass: "mlopt"
   node_kind: "div"
   rule:
-    !Declarative
-    target_kind: "softsign"
-    children:
-      - !KeepPath
-        - 0
+    !Native "mlopt.law.softsign_fold"
   mlopt:
     law:
       version: 2
@@ -627,6 +639,10 @@
     metavars:
       x:
         - 0
+    handl_gaps:
+      - "repeat_mvar"
+      - "spine_deep"
+      - "leaf_deep"
   when:
     !And
     - !KindAt
@@ -675,6 +691,7 @@
     metavars:
       x:
         - 0
+    handl_gaps: []
   when:
     !ChildCount 1
   priority: 1
@@ -717,8 +734,13 @@
     metavars:
       x:
         - 0
+    handl_gaps: []
   when:
-    !ChildCount 2
+    !And
+    - !KindAt
+      index: 1
+      kind: "2"
+    - !ChildCount 2
   priority: 1
 - id: "transform.mlopt.square_to_pow"
   pass: "mlopt"
@@ -765,6 +787,7 @@
     metavars:
       x:
         - 0
+    handl_gaps: []
   when:
     !ChildCount 1
   priority: 2
@@ -772,11 +795,7 @@
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "square"
-    children:
-      - !KeepPath
-        - 0
+    !Native "mlopt.law.mul_square"
   mlopt:
     law:
       version: 2
@@ -808,6 +827,8 @@
     metavars:
       u:
         - 0
+    handl_gaps:
+      - "repeat_mvar"
   when:
     !ChildCount 2
   priority: 6
@@ -815,18 +836,7 @@
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "select"
-    children:
-      - !Create
-        kind: "mul"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-          - !KeepPath
-            - 1
-            - 0
+    !Native "mlopt.law.select_mul"
   mlopt:
     law:
       version: 2
@@ -887,6 +897,8 @@
       v:
         - 1
         - 0
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -896,14 +908,34 @@
       index: 1
       kind: "select"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim"
+    - !SameAttr
+      path_a:
+        - 0
+      attr_a: "dim"
+      path_b:
+        - 1
+      attr_b: "dim"
+    - !AttrEq
+      path:
+        - 0
+      attr: "index"
+    - !SameAttr
+      path_a:
+        - 0
+      attr_a: "index"
+      path_b:
+        - 1
+      attr_b: "index"
   priority: 7
 - id: "transform.mlopt.transpose_noop"
   pass: "mlopt"
   node_kind: "transpose"
   rule:
-    !Replace
-    path:
-      - 0
+    !Native "mlopt.law.transpose_noop"
   mlopt:
     law:
       version: 2
@@ -936,8 +968,17 @@
     metavars:
       u:
         - 0
+    handl_gaps:
+      - "guard"
   when:
-    !ChildCount 1
+    !And
+    - !ChildCount 1
+    - !AttrEq
+      path: []
+      attr: "dim0"
+    - !AttrEq
+      path: []
+      attr: "dim1"
   priority: 1
 - id: "transform.mlopt.chunk_single"
   pass: "mlopt"
@@ -978,21 +1019,29 @@
     metavars:
       u:
         - 0
+    handl_gaps: []
   when:
-    !ChildCount 1
+    !And
+    - !ChildCount 1
+    - !AttrEq
+      path: []
+      attr: "chunks"
+    - !AttrEq
+      path: []
+      attr: "dim"
+    - !AttrEq
+      path: []
+      attr: "index"
+    - !AttrEq
+      path: []
+      attr: "chunks"
+      value: 1
   priority: 1
 - id: "transform.mlopt.mul_unsq_pad_l"
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "mul"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 1
+    !Native "mlopt.law.mul_unsq_pad_l"
   mlopt:
     law:
       version: 2
@@ -1044,25 +1093,24 @@
         - 0
       v:
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "unsqueeze"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim"
   priority: 8
 - id: "transform.mlopt.mul_unsq_pad_r"
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "mul"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-        - 0
+    !Native "mlopt.law.mul_unsq_pad_r"
   mlopt:
     law:
       version: 2
@@ -1114,25 +1162,24 @@
       v:
         - 1
         - 0
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
       index: 1
       kind: "unsqueeze"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 1
+      attr: "dim"
   priority: 9
 - id: "transform.mlopt.sub_unsq_pad_l"
   pass: "mlopt"
   node_kind: "sub"
   rule:
-    !Declarative
-    target_kind: "sub"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 1
+    !Native "mlopt.law.sub_unsq_pad_l"
   mlopt:
     law:
       version: 2
@@ -1184,25 +1231,24 @@
         - 0
       v:
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "unsqueeze"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim"
   priority: 2
 - id: "transform.mlopt.add_unsq_pad_r"
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "add"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-        - 0
+    !Native "mlopt.law.add_unsq_pad_r"
   mlopt:
     law:
       version: 2
@@ -1254,29 +1300,24 @@
       v:
         - 1
         - 0
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
       index: 1
       kind: "unsqueeze"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 1
+      attr: "dim"
   priority: 4
 - id: "transform.mlopt.mul_unsq_nat"
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "unsqueeze"
-    children:
-      - !Create
-        kind: "mul"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-          - !KeepPath
-            - 1
-            - 0
+    !Native "mlopt.law.mul_unsq_nat"
   mlopt:
     law:
       version: 2
@@ -1331,6 +1372,8 @@
       v:
         - 1
         - 0
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -1340,19 +1383,23 @@
       index: 1
       kind: "unsqueeze"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim"
+    - !SameAttr
+      path_a:
+        - 0
+      attr_a: "dim"
+      path_b:
+        - 1
+      attr_b: "dim"
   priority: 10
 - id: "transform.mlopt.mul_reshape_inert_l"
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "mul"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 1
+    !Native "mlopt.law.mul_reshape_inert_l"
   mlopt:
     law:
       version: 2
@@ -1398,23 +1445,24 @@
         - 0
       v:
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "reshape"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "shape"
   priority: 11
 - id: "transform.mlopt.softmax_fold"
   pass: "mlopt"
   node_kind: "div"
   rule:
-    !Declarative
-    target_kind: "softmax"
-    children:
-      - !KeepPath
-        - 0
-        - 0
+    !Native "mlopt.law.softmax_fold"
   mlopt:
     law:
       version: 2
@@ -1477,6 +1525,11 @@
       u:
         - 0
         - 0
+    handl_gaps:
+      - "derive"
+      - "repeat_mvar"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
@@ -1486,17 +1539,20 @@
       index: 1
       kind: "sum"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 1
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 1
+      attr: "keepdim"
   priority: 2
 - id: "transform.mlopt.glu_fold"
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "glu"
-    children:
-      - !KeepPath
-        - 0
-        - 0
+    !Native "mlopt.law.glu_fold"
   mlopt:
     law:
       version: 2
@@ -1554,6 +1610,10 @@
       u:
         - 0
         - 0
+    handl_gaps:
+      - "repeat_mvar"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
@@ -1563,19 +1623,46 @@
       index: 1
       kind: "sigmoid"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "chunks"
+      value: 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "index"
+      value: 0
+    - !AttrEq
+      path:
+        - 1
+        - 0
+      attr: "chunks"
+      value: 2
+    - !AttrEq
+      path:
+        - 1
+        - 0
+      attr: "index"
+      value: 1
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim"
+    - !SameAttr
+      path_a:
+        - 0
+      attr_a: "dim"
+      path_b:
+        - 1
+        - 0
+      attr_b: "dim"
   priority: 12
 - id: "transform.mlopt.rms_norm_fold"
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "rms_norm"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 1
+    !Native "mlopt.law.rms_norm_fold"
   mlopt:
     law:
       version: 2
@@ -1669,22 +1756,37 @@
         - 1
       w:
         - 1
+    handl_gaps:
+      - "derive"
+      - "repeat_mvar"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "mul"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+        - 1
+        - 0
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 1
+        - 0
+        - 0
+      attr: "keepdim"
   priority: 13
 - id: "transform.mlopt.rms_norm_fold_nogain"
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "rms_norm"
-    children:
-      - !KeepPath
-        - 0
+    !Native "mlopt.law.rms_norm_fold_nogain"
   mlopt:
     law:
       version: 2
@@ -1767,23 +1869,35 @@
         - 1
         - 0
         - 1
+    handl_gaps:
+      - "derive"
+      - "repeat_mvar"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 1
       kind: "rsqrt"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 1
+        - 0
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 1
+        - 0
+        - 0
+      attr: "keepdim"
   priority: 14
 - id: "transform.mlopt.div_sqrt_to_rsqrt"
   pass: "mlopt"
   node_kind: "div"
   rule:
-    !Declarative
-    target_kind: "rsqrt"
-    children:
-      - !KeepPath
-        - 1
-        - 0
+    !Native "mlopt.law.div_sqrt_to_rsqrt"
   mlopt:
     law:
       version: 2
@@ -1824,6 +1938,8 @@
       u:
         - 1
         - 0
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -1835,11 +1951,7 @@
   pass: "mlopt"
   node_kind: "pow"
   rule:
-    !Declarative
-    target_kind: "rsqrt"
-    children:
-      - !KeepPath
-        - 0
+    !Native "mlopt.law.pow_to_rsqrt"
   mlopt:
     law:
       version: 2
@@ -1876,6 +1988,8 @@
         - 0
       P:
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !ChildCount 2
   priority: 2
@@ -1922,6 +2036,7 @@
       u:
         - 0
         - 0
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -1992,6 +2107,7 @@
         - 1
       c:
         - 1
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -2003,20 +2119,7 @@
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "div"
-    children:
-      - !Create
-        kind: "matmul"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-          - !KeepPath
-            - 1
-      - !KeepPath
-        - 0
-        - 1
+    !Native "mlopt.law.matmul_div_distribute"
   mlopt:
     law:
       version: 2
@@ -2064,6 +2167,8 @@
         - 1
       v:
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -2075,21 +2180,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "div"
-    children:
-      - !Create
-        kind: "add"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-          - !KeepPath
-            - 1
-            - 0
-      - !KeepPath
-        - 0
-        - 1
+    !Native "mlopt.law.div_add_factor"
   mlopt:
     law:
       version: 2
@@ -2142,6 +2233,9 @@
       y:
         - 1
         - 0
+    handl_gaps:
+      - "repeat_mvar"
+      - "guard"
   when:
     !And
     - !KindAt
@@ -2156,25 +2250,7 @@
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "add"
-    children:
-      - !Create
-        kind: "matmul"
-        children:
-          - !KeepPath
-            - 0
-          - !KeepPath
-            - 1
-            - 0
-      - !Create
-        kind: "matmul"
-        children:
-          - !KeepPath
-            - 0
-          - !KeepPath
-            - 1
-            - 1
+    !Native "mlopt.law.distribute_matmul_over_add"
   mlopt:
     law:
       version: 2
@@ -2251,6 +2327,8 @@
       b:
         - 1
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -2262,21 +2340,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "matmul"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !Create
-        kind: "add"
-        children:
-          - !KeepPath
-            - 0
-            - 1
-          - !KeepPath
-            - 1
-            - 1
+    !Native "mlopt.law.factor_matmul"
   mlopt:
     law:
       version: 2
@@ -2355,6 +2419,9 @@
       b:
         - 1
         - 1
+    handl_gaps:
+      - "repeat_mvar"
+      - "guard"
   when:
     !And
     - !KindAt
@@ -2438,6 +2505,7 @@
         - 1
       W:
         - 1
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -2449,21 +2517,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "matmul"
-    children:
-      - !Create
-        kind: "add"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-          - !KeepPath
-            - 1
-            - 0
-      - !KeepPath
-        - 0
-        - 1
+    !Native "mlopt.law.right_factor_matmul"
   mlopt:
     law:
       version: 2
@@ -2516,6 +2570,8 @@
       b:
         - 1
         - 0
+    handl_gaps:
+      - "repeat_mvar"
   when:
     !And
     - !KindAt
@@ -2530,21 +2586,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "matmul"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !Create
-        kind: "add"
-        children:
-          - !KeepPath
-            - 0
-            - 1
-          - !KeepPath
-            - 1
-            - 1
+    !Native "mlopt.law.weight_factor_matmul"
   mlopt:
     law:
       version: 2
@@ -2624,6 +2666,9 @@
       W2:
         - 1
         - 1
+    handl_gaps:
+      - "repeat_mvar"
+      - "guard"
   when:
     !And
     - !KindAt
@@ -2638,25 +2683,7 @@
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "add"
-    children:
-      - !Create
-        kind: "matmul"
-        children:
-          - !KeepPath
-            - 0
-          - !KeepPath
-            - 1
-            - 0
-      - !Create
-        kind: "matmul"
-        children:
-          - !KeepPath
-            - 0
-          - !KeepPath
-            - 1
-            - 1
+    !Native "mlopt.law.weight_distribute_matmul"
   mlopt:
     law:
       version: 2
@@ -2735,6 +2762,8 @@
       W2:
         - 1
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -2746,21 +2775,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "linear"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !Create
-        kind: "add"
-        children:
-          - !KeepPath
-            - 0
-            - 1
-          - !KeepPath
-            - 1
-            - 1
+    !Native "mlopt.law.weight_factor_linear"
   mlopt:
     law:
       version: 2
@@ -2839,6 +2854,9 @@
       W2:
         - 1
         - 1
+    handl_gaps:
+      - "repeat_mvar"
+      - "guard"
   when:
     !And
     - !KindAt
@@ -2853,25 +2871,7 @@
   pass: "mlopt"
   node_kind: "linear"
   rule:
-    !Declarative
-    target_kind: "add"
-    children:
-      - !Create
-        kind: "linear"
-        children:
-          - !KeepPath
-            - 0
-          - !KeepPath
-            - 1
-            - 0
-      - !Create
-        kind: "linear"
-        children:
-          - !KeepPath
-            - 0
-          - !KeepPath
-            - 1
-            - 1
+    !Native "mlopt.law.weight_distribute_linear"
   mlopt:
     law:
       version: 2
@@ -2948,6 +2948,8 @@
       W2:
         - 1
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -2959,21 +2961,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "linear"
-    children:
-      - !Create
-        kind: "add"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-          - !KeepPath
-            - 1
-            - 0
-      - !KeepPath
-        - 0
-        - 1
+    !Native "mlopt.law.right_factor_linear"
   mlopt:
     law:
       version: 2
@@ -3025,6 +3013,8 @@
       b:
         - 1
         - 0
+    handl_gaps:
+      - "repeat_mvar"
   when:
     !And
     - !KindAt
@@ -3099,6 +3089,7 @@
         - 1
       B:
         - 1
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -3171,6 +3162,7 @@
       A:
         - 1
         - 1
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -3182,33 +3174,7 @@
   pass: "mlopt"
   node_kind: "linear"
   rule:
-    !Declarative
-    target_kind: "add"
-    children:
-      - !Create
-        kind: "linear"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-          - !Create
-            kind: "matmul"
-            children:
-              - !KeepPath
-                - 1
-              - !KeepPath
-                - 0
-                - 1
-          - !Create
-            kind: "matmul"
-            children:
-              - !KeepPath
-                - 1
-              - !KeepPath
-                - 0
-                - 2
-      - !KeepPath
-        - 2
+    !Native "mlopt.law.assoc_linear_bias"
   mlopt:
     law:
       version: 2
@@ -3316,6 +3282,8 @@
         - 1
       b2:
         - 2
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -3327,29 +3295,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "linear"
-    children:
-      - !Create
-        kind: "linear"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-          - !KeepPath
-            - 0
-            - 1
-            - 1
-          - !KeepPath
-            - 0
-            - 2
-            - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
+    !Native "mlopt.law.assoc_linear_bias_rev"
   mlopt:
     law:
       version: 2
@@ -3462,6 +3408,10 @@
         - 1
       b2:
         - 1
+    handl_gaps:
+      - "repeat_mvar"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
@@ -3473,20 +3423,7 @@
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "mul"
-    children:
-      - !Create
-        kind: "matmul"
-        children:
-          - !KeepPath
-            - 0
-          - !KeepPath
-            - 1
-            - 0
-      - !KeepPath
-        - 1
-        - 1
+    !Native "mlopt.law.naturality_scalar"
   mlopt:
     law:
       version: 2
@@ -3535,6 +3472,8 @@
       c:
         - 1
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -3546,20 +3485,7 @@
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "matmul"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !Create
-        kind: "mul"
-        children:
-          - !KeepPath
-            - 0
-            - 1
-          - !KeepPath
-            - 1
+    !Native "mlopt.law.naturality_scalar_rev"
   mlopt:
     law:
       version: 2
@@ -3609,6 +3535,8 @@
         - 1
       c:
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -3680,6 +3608,7 @@
       C:
         - 1
         - 1
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -3752,6 +3681,7 @@
         - 1
       C:
         - 1
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -3763,18 +3693,7 @@
   pass: "mlopt"
   node_kind: "split"
   rule:
-    !Declarative
-    target_kind: "add"
-    children:
-      - !Create
-        kind: "split"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-      - !KeepPath
-        - 0
-        - 1
+    !Native "mlopt.law.split_scalar_add_r"
   mlopt:
     law:
       version: 2
@@ -3826,29 +3745,29 @@
       c:
         - 0
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "add"
     - !ChildCount 1
+    - !AttrEq
+      path: []
+      attr: "sizes"
+    - !AttrEq
+      path: []
+      attr: "dim"
+    - !AttrEq
+      path: []
+      attr: "index"
   priority: 1
 - id: "transform.mlopt.split_scalar_add_l"
   pass: "mlopt"
   node_kind: "split"
   rule:
-    !Declarative
-    target_kind: "add"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !Create
-        kind: "split"
-        children:
-          - !KeepPath
-            - 0
-            - 1
+    !Native "mlopt.law.split_scalar_add_l"
   mlopt:
     law:
       version: 2
@@ -3900,29 +3819,29 @@
       x:
         - 0
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "add"
     - !ChildCount 1
+    - !AttrEq
+      path: []
+      attr: "sizes"
+    - !AttrEq
+      path: []
+      attr: "dim"
+    - !AttrEq
+      path: []
+      attr: "index"
   priority: 2
 - id: "transform.mlopt.split_scalar_div_r"
   pass: "mlopt"
   node_kind: "split"
   rule:
-    !Declarative
-    target_kind: "div"
-    children:
-      - !Create
-        kind: "split"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-      - !KeepPath
-        - 0
-        - 1
+    !Native "mlopt.law.split_scalar_div_r"
   mlopt:
     law:
       version: 2
@@ -3974,29 +3893,29 @@
       c:
         - 0
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "div"
     - !ChildCount 1
+    - !AttrEq
+      path: []
+      attr: "sizes"
+    - !AttrEq
+      path: []
+      attr: "dim"
+    - !AttrEq
+      path: []
+      attr: "index"
   priority: 3
 - id: "transform.mlopt.split_scalar_div_l"
   pass: "mlopt"
   node_kind: "split"
   rule:
-    !Declarative
-    target_kind: "div"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !Create
-        kind: "split"
-        children:
-          - !KeepPath
-            - 0
-            - 1
+    !Native "mlopt.law.split_scalar_div_l"
   mlopt:
     law:
       version: 2
@@ -4048,29 +3967,29 @@
       x:
         - 0
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "div"
     - !ChildCount 1
+    - !AttrEq
+      path: []
+      attr: "sizes"
+    - !AttrEq
+      path: []
+      attr: "dim"
+    - !AttrEq
+      path: []
+      attr: "index"
   priority: 4
 - id: "transform.mlopt.split_scalar_mul_r"
   pass: "mlopt"
   node_kind: "split"
   rule:
-    !Declarative
-    target_kind: "mul"
-    children:
-      - !Create
-        kind: "split"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-      - !KeepPath
-        - 0
-        - 1
+    !Native "mlopt.law.split_scalar_mul_r"
   mlopt:
     law:
       version: 2
@@ -4122,29 +4041,29 @@
       c:
         - 0
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "mul"
     - !ChildCount 1
+    - !AttrEq
+      path: []
+      attr: "sizes"
+    - !AttrEq
+      path: []
+      attr: "dim"
+    - !AttrEq
+      path: []
+      attr: "index"
   priority: 5
 - id: "transform.mlopt.split_scalar_mul_l"
   pass: "mlopt"
   node_kind: "split"
   rule:
-    !Declarative
-    target_kind: "mul"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !Create
-        kind: "split"
-        children:
-          - !KeepPath
-            - 0
-            - 1
+    !Native "mlopt.law.split_scalar_mul_l"
   mlopt:
     law:
       version: 2
@@ -4196,29 +4115,29 @@
       x:
         - 0
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "mul"
     - !ChildCount 1
+    - !AttrEq
+      path: []
+      attr: "sizes"
+    - !AttrEq
+      path: []
+      attr: "dim"
+    - !AttrEq
+      path: []
+      attr: "index"
   priority: 6
 - id: "transform.mlopt.split_scalar_sub_r"
   pass: "mlopt"
   node_kind: "split"
   rule:
-    !Declarative
-    target_kind: "sub"
-    children:
-      - !Create
-        kind: "split"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-      - !KeepPath
-        - 0
-        - 1
+    !Native "mlopt.law.split_scalar_sub_r"
   mlopt:
     law:
       version: 2
@@ -4270,29 +4189,29 @@
       c:
         - 0
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "sub"
     - !ChildCount 1
+    - !AttrEq
+      path: []
+      attr: "sizes"
+    - !AttrEq
+      path: []
+      attr: "dim"
+    - !AttrEq
+      path: []
+      attr: "index"
   priority: 7
 - id: "transform.mlopt.split_scalar_sub_l"
   pass: "mlopt"
   node_kind: "split"
   rule:
-    !Declarative
-    target_kind: "sub"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !Create
-        kind: "split"
-        children:
-          - !KeepPath
-            - 0
-            - 1
+    !Native "mlopt.law.split_scalar_sub_l"
   mlopt:
     law:
       version: 2
@@ -4344,63 +4263,29 @@
       x:
         - 0
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "sub"
     - !ChildCount 1
+    - !AttrEq
+      path: []
+      attr: "sizes"
+    - !AttrEq
+      path: []
+      attr: "dim"
+    - !AttrEq
+      path: []
+      attr: "index"
   priority: 8
 - id: "transform.mlopt.swiglu_fuse"
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "mul"
-    children:
-      - !Create
-        kind: "silu"
-        children:
-          - !Create
-            kind: "chunk"
-            children:
-              - !Create
-                kind: "linear"
-                children:
-                  - !KeepPath
-                    - 0
-                    - 0
-                    - 0
-                  - !Create
-                    kind: "concat"
-                    children:
-                      - !KeepPath
-                        - 0
-                        - 0
-                        - 1
-                      - !KeepPath
-                        - 1
-                        - 1
-      - !Create
-        kind: "chunk"
-        children:
-          - !Create
-            kind: "linear"
-            children:
-              - !KeepPath
-                - 0
-                - 0
-                - 0
-              - !Create
-                kind: "concat"
-                children:
-                  - !KeepPath
-                    - 0
-                    - 0
-                    - 1
-                  - !KeepPath
-                    - 1
-                    - 1
+    !Native "mlopt.law.swiglu_fuse"
   mlopt:
     law:
       version: 2
@@ -4498,6 +4383,10 @@
       B:
         - 1
         - 1
+    handl_gaps:
+      - "repeat_mvar"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
@@ -4512,45 +4401,7 @@
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "mul"
-    children:
-      - !Create
-        kind: "chunk"
-        children:
-          - !Create
-            kind: "linear"
-            children:
-              - !KeepPath
-                - 0
-                - 0
-              - !Create
-                kind: "concat"
-                children:
-                  - !KeepPath
-                    - 0
-                    - 1
-                  - !KeepPath
-                    - 1
-                    - 1
-      - !Create
-        kind: "chunk"
-        children:
-          - !Create
-            kind: "linear"
-            children:
-              - !KeepPath
-                - 0
-                - 0
-              - !Create
-                kind: "concat"
-                children:
-                  - !KeepPath
-                    - 0
-                    - 1
-                  - !KeepPath
-                    - 1
-                    - 1
+    !Native "mlopt.law.parallel_mul_fuse"
   mlopt:
     law:
       version: 2
@@ -4640,6 +4491,9 @@
       B:
         - 1
         - 1
+    handl_gaps:
+      - "repeat_mvar"
+      - "guard"
   when:
     !And
     - !KindAt
@@ -4654,123 +4508,7 @@
   pass: "mlopt"
   node_kind: "sdpa"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !Create
-        kind: "transpose"
-        children:
-          - !Create
-            kind: "reshape"
-            children:
-              - !Create
-                kind: "chunk"
-                children:
-                  - !Create
-                    kind: "linear"
-                    children:
-                      - !KeepPath
-                        - 0
-                        - 0
-                        - 0
-                        - 0
-                      - !Create
-                        kind: "concat"
-                        children:
-                          - !Create
-                            kind: "concat"
-                            children:
-                              - !KeepPath
-                                - 0
-                                - 0
-                                - 0
-                                - 1
-                              - !KeepPath
-                                - 1
-                                - 0
-                                - 0
-                                - 1
-                          - !KeepPath
-                            - 2
-                            - 0
-                            - 0
-                            - 1
-      - !Create
-        kind: "transpose"
-        children:
-          - !Create
-            kind: "reshape"
-            children:
-              - !Create
-                kind: "chunk"
-                children:
-                  - !Create
-                    kind: "linear"
-                    children:
-                      - !KeepPath
-                        - 0
-                        - 0
-                        - 0
-                        - 0
-                      - !Create
-                        kind: "concat"
-                        children:
-                          - !Create
-                            kind: "concat"
-                            children:
-                              - !KeepPath
-                                - 0
-                                - 0
-                                - 0
-                                - 1
-                              - !KeepPath
-                                - 1
-                                - 0
-                                - 0
-                                - 1
-                          - !KeepPath
-                            - 2
-                            - 0
-                            - 0
-                            - 1
-      - !Create
-        kind: "transpose"
-        children:
-          - !Create
-            kind: "reshape"
-            children:
-              - !Create
-                kind: "chunk"
-                children:
-                  - !Create
-                    kind: "linear"
-                    children:
-                      - !KeepPath
-                        - 0
-                        - 0
-                        - 0
-                        - 0
-                      - !Create
-                        kind: "concat"
-                        children:
-                          - !Create
-                            kind: "concat"
-                            children:
-                              - !KeepPath
-                                - 0
-                                - 0
-                                - 0
-                                - 1
-                              - !KeepPath
-                                - 1
-                                - 0
-                                - 0
-                                - 1
-                          - !KeepPath
-                            - 2
-                            - 0
-                            - 0
-                            - 1
+    !Native "mlopt.law.qkv_fuse"
   mlopt:
     law:
       version: 2
@@ -4951,6 +4689,9 @@
         - 0
         - 0
         - 1
+    handl_gaps:
+      - "repeat_mvar"
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -4963,128 +4704,68 @@
       index: 2
       kind: "transpose"
     - !ChildCount 3
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim0"
+      value: 1
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim1"
+      value: 2
+    - !AttrEq
+      path:
+        - 1
+      attr: "dim0"
+      value: 1
+    - !AttrEq
+      path:
+        - 1
+      attr: "dim1"
+      value: 2
+    - !AttrEq
+      path:
+        - 2
+      attr: "dim0"
+      value: 1
+    - !AttrEq
+      path:
+        - 2
+      attr: "dim1"
+      value: 2
+    - !AttrEq
+      path: []
+      attr: "scale"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+      attr: "shape"
+    - !SameAttr
+      path_a:
+        - 0
+        - 0
+      attr_a: "shape"
+      path_b:
+        - 1
+        - 0
+      attr_b: "shape"
+    - !SameAttr
+      path_a:
+        - 0
+        - 0
+      attr_a: "shape"
+      path_b:
+        - 2
+        - 0
+      attr_b: "shape"
   priority: 1
 - id: "transform.mlopt.qkv_fuse_asym"
   pass: "mlopt"
   node_kind: "sdpa"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !Create
-        kind: "transpose"
-        children:
-          - !Create
-            kind: "reshape"
-            children:
-              - !Create
-                kind: "split"
-                children:
-                  - !Create
-                    kind: "linear"
-                    children:
-                      - !KeepPath
-                        - 0
-                        - 0
-                        - 0
-                        - 0
-                      - !Create
-                        kind: "concat"
-                        children:
-                          - !Create
-                            kind: "concat"
-                            children:
-                              - !KeepPath
-                                - 0
-                                - 0
-                                - 0
-                                - 1
-                              - !KeepPath
-                                - 1
-                                - 0
-                                - 0
-                                - 1
-                          - !KeepPath
-                            - 2
-                            - 0
-                            - 0
-                            - 1
-      - !Create
-        kind: "transpose"
-        children:
-          - !Create
-            kind: "reshape"
-            children:
-              - !Create
-                kind: "split"
-                children:
-                  - !Create
-                    kind: "linear"
-                    children:
-                      - !KeepPath
-                        - 0
-                        - 0
-                        - 0
-                        - 0
-                      - !Create
-                        kind: "concat"
-                        children:
-                          - !Create
-                            kind: "concat"
-                            children:
-                              - !KeepPath
-                                - 0
-                                - 0
-                                - 0
-                                - 1
-                              - !KeepPath
-                                - 1
-                                - 0
-                                - 0
-                                - 1
-                          - !KeepPath
-                            - 2
-                            - 0
-                            - 0
-                            - 1
-      - !Create
-        kind: "transpose"
-        children:
-          - !Create
-            kind: "reshape"
-            children:
-              - !Create
-                kind: "split"
-                children:
-                  - !Create
-                    kind: "linear"
-                    children:
-                      - !KeepPath
-                        - 0
-                        - 0
-                        - 0
-                        - 0
-                      - !Create
-                        kind: "concat"
-                        children:
-                          - !Create
-                            kind: "concat"
-                            children:
-                              - !KeepPath
-                                - 0
-                                - 0
-                                - 0
-                                - 1
-                              - !KeepPath
-                                - 1
-                                - 0
-                                - 0
-                                - 1
-                          - !KeepPath
-                            - 2
-                            - 0
-                            - 0
-                            - 1
+    !Native "mlopt.law.qkv_fuse_asym"
   mlopt:
     law:
       version: 2
@@ -5278,6 +4959,10 @@
         - 0
         - 0
         - 1
+    handl_gaps:
+      - "derive"
+      - "repeat_mvar"
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -5290,25 +4975,63 @@
       index: 2
       kind: "transpose"
     - !ChildCount 3
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim0"
+      value: 1
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim1"
+      value: 2
+    - !AttrEq
+      path:
+        - 1
+      attr: "dim0"
+      value: 1
+    - !AttrEq
+      path:
+        - 1
+      attr: "dim1"
+      value: 2
+    - !AttrEq
+      path:
+        - 2
+      attr: "dim0"
+      value: 1
+    - !AttrEq
+      path:
+        - 2
+      attr: "dim1"
+      value: 2
+    - !AttrEq
+      path: []
+      attr: "scale"
+    - !AttrEq
+      path: []
+      attr: "enable_gqa"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+      attr: "shape"
+    - !AttrEq
+      path:
+        - 1
+        - 0
+      attr: "shape"
+    - !AttrEq
+      path:
+        - 2
+        - 0
+      attr: "shape"
   priority: 2
 - id: "transform.mlopt.linear_channel_scale"
   pass: "mlopt"
   node_kind: "linear"
   rule:
-    !Declarative
-    target_kind: "linear"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !Create
-        kind: "mul"
-        children:
-          - !KeepPath
-            - 1
-          - !KeepPath
-            - 0
-            - 1
+    !Native "mlopt.law.linear_channel_scale"
   mlopt:
     law:
       version: 2
@@ -5383,6 +5106,8 @@
         - 1
       W:
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -5394,20 +5119,7 @@
   pass: "mlopt"
   node_kind: "linear"
   rule:
-    !Declarative
-    target_kind: "linear"
-    children:
-      - !Create
-        kind: "mul"
-        children:
-          - !KeepPath
-            - 0
-          - !KeepPath
-            - 1
-            - 1
-      - !KeepPath
-        - 1
-        - 0
+    !Native "mlopt.law.linear_channel_scale_rev"
   mlopt:
     law:
       version: 2
@@ -5483,6 +5195,8 @@
       c:
         - 1
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -5494,20 +5208,7 @@
   pass: "mlopt"
   node_kind: "linear"
   rule:
-    !Declarative
-    target_kind: "mul"
-    children:
-      - !Create
-        kind: "linear"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-          - !KeepPath
-            - 1
-      - !KeepPath
-        - 0
-        - 1
+    !Native "mlopt.law.linear_row_scale"
   mlopt:
     law:
       version: 2
@@ -5574,6 +5275,8 @@
         - 1
       W:
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -5585,20 +5288,7 @@
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "linear"
-    children:
-      - !Create
-        kind: "mul"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-          - !KeepPath
-            - 1
-      - !KeepPath
-        - 0
-        - 1
+    !Native "mlopt.law.linear_row_scale_rev"
   mlopt:
     law:
       version: 2
@@ -5666,6 +5356,8 @@
         - 1
       r:
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -5677,20 +5369,7 @@
   pass: "mlopt"
   node_kind: "linear"
   rule:
-    !Declarative
-    target_kind: "mul"
-    children:
-      - !Create
-        kind: "linear"
-        children:
-          - !KeepPath
-            - 0
-          - !KeepPath
-            - 1
-            - 0
-      - !KeepPath
-        - 1
-        - 1
+    !Native "mlopt.law.linear_channel_to_row_scale"
   mlopt:
     law:
       version: 2
@@ -5787,6 +5466,8 @@
       c:
         - 1
         - 1
+    handl_gaps:
+      - "guard"
   when:
     !And
     - !KindAt
@@ -5798,33 +5479,7 @@
   pass: "mlopt"
   node_kind: "sdpa"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !Create
-        kind: "transpose"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-      - !Create
-        kind: "transpose"
-        children:
-          - !KeepPath
-            - 1
-            - 0
-            - 0
-            - 0
-            - 0
-      - !Create
-        kind: "transpose"
-        children:
-          - !KeepPath
-            - 2
-            - 0
-            - 0
-            - 0
-            - 0
+    !Native "mlopt.law.gqa_absorb_repeat"
   mlopt:
     law:
       version: 2
@@ -5961,6 +5616,9 @@
         - 0
         - 0
         - 0
+    handl_gaps:
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
@@ -5973,33 +5631,84 @@
       index: 2
       kind: "transpose"
     - !ChildCount 3
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim0"
+      value: 1
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim1"
+      value: 2
+    - !AttrEq
+      path:
+        - 1
+      attr: "dim0"
+      value: 1
+    - !AttrEq
+      path:
+        - 1
+      attr: "dim1"
+      value: 2
+    - !AttrEq
+      path:
+        - 2
+      attr: "dim0"
+      value: 1
+    - !AttrEq
+      path:
+        - 2
+      attr: "dim1"
+      value: 2
+    - !AttrEq
+      path: []
+      attr: "dropout_p"
+    - !AttrEq
+      path: []
+      attr: "is_causal"
+    - !AttrEq
+      path:
+        - 1
+        - 0
+      attr: "shape"
+    - !AttrEq
+      path:
+        - 1
+        - 0
+        - 0
+      attr: "shape"
+    - !AttrEq
+      path:
+        - 1
+        - 0
+        - 0
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 2
+        - 0
+      attr: "shape"
+    - !AttrEq
+      path:
+        - 2
+        - 0
+        - 0
+      attr: "shape"
+    - !AttrEq
+      path:
+        - 2
+        - 0
+        - 0
+        - 0
+      attr: "dim"
   priority: 3
 - id: "transform.mlopt.sdpa_fold_addmul"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 0
-        - 0
-        - 1
+    !Native "mlopt.law.sdpa_fold_addmul"
   mlopt:
     law:
       version: 2
@@ -6102,42 +5811,42 @@
         - 1
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "softmax"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 8
 - id: "transform.mlopt.sdpa_fold_masked_fillmul"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-      - !Create
-        kind: "logical_not"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-            - 1
+    !Native "mlopt.law.sdpa_fold_masked_fillmul"
   mlopt:
     law:
       version: 2
@@ -6253,42 +5962,42 @@
         - 2
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "softmax"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 9
 - id: "transform.mlopt.sdpa_fold_addmul_drop"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 1
+    !Native "mlopt.law.sdpa_fold_addmul_drop"
   mlopt:
     law:
       version: 2
@@ -6400,45 +6109,53 @@
         - 1
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "dropout"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "p"
+    - !AttrEq
+      path:
+        - 0
+      attr: "train"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 10
 - id: "transform.mlopt.sdpa_fold_masked_fillmul_drop"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-      - !Create
-        kind: "logical_not"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-            - 0
-            - 1
+    !Native "mlopt.law.sdpa_fold_masked_fillmul_drop"
   mlopt:
     law:
       version: 2
@@ -6564,39 +6281,53 @@
         - 2
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "dropout"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "p"
+    - !AttrEq
+      path:
+        - 0
+      attr: "train"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 11
 - id: "transform.mlopt.sdpa_fold_adddiv"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 0
-        - 0
-        - 1
+    !Native "mlopt.law.sdpa_fold_adddiv"
   mlopt:
     law:
       version: 2
@@ -6700,42 +6431,42 @@
         - 1
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "softmax"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 12
 - id: "transform.mlopt.sdpa_fold_masked_filldiv"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-      - !Create
-        kind: "logical_not"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-            - 1
+    !Native "mlopt.law.sdpa_fold_masked_filldiv"
   mlopt:
     law:
       version: 2
@@ -6852,42 +6583,42 @@
         - 2
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "softmax"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 13
 - id: "transform.mlopt.sdpa_fold_adddiv_drop"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 1
+    !Native "mlopt.law.sdpa_fold_adddiv_drop"
   mlopt:
     law:
       version: 2
@@ -7000,45 +6731,53 @@
         - 1
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "dropout"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "p"
+    - !AttrEq
+      path:
+        - 0
+      attr: "train"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 14
 - id: "transform.mlopt.sdpa_fold_masked_filldiv_drop"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-      - !Create
-        kind: "logical_not"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-            - 0
-            - 1
+    !Native "mlopt.law.sdpa_fold_masked_filldiv_drop"
   mlopt:
     law:
       version: 2
@@ -7165,37 +6904,53 @@
         - 2
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "dropout"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "p"
+    - !AttrEq
+      path:
+        - 0
+      attr: "train"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 15
 - id: "transform.mlopt.sdpa_fold_add"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 0
-        - 0
-        - 1
+    !Native "mlopt.law.sdpa_fold_add"
   mlopt:
     law:
       version: 2
@@ -7281,40 +7036,40 @@
         - 1
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "softmax"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 16
 - id: "transform.mlopt.sdpa_fold_masked_fill"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-      - !Create
-        kind: "logical_not"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-            - 1
+    !Native "mlopt.law.sdpa_fold_masked_fill"
   mlopt:
     law:
       version: 2
@@ -7413,40 +7168,40 @@
         - 2
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "softmax"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 17
 - id: "transform.mlopt.sdpa_fold_add_drop"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 1
+    !Native "mlopt.law.sdpa_fold_add_drop"
   mlopt:
     law:
       version: 2
@@ -7540,43 +7295,51 @@
         - 1
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "dropout"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "p"
+    - !AttrEq
+      path:
+        - 0
+      attr: "train"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 18
 - id: "transform.mlopt.sdpa_fold_masked_fill_drop"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-      - !Create
-        kind: "logical_not"
-        children:
-          - !KeepPath
-            - 0
-            - 0
-            - 0
-            - 1
+    !Native "mlopt.law.sdpa_fold_masked_fill_drop"
   mlopt:
     law:
       version: 2
@@ -7684,31 +7447,51 @@
         - 2
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "dropout"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "p"
+    - !AttrEq
+      path:
+        - 0
+      attr: "train"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 19
 - id: "transform.mlopt.sdpa_fold_nomask"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
+    !Native "mlopt.law.sdpa_fold_nomask"
   mlopt:
     law:
       version: 2
@@ -7793,33 +7576,38 @@
         - 0
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "softmax"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 20
 - id: "transform.mlopt.sdpa_fold_div_nomask"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
+    !Native "mlopt.law.sdpa_fold_div_nomask"
   mlopt:
     law:
       version: 2
@@ -7921,33 +7709,40 @@
         - 1
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "softmax"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 21
 - id: "transform.mlopt.sdpa_fold_mul_nomask"
   pass: "mlopt"
   node_kind: "matmul"
   rule:
-    !Declarative
-    target_kind: "sdpa"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 0
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
+    !Native "mlopt.law.sdpa_fold_mul_nomask"
   mlopt:
     law:
       version: 2
@@ -8048,109 +7843,40 @@
         - 1
       V:
         - 1
+    handl_gaps:
+      - "derive"
+      - "spine_deep"
+      - "guard"
   when:
     !And
     - !KindAt
       index: 0
       kind: "softmax"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim0"
+    - !AttrEq
+      path:
+        - 0
+        - 0
+        - 0
+        - 1
+      attr: "dim1"
   priority: 22
 - id: "transform.mlopt.conv_bn_fold"
   pass: "mlopt"
   node_kind: "batch_norm"
   rule:
-    !Declarative
-    target_kind: "conv2d"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !Create
-        kind: "mul"
-        children:
-          - !Create
-            kind: "mul"
-            children:
-              - !KeepPath
-                - 0
-                - 1
-              - !Create
-                kind: "reshape"
-                children:
-                  - !Create
-                    kind: "rsqrt"
-                    children:
-                      - !Create
-                        kind: "add"
-                        children:
-                          - !Create
-                            kind: "reshape"
-                            children:
-                              - !KeepPath
-                                - 4
-                          - !Fresh "@1:@1:@1:@1:EPS"
-          - !Create
-            kind: "reshape"
-            children:
-              - !Create
-                kind: "reshape"
-                children:
-                  - !KeepPath
-                    - 1
-      - !Create
-        kind: "add"
-        children:
-          - !Create
-            kind: "mul"
-            children:
-              - !Create
-                kind: "mul"
-                children:
-                  - !Create
-                    kind: "sub"
-                    children:
-                      - !KeepPath
-                        - 0
-                        - 2
-                      - !Create
-                        kind: "reshape"
-                        children:
-                          - !Create
-                            kind: "reshape"
-                            children:
-                              - !KeepPath
-                                - 3
-                  - !Create
-                    kind: "reshape"
-                    children:
-                      - !Create
-                        kind: "rsqrt"
-                        children:
-                          - !Create
-                            kind: "add"
-                            children:
-                              - !Create
-                                kind: "reshape"
-                                children:
-                                  - !KeepPath
-                                    - 4
-                              - !Fresh "@1:@1:@1:@1:EPS"
-              - !Create
-                kind: "reshape"
-                children:
-                  - !Create
-                    kind: "reshape"
-                    children:
-                      - !KeepPath
-                        - 1
-          - !Create
-            kind: "reshape"
-            children:
-              - !Create
-                kind: "reshape"
-                children:
-                  - !KeepPath
-                    - 2
+    !Native "mlopt.law.conv_bn_fold"
   mlopt:
     law:
       version: 2
@@ -8314,46 +8040,53 @@
         - 3
       v6:
         - 4
+    handl_gaps:
+      - "hooks"
+      - "derive"
   when:
     !And
     - !KindAt
       index: 0
       kind: "conv2d"
     - !ChildCount 5
+    - !AttrEq
+      path: []
+      attr: "cudnn_enabled"
+      value: false
+    - !AttrEq
+      path: []
+      attr: "eps"
+      value: 1e-05
+    - !AttrEq
+      path: []
+      attr: "momentum"
+      value: 0.1
+    - !AttrEq
+      path: []
+      attr: "training"
+      value: false
+    - !AttrEq
+      path:
+        - 0
+      attr: "padding"
+      value:
+        __tuple__:
+          - 1
+          - 1
+    - !AttrEq
+      path:
+        - 0
+      attr: "stride"
+      value:
+        __tuple__:
+          - 1
+          - 1
   priority: 1
 - id: "transform.mlopt.prim:synop_03889d8fe1"
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_03889d8fe1"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 1
+    !Native "mlopt.law.prim:synop_03889d8fe1"
   mlopt:
     law:
       version: 2
@@ -8429,6 +8162,8 @@
         - 1
       v14:
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -8440,32 +8175,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_2b8cfd1c90"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 1
-      - !KeepPath
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 1
+    !Native "mlopt.law.prim:synop_2b8cfd1c90"
   mlopt:
     law:
       version: 2
@@ -8538,6 +8248,8 @@
       v216:
         - 1
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -8552,43 +8264,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_39f76b66f8"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 0
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 1
+    !Native "mlopt.law.prim:synop_39f76b66f8"
   mlopt:
     law:
       version: 2
@@ -8677,6 +8353,8 @@
         - 1
       v14:
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -8688,33 +8366,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_4c5296b3ba"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 1
-        - 0
+    !Native "mlopt.law.prim:synop_4c5296b3ba"
   mlopt:
     law:
       version: 2
@@ -8793,6 +8445,8 @@
         - 1
         - 1
         - 0
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -8802,38 +8456,17 @@
       index: 1
       kind: "mul"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 1
+        - 1
+      attr: "dim"
   priority: 15
 - id: "transform.mlopt.prim:synop_4c657cb2c0"
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_4c657cb2c0"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 1
-        - 1
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 1
-        - 1
-        - 0
-        - 0
-        - 1
-      - !KeepPath
-        - 1
-        - 1
-        - 0
-        - 0
-        - 2
+    !Native "mlopt.law.prim:synop_4c657cb2c0"
   mlopt:
     law:
       version: 2
@@ -8914,50 +8547,44 @@
         - 0
         - 0
         - 2
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
       index: 1
       kind: "mul"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 1
+        - 0
+      attr: "dim"
+      value: -1
+    - !AttrEq
+      path:
+        - 1
+        - 1
+        - 0
+      attr: "dim"
+      value: 1
+    - !AttrEq
+      path:
+        - 1
+        - 1
+      attr: "dim"
+    - !AttrEq
+      path:
+        - 1
+        - 1
+        - 0
+      attr: "index"
   priority: 16
 - id: "transform.mlopt.prim:synop_4f8fefdd38"
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_4f8fefdd38"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 1
+    !Native "mlopt.law.prim:synop_4f8fefdd38"
   mlopt:
     law:
       version: 2
@@ -9042,6 +8669,8 @@
       v216:
         - 1
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -9056,41 +8685,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_5147826430"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 1
-      - !KeepPath
-        - 1
+    !Native "mlopt.law.prim:synop_5147826430"
   mlopt:
     law:
       version: 2
@@ -9177,6 +8772,8 @@
         - 1
       v14:
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -9188,40 +8785,7 @@
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "synop_571fb768b0"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 1
-        - 1
-      - !KeepPath
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 1
-        - 1
+    !Native "mlopt.law.prim:synop_571fb768b0"
   mlopt:
     law:
       version: 2
@@ -9307,6 +8871,8 @@
         - 1
         - 1
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -9318,38 +8884,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_5e58f26875"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 1
-      - !KeepPath
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 1
+    !Native "mlopt.law.prim:synop_5e58f26875"
   mlopt:
     law:
       version: 2
@@ -9433,6 +8968,8 @@
       v216:
         - 1
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -9447,42 +8984,7 @@
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "synop_629f9ef13b"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 0
-        - 1
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 1
-        - 1
-      - !KeepPath
-        - 1
-        - 1
+    !Native "mlopt.law.prim:synop_629f9ef13b"
   mlopt:
     law:
       version: 2
@@ -9570,6 +9072,8 @@
       v138:
         - 1
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -9581,40 +9085,7 @@
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "synop_62d36aefdb"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 0
-        - 1
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 1
-        - 1
+    !Native "mlopt.law.prim:synop_62d36aefdb"
   mlopt:
     law:
       version: 2
@@ -9700,6 +9171,8 @@
         - 1
         - 1
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -9711,34 +9184,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_6c709f774a"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 1
-      - !KeepPath
-        - 1
+    !Native "mlopt.law.prim:synop_6c709f774a"
   mlopt:
     law:
       version: 2
@@ -9813,6 +9259,8 @@
         - 1
       v14:
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -9824,35 +9272,7 @@
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "synop_889d740672"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 1
-        - 1
-      - !KeepPath
-        - 1
-        - 1
+    !Native "mlopt.law.prim:synop_889d740672"
   mlopt:
     law:
       version: 2
@@ -9928,6 +9348,8 @@
       v138:
         - 1
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -9939,35 +9361,7 @@
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "synop_93e57c595e"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 0
-        - 1
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 1
-        - 1
+    !Native "mlopt.law.prim:synop_93e57c595e"
   mlopt:
     law:
       version: 2
@@ -10043,6 +9437,8 @@
       v138:
         - 1
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -10054,33 +9450,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_976f9836d7"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 1
-      - !KeepPath
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 1
-        - 0
+    !Native "mlopt.law.prim:synop_976f9836d7"
   mlopt:
     law:
       version: 2
@@ -10159,6 +9529,8 @@
         - 1
         - 1
         - 0
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -10168,40 +9540,17 @@
       index: 1
       kind: "mul"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 1
+        - 1
+      attr: "dim"
   priority: 21
 - id: "transform.mlopt.prim:synop_98a002d64b"
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_98a002d64b"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 1
+    !Native "mlopt.law.prim:synop_98a002d64b"
   mlopt:
     law:
       version: 2
@@ -10282,44 +9631,27 @@
         - 0
       v14:
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
       index: 0
       kind: "mul"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+        - 1
+        - 1
+        - 1
+      attr: "dim"
   priority: 22
 - id: "transform.mlopt.prim:synop_b246dcb838"
   pass: "mlopt"
   node_kind: "mul"
   rule:
-    !Declarative
-    target_kind: "synop_b246dcb838"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 1
-        - 1
+    !Native "mlopt.law.prim:synop_b246dcb838"
   mlopt:
     law:
       version: 2
@@ -10393,6 +9725,8 @@
         - 1
         - 1
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -10470,6 +9804,7 @@
       v216:
         - 1
         - 1
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -10484,43 +9819,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_d5b128282a"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 1
+    !Native "mlopt.law.prim:synop_d5b128282a"
   mlopt:
     law:
       version: 2
@@ -10609,6 +9908,8 @@
         - 1
       v14:
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -10620,33 +9921,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_f08a53f9a0"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 1
+    !Native "mlopt.law.prim:synop_f08a53f9a0"
   mlopt:
     law:
       version: 2
@@ -10725,6 +10000,8 @@
       v216:
         - 1
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -10734,37 +10011,19 @@
       index: 1
       kind: "mul"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 0
+        - 1
+        - 1
+        - 1
+      attr: "dim"
   priority: 25
 - id: "transform.mlopt.prim:synop_f3290a1163"
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_f3290a1163"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 1
+    !Native "mlopt.law.prim:synop_f3290a1163"
   mlopt:
     law:
       version: 2
@@ -10837,6 +10096,8 @@
       v216:
         - 1
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -10851,83 +10112,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop2_35bbd03301"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-        - 0
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-        - 1
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 2
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 3
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 1
-      - !KeepPath
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 1
+    !Native "mlopt.law.prim:synop2_35bbd03301"
   mlopt:
     law:
       version: 2
@@ -11080,6 +10265,8 @@
       v478:
         - 1
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -11094,86 +10281,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop2_d46808a970"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 0
-        - 1
-        - 2
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 0
-        - 1
-        - 3
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 1
-      - !KeepPath
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 1
+    !Native "mlopt.law.prim:synop2_d46808a970"
   mlopt:
     law:
       version: 2
@@ -11329,6 +10437,8 @@
       v478:
         - 1
         - 1
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -11494,6 +10604,7 @@
         - 11
       v232:
         - 12
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -11624,6 +10735,7 @@
         - 11
       v219:
         - 12
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -11786,6 +10898,7 @@
         - 11
       v219:
         - 12
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -11968,6 +11081,7 @@
         - 5
       v121:
         - 6
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -12098,6 +11212,7 @@
         - 11
       v232:
         - 12
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -12260,6 +11375,7 @@
         - 11
       v219:
         - 12
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -12406,6 +11522,7 @@
         - 11
       v219:
         - 12
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -12417,44 +11534,7 @@
   pass: "mlopt"
   node_kind: "synop2_35bbd03301"
   rule:
-    !Declarative
-    target_kind: "synop3_24c5153e5e"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 1
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_24c5153e5e"
   mlopt:
     law:
       version: 2
@@ -12551,6 +11631,8 @@
         - 11
       v219:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -12562,49 +11644,7 @@
   pass: "mlopt"
   node_kind: "synop2_35bbd03301"
   rule:
-    !Declarative
-    target_kind: "synop3_2fcad5e803"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-        - 0
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-      - !KeepPath
-        - 4
-        - 1
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 1
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_2fcad5e803"
   mlopt:
     law:
       version: 2
@@ -12711,6 +11751,8 @@
         - 11
       v219:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -12857,6 +11899,7 @@
         - 11
       v232:
         - 12
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -12868,44 +11911,7 @@
   pass: "mlopt"
   node_kind: "synop2_d46808a970"
   rule:
-    !Declarative
-    target_kind: "synop3_39dbcda988"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 1
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_39dbcda988"
   mlopt:
     law:
       version: 2
@@ -13002,6 +12008,8 @@
         - 11
       v232:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -13013,56 +12021,7 @@
   pass: "mlopt"
   node_kind: "synop2_d46808a970"
   rule:
-    !Declarative
-    target_kind: "synop3_426efb3fb1"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 1
-      - !KeepPath
-        - 4
-        - 2
-      - !KeepPath
-        - 4
-        - 3
-      - !KeepPath
-        - 4
-        - 4
-      - !KeepPath
-        - 4
-        - 5
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_426efb3fb1"
   mlopt:
     law:
       version: 2
@@ -13179,6 +12138,8 @@
         - 11
       v232:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -13349,6 +12310,7 @@
         - 11
       v219:
         - 12
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -13360,65 +12322,7 @@
   pass: "mlopt"
   node_kind: "synop2_d46808a970"
   rule:
-    !Declarative
-    target_kind: "synop3_42f015e162"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-        - 0
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 2
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 3
-      - !KeepPath
-        - 4
-        - 1
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 1
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_42f015e162"
   mlopt:
     law:
       version: 2
@@ -13550,6 +12454,8 @@
         - 11
       v232:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -13720,6 +12626,7 @@
         - 11
       v232:
         - 12
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -13902,6 +12809,7 @@
         - 5
       v121:
         - 6
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -13913,58 +12821,7 @@
   pass: "mlopt"
   node_kind: "synop2_35bbd03301"
   rule:
-    !Declarative
-    target_kind: "synop3_4b31b4501a"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 1
-      - !KeepPath
-        - 4
-        - 1
-        - 2
-      - !KeepPath
-        - 4
-        - 1
-        - 3
-      - !KeepPath
-        - 4
-        - 2
-      - !KeepPath
-        - 4
-        - 3
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_4b31b4501a"
   mlopt:
     law:
       version: 2
@@ -14083,6 +12940,8 @@
         - 11
       v219:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -14235,6 +13094,7 @@
       v348:
         - 1
         - 12
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -14246,56 +13106,7 @@
   pass: "mlopt"
   node_kind: "synop2_35bbd03301"
   rule:
-    !Declarative
-    target_kind: "synop3_4cf8732640"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-      - !KeepPath
-        - 4
-        - 2
-      - !KeepPath
-        - 4
-        - 3
-      - !KeepPath
-        - 4
-        - 4
-      - !KeepPath
-        - 4
-        - 5
-        - 0
-      - !KeepPath
-        - 4
-        - 5
-        - 1
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_4cf8732640"
   mlopt:
     law:
       version: 2
@@ -14412,6 +13223,8 @@
         - 11
       v219:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -14423,56 +13236,7 @@
   pass: "mlopt"
   node_kind: "synop2_35bbd03301"
   rule:
-    !Declarative
-    target_kind: "synop3_50a12a0158"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-      - !KeepPath
-        - 4
-        - 2
-      - !KeepPath
-        - 4
-        - 3
-        - 0
-      - !KeepPath
-        - 4
-        - 3
-        - 1
-      - !KeepPath
-        - 4
-        - 4
-      - !KeepPath
-        - 4
-        - 5
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_50a12a0158"
   mlopt:
     law:
       version: 2
@@ -14589,6 +13353,8 @@
         - 11
       v219:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -14600,65 +13366,7 @@
   pass: "mlopt"
   node_kind: "synop2_35bbd03301"
   rule:
-    !Declarative
-    target_kind: "synop3_531bb1872b"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-        - 0
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 2
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 3
-      - !KeepPath
-        - 4
-        - 1
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 1
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_531bb1872b"
   mlopt:
     law:
       version: 2
@@ -14790,6 +13498,8 @@
         - 11
       v219:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -14801,60 +13511,7 @@
   pass: "mlopt"
   node_kind: "synop2_35bbd03301"
   rule:
-    !Declarative
-    target_kind: "synop3_543ad6d861"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-        - 0
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 2
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 3
-      - !KeepPath
-        - 4
-        - 1
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_543ad6d861"
   mlopt:
     law:
       version: 2
@@ -14976,6 +13633,8 @@
         - 11
       v219:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -15138,6 +13797,7 @@
         - 11
       v219:
         - 12
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -15149,49 +13809,7 @@
   pass: "mlopt"
   node_kind: "synop2_d46808a970"
   rule:
-    !Declarative
-    target_kind: "synop3_9b8631df70"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-        - 0
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-      - !KeepPath
-        - 4
-        - 1
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 1
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_9b8631df70"
   mlopt:
     law:
       version: 2
@@ -15298,6 +13916,8 @@
         - 11
       v232:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -15309,56 +13929,7 @@
   pass: "mlopt"
   node_kind: "synop2_35bbd03301"
   rule:
-    !Declarative
-    target_kind: "synop3_acc3c38681"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 1
-      - !KeepPath
-        - 4
-        - 2
-      - !KeepPath
-        - 4
-        - 3
-      - !KeepPath
-        - 4
-        - 4
-      - !KeepPath
-        - 4
-        - 5
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_acc3c38681"
   mlopt:
     law:
       version: 2
@@ -15475,6 +14046,8 @@
         - 11
       v219:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -15486,58 +14059,7 @@
   pass: "mlopt"
   node_kind: "synop2_d46808a970"
   rule:
-    !Declarative
-    target_kind: "synop3_c79a6fe687"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-        - 1
-      - !KeepPath
-        - 4
-        - 1
-        - 2
-      - !KeepPath
-        - 4
-        - 1
-        - 3
-      - !KeepPath
-        - 4
-        - 2
-      - !KeepPath
-        - 4
-        - 3
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_c79a6fe687"
   mlopt:
     law:
       version: 2
@@ -15656,6 +14178,8 @@
         - 11
       v232:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -15667,60 +14191,7 @@
   pass: "mlopt"
   node_kind: "synop2_d46808a970"
   rule:
-    !Declarative
-    target_kind: "synop3_d5452c1c56"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-        - 0
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 1
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 2
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-        - 3
-      - !KeepPath
-        - 4
-        - 1
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_d5452c1c56"
   mlopt:
     law:
       version: 2
@@ -15842,6 +14313,8 @@
         - 11
       v232:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -15853,56 +14326,7 @@
   pass: "mlopt"
   node_kind: "synop2_d46808a970"
   rule:
-    !Declarative
-    target_kind: "synop3_d8a399f647"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-      - !KeepPath
-        - 4
-        - 2
-      - !KeepPath
-        - 4
-        - 3
-        - 0
-      - !KeepPath
-        - 4
-        - 3
-        - 1
-      - !KeepPath
-        - 4
-        - 4
-      - !KeepPath
-        - 4
-        - 5
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_d8a399f647"
   mlopt:
     law:
       version: 2
@@ -16019,6 +14443,8 @@
         - 11
       v232:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -16181,6 +14607,7 @@
         - 11
       v232:
         - 12
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -16343,6 +14770,7 @@
         - 11
       v232:
         - 12
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -16354,56 +14782,7 @@
   pass: "mlopt"
   node_kind: "synop2_d46808a970"
   rule:
-    !Declarative
-    target_kind: "synop3_efb0c0d7ce"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-      - !KeepPath
-        - 4
-        - 1
-      - !KeepPath
-        - 4
-        - 2
-      - !KeepPath
-        - 4
-        - 3
-      - !KeepPath
-        - 4
-        - 4
-      - !KeepPath
-        - 4
-        - 5
-        - 0
-      - !KeepPath
-        - 4
-        - 5
-        - 1
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_efb0c0d7ce"
   mlopt:
     law:
       version: 2
@@ -16520,6 +14899,8 @@
         - 11
       v232:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -16531,44 +14912,7 @@
   pass: "mlopt"
   node_kind: "synop2_35bbd03301"
   rule:
-    !Declarative
-    target_kind: "synop3_f28f7ffd1a"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-        - 0
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-      - !KeepPath
-        - 4
-        - 1
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_f28f7ffd1a"
   mlopt:
     law:
       version: 2
@@ -16665,6 +15009,8 @@
         - 11
       v219:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -16676,44 +15022,7 @@
   pass: "mlopt"
   node_kind: "synop2_d46808a970"
   rule:
-    !Declarative
-    target_kind: "synop3_f9c72e0a8f"
-    children:
-      - !KeepPath
-        - 0
-      - !KeepPath
-        - 1
-      - !KeepPath
-        - 2
-      - !KeepPath
-        - 3
-      - !KeepPath
-        - 4
-        - 0
-        - 0
-      - !KeepPath
-        - 4
-        - 0
-        - 1
-      - !KeepPath
-        - 4
-        - 1
-      - !KeepPath
-        - 5
-      - !KeepPath
-        - 6
-      - !KeepPath
-        - 7
-      - !KeepPath
-        - 8
-      - !KeepPath
-        - 9
-      - !KeepPath
-        - 10
-      - !KeepPath
-        - 11
-      - !KeepPath
-        - 12
+    !Native "mlopt.law.prim:synop3_f9c72e0a8f"
   mlopt:
     law:
       version: 2
@@ -16810,6 +15119,8 @@
         - 11
       v232:
         - 12
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -16962,6 +15273,7 @@
       v335:
         - 1
         - 12
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -16973,69 +15285,7 @@
   pass: "mlopt"
   node_kind: "add"
   rule:
-    !Declarative
-    target_kind: "synop_6ed0a07c7d"
-    children:
-      - !KeepPath
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 0
-        - 1
-        - 1
-        - 1
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 0
-        - 1
-        - 1
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 0
-      - !KeepPath
-        - 1
-        - 1
-        - 0
-        - 0
-        - 0
-      - !KeepPath
-        - 1
-        - 1
-        - 0
-        - 0
-        - 1
-      - !KeepPath
-        - 1
-        - 1
-        - 0
-        - 0
-        - 2
+    !Native "mlopt.law.prim:synop_6ed0a07c7d"
   mlopt:
     law:
       version: 2
@@ -17182,6 +15432,8 @@
         - 0
         - 0
         - 2
+    handl_gaps:
+      - "spine_deep"
   when:
     !And
     - !KindAt
@@ -17191,6 +15443,37 @@
       index: 1
       kind: "mul"
     - !ChildCount 2
+    - !AttrEq
+      path:
+        - 1
+        - 1
+        - 0
+      attr: "dim"
+      value: 1
+    - !AttrEq
+      path:
+        - 0
+        - 1
+        - 1
+        - 1
+      attr: "dim"
+    - !SameAttr
+      path_a:
+        - 0
+        - 1
+        - 1
+        - 1
+      attr_a: "dim"
+      path_b:
+        - 1
+        - 1
+      attr_b: "dim"
+    - !AttrEq
+      path:
+        - 1
+        - 1
+        - 0
+      attr: "index"
   priority: 29
 - id: "transform.mlopt.prim:synop_0b304215b3"
   pass: "mlopt"
@@ -17234,6 +15517,7 @@
       v269:
         - 0
         - 0
+    handl_gaps: []
   when:
     !And
     - !KindAt
@@ -17251,6 +15535,21 @@
       - !KeepPath
         - 0
         - 0
+    payload:
+      attrs:
+        a12:
+          $attr_of:
+            path:
+              - 0
+            attr: "shape"
+        a5:
+          $attr_of:
+            path: []
+            attr: "dim0"
+        a6:
+          $attr_of:
+            path: []
+            attr: "dim1"
   mlopt:
     law:
       version: 2
@@ -17289,10 +15588,21 @@
       v50:
         - 0
         - 0
+    handl_gaps: []
   when:
     !And
     - !KindAt
       index: 0
       kind: "reshape"
     - !ChildCount 1
+    - !AttrEq
+      path: []
+      attr: "dim0"
+    - !AttrEq
+      path: []
+      attr: "dim1"
+    - !AttrEq
+      path:
+        - 0
+      attr: "shape"
   priority: 2

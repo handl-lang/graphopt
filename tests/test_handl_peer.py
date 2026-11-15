@@ -147,16 +147,19 @@ def test_the_peer_agrees_with_mlopts_own_engine() -> None:
 def test_the_differential_reports_no_disagreement() -> None:
     """mlopt's engine and handl's agree wherever both fire.
 
-    The probe (`bench/drivers/audit/handl_differential.py`) synthesizes one term per
-    law, rewrites it with both engines and compares the results.  This
-    pins the *measured* state: 24 laws comparable, 24 agreeing, 0
-    disagreements.  The laws it cannot compare are reported by the probe
-    with their reason (leaf rhs, declined, guard raised) -- none of which
-    is a disagreement.  Root-eliminating laws (``id_add``, ``id_mul``,
-    ``double_neg``, ``transpose_noop``, ``chunk_single``) are now
-    *expressible* via handl's ``!Replace`` (handl ADR-0127): three are
-    compared here, and the other two are declined only because the probe's
-    synthesized term cannot satisfy their guard -- see
+    The probe (`bench/drivers/audit/handl_differential.py`) synthesizes terms per
+    law — attribute metavars over a small candidate pool, so guarded laws
+    are exercised on *both* sides of their guard — rewrites them with
+    both engines and compares the results.  This pins the *measured*
+    state: 48 agreeing applications, 0 disagreements, and — the
+    Phase-B decline-parity arm — **0 over-fires** (mlopt declined
+    where handl fired) across 40 both-declined instantiations and 76
+    explicit ``!Native`` refusals.  The laws it cannot compare are
+    reported by the probe with their reason (leaf rhs, guard raised)
+    -- none of which is a disagreement.  Root-eliminating laws
+    (``id_add``, ``id_mul``, ``double_neg``, ``transpose_noop``,
+    ``chunk_single``) are *expressible* via handl's ``!Replace``
+    (handl ADR-0127) plus the new attr guards — see
     `test_root_eliminating_laws_agree_on_satisfying_terms`.
     """
     import importlib.util
@@ -177,85 +180,94 @@ def test_the_differential_reports_no_disagreement() -> None:
         code = mod.main([])
     report = buf.getvalue()
     assert "DISAGREE           : 0" in report, report
-    assert "agree              : 24" in report, report
+    assert "OVERFIRE (mlopt no, handl yes): 0" in report, report
+    assert "agree              : 48" in report, report
     assert code == 0, report
 
 
 def test_root_eliminating_laws_agree_on_satisfying_terms() -> None:
-    """The two guarded root-eliminating laws agree when both engines fire.
+    """Guarded root-eliminating laws agree *or refuse* — never over-fire.
 
-    The probe's generic term cannot satisfy ``transpose_noop``'s
-    ``axes-noop`` guard or ``chunk_single``'s ``attr-eq CK 1`` guard, so it
-    reports them ``declined`` -- a limitation of the probe's synthesis, not
-    of the ``!Replace`` rule form.  Given a term whose guard *holds*, both
-    engines must return the subterm, so the faithful form is pinned for
-    all five root-eliminating laws.
+    ``chunk_single``'s ``attr-eq CK 1`` guard is attr-decidable, so the
+    bridge emits a real ``!Replace`` guarded by ``AttrEq`` clauses:
+    on a satisfying term both engines return the subterm.  The probe's
+    generic term cannot satisfy ``transpose_noop``'s ``axes-noop``
+    guard — that predicate needs mlopt's shape oracle, which handl's
+    AST does not carry — so the bridge refuses it explicitly as
+    ``!Native "mlopt.law.transpose_noop"`` and handl declines *even
+    when mlopt fires*.  That is the honest gap the refusal names
+    (Phase-B report §4), pinned here so a silent regression back to an
+    unguarded ``!Replace`` cannot pass.
     """
     from mlopt_core.egraph import EGraph
     from mlopt_core.ir import Op, TensorType, Var
+    from mlopt_discovery.handl_engine import term_to_ast
 
     fragments_all = _REPO / "tests" / "fixtures" / "handl-spike" / "fragments-all"
     assert fragments_all.is_dir(), "the full bank fragment dir is required"
 
-    cases = {
-        # chunk(u, chunks=1, …) -> u
-        "chunk_single": Op.make(
-            "chunk", Var("u", TensorType((4,))), chunks=1, dim=0, index=0
-        ),
-        # transpose(u, 0, 0) -> u (the axes coincide)
-        "transpose_noop": Op.make(
-            "transpose", Var("u", TensorType((4, 4))), dim0=0, dim1=0
-        ),
-    }
-    for name, term in cases.items():
-        law = next(r for r in ALL_RULES if r.name == name)
-        graph = EGraph()
-        assert graph.apply_rule(law, graph.add_term(term)), (
-            f"mlopt's engine must fire {name} on a satisfying term"
-        )
-        ast = json.dumps(
-            [{"kind": n["kind"], "payload": {"children": n["children"]}}
-             for n in _arena_of(term)]
-        )
+    def _apply(name: str, term: object):
+        """Run the peer on *term*; ``None`` on decline/refusal."""
+        nodes, at = term_to_ast(term)
+        ast = json.dumps(nodes)
         if _ext is not None:
-            out = json.loads(
-                _ext.apply_rule(
-                    str(fragments_all),
-                    ast,
-                    _root_of(term),
-                    f"transform.mlopt.{name}",
+            try:
+                return json.loads(
+                    _ext.apply_rule(
+                        str(fragments_all), ast, at,
+                        f"transform.mlopt.{name}",
+                    )
                 )
-            )
-        else:
-            proc = subprocess.run(
-                [str(_BIN), str(fragments_all), f"transform.mlopt.{name}",
-                 str(_root_of(term)), ast],
-                capture_output=True, text=True, timeout=120,
-            )
-            assert proc.returncode == 0, proc.stderr
-            out = json.loads(proc.stdout)
-        root = out["arena"][out["root_index"]]
-        assert root["kind"] == "u", (
-            f"{name}: handl must return the subterm, got {root}"
+            except Exception:
+                return None
+        proc = subprocess.run(
+            [str(_BIN), str(fragments_all), f"transform.mlopt.{name}",
+             str(at), ast],
+            capture_output=True, text=True, timeout=120,
         )
+        if proc.returncode != 0:
+            return None
+        return json.loads(proc.stdout)
 
+    # chunk(u, chunks=1, …) -> u — the guard holds, both engines agree.
+    term = Op.make(
+        "chunk", Var("u", TensorType((4,))), chunks=1, dim=0, index=0
+    )
+    law = next(r for r in ALL_RULES if r.name == "chunk_single")
+    graph = EGraph()
+    assert graph.apply_rule(law, graph.add_term(term)), (
+        "mlopt's engine must fire chunk_single on a satisfying term"
+    )
+    out = _apply("chunk_single", term)
+    assert out is not None, "handl must not refuse the attr-guarded law"
+    root = out["arena"][out["root_index"]]
+    assert root["kind"] == "u", f"chunk_single: got {root}"
 
-def _arena_of(term) -> list[dict]:
-    """Flatten a mlopt term to the peer's flat node list (post-order)."""
-    arena: list[dict] = []
-    _flatten_into(term, arena)
-    return arena
+    # chunk(u, chunks=3, …) — mlopt declines; handl must decline too
+    # (the ``AttrEq chunks == 1`` clause is the guard that used to be
+    # missing — the Phase-B over-fire).
+    bad = Op.make(
+        "chunk", Var("u", TensorType((4,))), chunks=3, dim=0, index=0
+    )
+    graph = EGraph()
+    assert not graph.apply_rule(law, graph.add_term(bad)), (
+        "mlopt's engine must decline chunk_single when chunks != 1"
+    )
+    assert _apply("chunk_single", bad) is None, (
+        "handl fired chunk_single where mlopt declined — over-fire"
+    )
 
-
-def _flatten_into(node, arena: list[dict]) -> int:
-    if isinstance(node, Op):
-        kids = [_flatten_into(a, arena) for a in node.args]
-        arena.append({"kind": node.op, "children": kids})
-    else:
-        arena.append({"kind": getattr(node, "name", str(node)), "children": []})
-    return len(arena) - 1
-
-
-def _root_of(term) -> int:
-    """Index of ``term``'s root in the post-order arena `_arena_of` builds."""
-    return len(_arena_of(term)) - 1
+    # transpose(u, 0, 0) -> u — mlopt's ``axes-noop`` guard holds, but
+    # the predicate is shape-only: handl refuses the law outright.
+    term = Op.make(
+        "transpose", Var("u", TensorType((4, 4))), dim0=0, dim1=0
+    )
+    law = next(r for r in ALL_RULES if r.name == "transpose_noop")
+    graph = EGraph()
+    assert graph.apply_rule(law, graph.add_term(term)), (
+        "mlopt's engine must fire transpose_noop on a noop transpose"
+    )
+    assert _apply("transpose_noop", term) is None, (
+        "transpose_noop must stay a !Native refusal — its guard is "
+        "shape-only and handl cannot express it"
+    )
