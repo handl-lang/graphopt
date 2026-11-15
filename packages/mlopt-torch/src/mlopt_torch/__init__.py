@@ -79,3 +79,31 @@ def __getattr__(name: str) -> Any:
     raise AttributeError(
         f"module {__name__!r} has no attribute {name!r}"
     )
+
+
+def register() -> None:
+    """Seat the torch backend on ``mlopt_core.backends.DEFAULT_REGISTRY``.
+
+    Explicit seam — importing ``mlopt_torch`` registers nothing; call
+    ``mlopt_torch.register()`` at the entry point (the same pattern as
+    ``mlopt_kernel.play.register()`` / ``mlopt_onnx.register()``).
+    Registers ``"torch"`` with :class:`TorchSource` + ``TorchSink``
+    (``"torch"`` target), ``TorchComposer`` and ``TorchMeter`` as lazy
+    factories — ``build_backend`` assembles the full port set.  A
+    custom ``device_policy`` is not registered (it is per-deployment);
+    pass one via ``TorchBackend(device_policy=...)`` directly.
+    """
+    from mlopt_core import backends
+
+    from mlopt_torch.adapters import TorchSink, TorchSource
+    from mlopt_torch.composer import TorchComposer
+    from mlopt_torch.meter import TorchMeter
+
+    backends.register_backend(
+        "torch",
+        source=TorchSource,
+        targets={"torch": TorchSink},
+        composer=TorchComposer,
+        meter=TorchMeter,
+        notes="PyTorch backend; device_policy per-deployment",
+    )
