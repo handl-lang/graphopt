@@ -881,7 +881,6 @@ def test_view_sets_agree_across_modules():
 def test_consumers_read_the_registry_object():
     """Each consumer set *is* the registry projection — identity, not
     a copy, so a twin cannot drift."""
-    from mlopt_core import typing as ty
     from mlopt_core.cost import basic as cost_basic
     from mlopt_core.laws import layout
     from mlopt_discovery import oracle as orc
@@ -889,7 +888,9 @@ def test_consumers_read_the_registry_object():
     from mlopt_orchestrator.morphisms import signature as sig
 
     assert cost_basic._VIEW_OPS is om.COST_VIEW_OPS
-    assert ty._COMMUTATIVE_BROADCAST is om.COMMUTATIVE_OPS
+    # ``typing._COMMUTATIVE_BROADCAST`` was retired with the
+    # broadcast-binary shape fix (eqsat typing._BROADCAST_BINOPS):
+    # unknown-shape pricing no longer borrows a sibling's shape.
     assert sig._VIEW_OPS is om.RELAYOUT_OPS
     assert sig._POINTWISE_OPS is om.POINTWISE_OPS
     assert sig._ACT_OPS is om.ACTIVATION_OPS
