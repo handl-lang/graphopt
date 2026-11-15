@@ -69,8 +69,8 @@ paths are re-exporting shims (see `TestGamekitCompatShims` in
 
 | Contract | Canonical location | Frozen surface |
 |---|---|---|
-| Law verification | `mlopt_discovery.verifier` | **`verify_law(lhs, rhs, rules, *, max_iterations=30, max_nodes=30_000, rule_budgets=None) -> LawResult`**, `LawResult` (`derivable`, `direction`, `witness_rules`, `replayable`, `cert`) — the admission side the phase-2 referees consume; saturation is bounded by default (`rule_budgets=None` applies the EXPANSIVE/non-library per-rule caps — `verifier._EXPANSIVE_BUDGET`) and a bound can only *refuse*, never accept |
-| Domain registry | `mlopt_discovery.play` | `DOMAINS`, `Domain` (`cases`/`board_of`/`legal`/`featurizer`/`features`/`scripted`/`deliver`/`spec`), `play(domain, case, player, *, budget)`, `spec_domain(cases, board_of, spec, *, scripted, deliver) -> Domain` — the `Domain` *shape* is the contract; the `DOMAINS` *contents* are domain data, and downstream repos seat their own (kernelopt's `mlopt_kernel.play` registers `kernel` at import — plan 0032 phase 4) |
+| Law verification | `discoverykit.verifier` (canonical); `mlopt_discovery.verifier` is the compat shim | **`verify_law(lhs, rhs, rules, *, max_iterations=30, max_nodes=30_000, rule_budgets=None) -> LawResult`**, `LawResult` (`derivable`, `direction`, `witness_rules`, `replayable`, `cert`) — the admission side the phase-2 referees consume; saturation is bounded by default (`rule_budgets=None` applies the EXPANSIVE/non-library per-rule caps — `verifier._EXPANSIVE_BUDGET`) and a bound can only *refuse*, never accept |
+| Domain registry | `discoverykit.play` (canonical); `mlopt_discovery.play` is the compat shim | `DOMAINS`, `Domain` (`cases`/`board_of`/`legal`/`featurizer`/`features`/`scripted`/`deliver`/`spec`), `play(domain, case, player, *, budget)`, `spec_domain(cases, board_of, spec, *, scripted, deliver) -> Domain` — the `Domain` *shape* is the contract; the `DOMAINS` *contents* are domain data, and downstream repos seat their own (kernelopt's `mlopt_kernel.play.register()` seats `kernel` — explicit call, never at import; plan 0032 phase 4 / 0034) |
 
 ## Torch delivery contracts (→ `graphopt`)
 

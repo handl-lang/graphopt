@@ -131,12 +131,12 @@ exclude = [
 # docs/reports/git_url_distribution.md).  Bump the tag on releases.
 mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", tag = "v0.1.1" }
 mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", tag = "v0.1.1" }
-gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.1" }
-benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", tag = "v0.1.1" }
+gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.2" }
+benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", tag = "v0.1.2" }
 # discoverykit (plan 0034 phase 1): the domain-free mining core
 # extracted from mlopt-discovery — local path dep while the repo is
 # pre-remote; Phase 2 flips this to the git+tag pin.
-discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.2" }
+discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.4" }
 mlopt-torch = { workspace = true }
 mlopt-carriers = { workspace = true }
 mlopt-cuda = { workspace = true }
@@ -205,6 +205,27 @@ layers = [
     # the whole stack and nothing may depend back on it.
     "mlopt_dtypes",
 ]
+
+# The game layer lives in other repos now (plan 0032/0034):
+# ``gamekit`` is the substrate-free kernel, ``benchkit`` the
+# benchmark harness, ``discoverykit`` the domain-free mining core.
+# None of the tensor-domain packages may reach *up* into them —
+# ``mlopt_discovery`` is the one sanctioned consumer (its modules
+# are the shims onto discoverykit and the domain registrations that
+# seat boards/players), so it is deliberately absent from
+# ``source_modules``.
+[[tool.importlinter.contracts]]
+name = "domain packages never reach the game layer"
+type = "forbidden"
+source_modules = [
+    "mlopt_torch",
+    "mlopt_carriers",
+    "mlopt_cuda",
+    "mlopt_onnx",
+    "mlopt_host_tensor",
+    "mlopt_dtypes",
+]
+forbidden_modules = ["gamekit", "benchkit", "discoverykit"]
 
 [tool.ruff]
 target-version = "py311"
