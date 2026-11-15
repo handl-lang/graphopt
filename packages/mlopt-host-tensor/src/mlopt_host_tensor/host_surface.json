@@ -1129,6 +1129,15 @@
       "reason": ""
     },
     {
+      "op": "tensor.load",
+      "signature": "Value... -> Tensor",
+      "min_args": null,
+      "max_args": null,
+      "status": "Handwritten",
+      "kind": "handwritten",
+      "reason": ""
+    },
+    {
       "op": "tensor.log",
       "signature": "Tensor -> Tensor",
       "schema": "aten::log(Tensor self) -> Tensor",

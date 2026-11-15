@@ -67,8 +67,8 @@ class TestArtifact:
         assert entry["kind"] == "handwritten"
 
     def test_op_count(self) -> None:
-        """238 ops — the full host-tensor ``index.hnl`` decl surface."""
-        assert len(host_ops()) == 238
+        """239 ops — the full host-tensor ``index.hnl`` decl surface."""
+        assert len(host_ops()) == 239
 
     def test_generated_and_handwritten_split(self) -> None:
         kinds = {e["kind"] for e in host_ops().values()}
