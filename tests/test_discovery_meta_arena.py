@@ -1027,6 +1027,10 @@ class TestClaimMove:
         # a handler whose args index metavars the spec does not have:
         # declare lands, the bind refuses, claim reports declined
         arena = self._arena()
+        # board-local copy — arena.handlers IS lawdata.HANDLERS by
+        # default; mutating it leaks the "wide" tag into every later
+        # board (and into vocabdir's handlers.yaml drift check)
+        arena.handlers = dict(arena.handlers)
         arena.handlers["wide"] = {
             "pattern": ("mul", "X1", ("sigmoid", "X1")),
             "args": ("X1", "X2", "X3"),
