@@ -76,7 +76,29 @@ __all__ = [
     "lift_model",
     "lower_ir",
     "numpy_to_onnx_type",
+    "register",
     "to_numpy",
     "verify_equiv",
     "verify_module",
 ]
+
+
+def register() -> None:
+    """Seat the ONNX backend on ``mlopt_core.backends.DEFAULT_REGISTRY``.
+
+    Explicit seam — importing this package registers nothing; call
+    ``mlopt_onnx.register()`` at the entry point (the same pattern as
+    ``mlopt_kernel.play.register()``).  Registers ``"onnx"`` with
+    :class:`OnnxSource` as the source and ``OnnxSink`` as the ``"onnx"``
+    target — both lazy factories, resolved on demand.  ONNX has no
+    composer/meter yet, so ``build_backend`` reports them missing
+    honestly; ``find_backends_by_ops`` capability queries work today.
+    """
+    from mlopt_core import backends
+
+    backends.register_backend(
+        "onnx",
+        source=OnnxSource,
+        targets={"onnx": OnnxSink},
+        notes="ONNX source+sink (ADR 0006); composer/meter pending",
+    )
