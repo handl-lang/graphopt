@@ -2231,12 +2231,15 @@ def _repeat_interleave_shape(op: Op, shapes: list) -> Any:
     The ``dim`` extent is multiplied by the scalar ``repeats`` count
     (``dim=None`` flattens first, so the result is
     ``(numel * repeats,)``).  A tensor-valued ``repeats`` operand or
-    an unreadable count reports unknown.
+    an unreadable count reports unknown, as does ``output_size``
+    (it fixes the output extent along ``dim`` outright).
     """
     x = shapes[0] if shapes else None
     if x is None or isinstance(x, str):
         return x
     if not isinstance(x, tuple):
+        return None
+    if attr_of(op, "output_size", "arg3", default=None) is not None:
         return None
     repeats = attr_of(op, "repeats", "arg1")
     if isinstance(repeats, bool) or not isinstance(repeats, int):
