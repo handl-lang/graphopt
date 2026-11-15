@@ -95,6 +95,14 @@ git deps. In this repo: `mlopt_torch` / `mlopt_onnx` (the
 `Source`/`Sink` ports) · `mlopt_discovery` (the meta-layer) ·
 `bench/drivers/` (measurement probes).
 
+The Rust side of the same stack is landing in sibling repos under
+ADR-0174/0175/0176: [`engine-eqsat`](https://github.com/handl-lang/engine-eqsat)
+(the e-graph search interpretation over kernel `Term`s),
+[`kit-eqsat`](https://github.com/handl-lang/kit-eqsat) (the canonical
+`LAW_FORMAT = 2` law corpus — kit data, not code), and
+[`source-onnx`](https://github.com/handl-lang/source-onnx) (the Rust
+ONNX→Term-JSON lifter; `mlopt_onnx.OnnxSource` stays the oracle).
+
 The full account — with the measured asides — is
 [`docs/mechanism.md`](https://github.com/handl-lang/graphopt/blob/main/docs/mechanism.md)
 upstream. See also [evaluation](./evaluation) and
