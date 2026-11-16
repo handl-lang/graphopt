@@ -131,7 +131,7 @@ exclude = [
 # docs/reports/git_url_distribution.md).  Bump the tag on releases.
 mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", tag = "v0.1.12" }
 mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", tag = "v0.1.12" }
-gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.14" }
+gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.12" }
 benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", tag = "v0.1.14" }
 # discoverykit (plan 0034 phase 1): the domain-free mining core
 # extracted from the discovery engine (mlopt-discovery, now
@@ -177,7 +177,7 @@ override-dependencies = [
     "mlopt-core @ git+https://github.com/handl-lang/eqsat.git@v0.1.12#subdirectory=packages/mlopt-core",
     "mlopt-orchestrator @ git+https://github.com/handl-lang/eqsat.git@v0.1.12#subdirectory=packages/mlopt-orchestrator",
     "mlopt-dtypes @ git+https://github.com/handl-lang/eqsat.git@v0.1.12#subdirectory=packages/mlopt-dtypes",
-    "gamekit @ git+https://github.com/handl-lang/gamekit.git@v0.1.14#subdirectory=packages/gamekit",
+    "gamekit @ git+https://github.com/handl-lang/gamekit.git@v0.1.12#subdirectory=packages/gamekit",
 ]
 
 [tool.pytest.ini_options]
