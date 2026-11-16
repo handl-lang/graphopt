@@ -119,6 +119,7 @@ dependencies = [
  "handl-lib-ops",
  "handl-platform",
  "handl-plugin-lib-handl",
+ "handl-value",
  "serde_json",
 ]
 

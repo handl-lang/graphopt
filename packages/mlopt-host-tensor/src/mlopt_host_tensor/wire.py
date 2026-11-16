@@ -25,10 +25,17 @@ Known holes, handled honestly rather than silently:
   :func:`to_wire`).
 * **Index dtypes.** ``argmax``/``argsort``-family results are f64 on
   the wire (no int dtype); consumers must not dtype-check them.
+* **Binary ``data`` (ADR-0179).** ``data`` may be
+  ``{"__tensor_bin__": "<base64 LE>"}`` with ``"dtype":
+  "f32"|"f64"`` — emitted by the Rust codecs iff ``numel >= 4096``.
+  :func:`from_wire` decodes it (payload widens ``f32 → f64`` exactly);
+  :func:`to_wire` always emits the array spelling.
 """
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import warnings
 from typing import Any
@@ -39,8 +46,15 @@ from mlopt_host_tensor.errors import HostTensorError
 
 WIRE_TAG = "__tensor__"
 NONFINITE_TAG = "__nonfinite__"
+TENSOR_BIN_TAG = "__tensor_bin__"
 
 _NONFINITE_VALUES = {"nan": np.nan, "inf": np.inf, "-inf": -np.inf}
+
+# ADR-0179: the binary `data` spelling — `{"__tensor_bin__":
+# "<base64 little-endian payload>"}` with a required
+# `"dtype": "f32"|"f64"` — emitted by the Rust codecs iff
+# `numel >= 4096` (`handl_value::TENSOR_BIN_THRESHOLD`).
+_TENSOR_BIN_DTYPES = {"f32": np.dtype("<f4"), "f64": np.dtype("<f8")}
 
 
 def _encode_f64(x: float) -> Any:
@@ -114,18 +128,71 @@ def to_wire(a: Any) -> dict[str, Any]:
     }
 
 
+def _decode_bin_data(rec: dict[str, Any]) -> np.ndarray:
+    """Decode the ADR-0179 binary ``data`` spelling to a flat f64 array.
+
+    ``data`` is ``{"__tensor_bin__": "<base64 LE>"}`` and ``dtype`` must
+    be ``"f32"`` or ``"f64"``; the payload widens ``f32 → f64`` exactly
+    (every f32 is an f64), matching the Rust ``decode_tensor``.
+    Malformed records — bad base64, a payload length that is not
+    ``numel x itemsize``, a missing/unsupported dtype — raise
+    :class:`HostTensorError`, never a silent coercion.
+    """
+    dtype = rec.get("dtype")
+    np_dtype = (
+        _TENSOR_BIN_DTYPES.get(dtype)
+        if isinstance(dtype, str)
+        else None
+    )
+    if np_dtype is None:
+        raise HostTensorError(
+            "binary tensor record requires dtype 'f32' or 'f64', "
+            f"got {dtype!r}"
+        )
+    data = rec.get("data")
+    b64 = data.get(TENSOR_BIN_TAG) if isinstance(data, dict) else None
+    if not isinstance(b64, str):
+        raise HostTensorError(
+            f"binary tensor record requires data.{TENSOR_BIN_TAG!r} "
+            "to be a base64 string"
+        )
+    try:
+        payload = base64.b64decode(b64, validate=True)
+    except (ValueError, binascii.Error) as e:
+        raise HostTensorError(
+            f"tensor {TENSOR_BIN_TAG!r} payload: bad base64: {e}"
+        ) from e
+    shape = [int(d) for d in rec["shape"]]
+    numel = 1
+    for d in shape:
+        numel *= d
+    itemsize = np_dtype.itemsize
+    if len(payload) != numel * itemsize:
+        raise HostTensorError(
+            f"tensor {TENSOR_BIN_TAG!r} payload is {len(payload)} bytes, "
+            f"expected {numel} elements x {itemsize}B for shape {shape}"
+        )
+    flat = np.frombuffer(payload, dtype=np_dtype).astype(np.float64)
+    return flat
+
+
 def from_wire(v: Any) -> np.ndarray:
     """Decode a wire record (or array-like) to a float64 ndarray.
 
     ``data`` elements may be JSON numbers or ``{"__nonfinite__": …}``
     tags; ``null`` and anything else raise :class:`HostTensorError`.
+    The ADR-0179 ``{"__tensor_bin__": …}`` spelling decodes through
+    :func:`_decode_bin_data`.
     """
     if isinstance(v, dict) and WIRE_TAG in v:
         rec = v[WIRE_TAG]
         data = rec["data"]
-        flat = np.array(
-            [_decode_f64(x) for x in data], dtype=np.float64
-        )
+        if isinstance(data, dict) and TENSOR_BIN_TAG in data:
+            flat = _decode_bin_data(rec)
+        else:
+            flat = np.array(
+                [_decode_f64(x) for x in data], dtype=np.float64
+            )
         return flat.reshape([int(d) for d in rec["shape"]])
     return np.asarray(v, dtype=np.float64)
 

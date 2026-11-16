@@ -74,6 +74,16 @@ fn main() -> ExitCode {
         },
     };
 
+    // An empty (or whitespace-only) program is a usage error, not a
+    // successful `null`: the parser returns an empty arena for it and the
+    // evaluator prints `null` with exit 0, which is indistinguishable from
+    // a program that genuinely evaluated to null (e.g. stdin already at
+    // EOF). Fail loudly instead.
+    if src.trim().is_empty() {
+        eprintln!("hnl-run: empty program (no tokens to parse)");
+        return ExitCode::from(2);
+    }
+
     let kit = match &project {
         Some(dir) => CatoptKit::new_with_project(dir.clone()),
         None => CatoptKit::new(),
@@ -97,7 +107,13 @@ fn main() -> ExitCode {
         }
     }
     match value {
-        Some(v) => {
+        Some(mut v) => {
+            // ADR-0179: tensors ≥ `TENSOR_BIN_THRESHOLD` cross the
+            // engine boundary as `{"__tensor_bin__": "<base64 LE>"}` —
+            // expand them back to the array `data` spelling so the
+            // stdout contract (`wire["data"]` is a list) holds for
+            // `KitRunner`/`verify-run` consumers.
+            handl_value::materialize_tensor_bin(&mut v);
             println!("{v}");
             ExitCode::SUCCESS
         }
