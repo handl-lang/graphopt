@@ -741,7 +741,7 @@ export class Course {
           note: "`export_optimized` / `load_optimized` — the artifact formats",
         },
         {
-          path: "packages/mlopt-cuda/src/mlopt_cuda/runners.py",
+          path: "kit-cuda/src/kit_cuda/runners.py",
           note: "the CUDA-graph runner",
         },
         {
@@ -1476,7 +1476,7 @@ export class Course {
           note: "the executor tiers a term can run through",
         },
         {
-          path: "packages/mlopt-cuda/src/mlopt_cuda/runners.py",
+          path: "kit-cuda/src/kit_cuda/runners.py",
           note: "the CUDA-graph runner",
         },
         {

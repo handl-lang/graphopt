@@ -435,7 +435,7 @@ class TestEdges:
         # CUDA delivers the graph-replay module with honest
         # eager-vs-graph timings and a zero output delta
         torch = pytest.importorskip("torch")
-        pytest.importorskip("mlopt_cuda")
+        pytest.importorskip("kit_cuda")
         from mlopt_discovery import zoo
 
         wl = next(

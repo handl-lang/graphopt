@@ -256,7 +256,7 @@ def corpus_decoder():
 
 
 def opt(which: str, iters: int = 3) -> None:
-    from mlopt_cuda import CudaGraphRunner
+    from kit_cuda import CudaGraphRunner
 
     dtype = sys.argv[3] if len(sys.argv) > 3 else "fp32"
     max_enodes = int(sys.argv[4]) if len(sys.argv) > 4 else 100_000

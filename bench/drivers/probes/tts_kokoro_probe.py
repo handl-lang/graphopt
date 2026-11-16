@@ -531,7 +531,7 @@ def synth() -> None:
 
 
 def opt(which: str, iters: int = 3) -> None:
-    from mlopt_cuda import CudaGraphRunner
+    from kit_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import Optimizer
     from mlopt_torch.backend import TorchBackend
 

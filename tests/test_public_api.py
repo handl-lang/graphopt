@@ -223,7 +223,10 @@ _PUBLIC_SURFACE: dict[str, tuple[str, ...]] = {
         "save_optimized_weights",
     ),
     "mlopt_torch.runners": ("TorchCompileRunner",),
-    "mlopt_cuda": ("CudaGraphRunner",),
+    # kit_cuda.CudaGraphRunner left with the package in P3 Step D-1c —
+    # its frozen surface lives in handl-lang/kit-cuda; the
+    # constructor-shape pin below still exercises it as a ``runner=``
+    # value through the installed git dep.
 }
 
 
@@ -441,7 +444,7 @@ class TestSignaturePins:
     def test_runner_constructor_shapes(self):
         """The ``runner=`` values: zero-arg captures, kwargs compile,
         an iterable chain — the three call shapes docs promise."""
-        from mlopt_cuda import CudaGraphRunner
+        from kit_cuda import CudaGraphRunner
         from mlopt_orchestrator import ChainedRunner, IdentityRunner
         from mlopt_torch import TorchCompileRunner
 

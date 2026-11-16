@@ -538,7 +538,7 @@ def arm_eager(model: str, ntok: int) -> None:
 def arm_opt(model: str, iters: int, ntok: int, L: int) -> None:
     import kit_carriers  # noqa: F401
     import mlopt_torch  # noqa: F401
-    from mlopt_cuda import CudaGraphRunner
+    from kit_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import Optimizer
     from mlopt_torch.backend import TorchBackend
 

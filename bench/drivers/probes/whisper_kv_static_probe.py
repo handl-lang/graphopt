@@ -287,7 +287,7 @@ def main() -> None:
 
     import kit_carriers  # noqa: F401
     import mlopt_torch  # noqa: F401
-    from mlopt_cuda import CudaGraphRunner
+    from kit_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import (
         Optimizer,
         VerifyDeclinedError,

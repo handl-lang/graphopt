@@ -163,7 +163,7 @@ def _verify_vs_hf(ref, feats, delivered, tag: str) -> None:
 def opt(model: str, iters: int, exclude: str = "") -> None:
     import kit_carriers  # noqa: F401
     import mlopt_torch  # noqa: F401
-    from mlopt_cuda import CudaGraphRunner
+    from kit_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import Optimizer
     from mlopt_torch.backend import TorchBackend
 
@@ -512,7 +512,7 @@ def e2e(model: str, iters: int, ntok: int) -> None:
     """
     import kit_carriers  # noqa: F401
     import mlopt_torch  # noqa: F401
-    from mlopt_cuda import CudaGraphRunner
+    from kit_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import (
         Optimizer,
         VerifyDeclinedError,

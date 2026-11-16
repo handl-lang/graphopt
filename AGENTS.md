@@ -12,7 +12,10 @@ laws/executors — `kit-carriers`, **split to
 `handl-lang/kit-carriers` in P3 Step D-1b** (was
 `packages/mlopt-carriers`; pin `kit-carriers` git dep, import
 `kit_carriers`; package-bound tests travelled with it);
-`mlopt-cuda` — the CUDA-graph runner;
+`kit-cuda` — the CUDA-graph runner, **split to
+`handl-lang/kit-cuda` in P3 Step D-1c** (was
+`packages/mlopt-cuda`; pin `kit-cuda` git dep, import
+`kit_cuda`; package-bound tests travelled with it);
 `mlopt-orchestrator` — the backend-neutral pipeline;
 the ONNX backend `kit-onnx` — ADR 0006: `OnnxSink` lowers IR to
 a checked ONNX artifact, `OnnxSource` lifts ONNX graphs back to IR;
@@ -53,7 +56,7 @@ the uv workspace and built with maturin — is opt-in via `engine=`.
 The `mlopt` façade is gone (plan 0008): `import mlopt` fails and
 every name lives at its real package path — `mlopt_core.egraph`,
 `mlopt_torch.adapters`, `mlopt_orchestrator.optimize`,
-`mlopt_cuda.CudaGraphRunner`, … Tests in
+`kit_cuda.CudaGraphRunner`, … Tests in
 `tests/`. The dev virtualenv is `.venv/` (uv-managed).
 
 **Repo split (plan 0032 phase 4, landed).**  The substrate packages
@@ -65,9 +68,10 @@ package/import names are unchanged.  The substrate-only test files
 travelled with them — domain-bound test functions carved out live in
 `tests/test_substrate_domain_edges.py`.  Coverage floors now apply
 per-repo: this repo's wall is the domain packages
-(`fail_under=100` on `mlopt_torch`/`mlopt_cuda`;
-`mlopt_onnx` split to handl-lang/kit-onnx in P3 Step D-1 and
-`kit_carriers` to handl-lang/kit-carriers in P3 Step D-1b — their
+(`fail_under=100` on `mlopt_torch`;
+`mlopt_onnx` split to handl-lang/kit-onnx in P3 Step D-1,
+`kit_carriers` to handl-lang/kit-carriers in P3 Step D-1b, and
+`kit_cuda` to handl-lang/kit-cuda in P3 Step D-1c — their
 floors live there) + the 99%
 `mlopt_discovery` ratchet); the substrate and
 game floors were re-measured in their own repos (56% / 98%).
@@ -598,12 +602,14 @@ package registers a `CarrierMachinery` value — all thunks, so
 registration loads no tensor library — when it is imported.  Without a
 registration the passes degrade to their carrier-free defaults.  The
 remaining package graph is pinned by the import-linter `dependency
-layers` contract: `mlopt_cuda` above `mlopt_torch`, above
+layers` contract: `mlopt_discovery` above `mlopt_torch` above
 `mlopt_orchestrator`, above `mlopt_native`, above `mlopt_core` (the
 carriers' own layering contract lives in the kit-carriers repo; the
 `mlopt_torch` → `kit_carriers` edge here stays lazy and undeclared —
-the declared direction is carriers → torch).  `mlopt_torch` does not
-depend on `mlopt_cuda`; import `CudaGraphRunner` from `mlopt_cuda`.
+the declared direction is carriers → torch; `kit_cuda` sits above
+`mlopt_torch` — its layering contract lives in the kit-cuda repo).
+`mlopt_torch` does not depend on `kit_cuda`; import `CudaGraphRunner`
+from `kit_cuda`.
 
 ## Conventions
 
@@ -611,10 +617,11 @@ depend on `mlopt_cuda`; import `CudaGraphRunner` from `mlopt_cuda`.
   `[tool.ruff.lint]` for rationale.
 - Coverage floor: `fail_under = 100` in `[tool.coverage.report]` —
   the suite is pinned at 100% for the shipped packages
-  (`mlopt_torch`/`mlopt_cuda`; `mlopt_onnx` climbed to
+  (`mlopt_torch`; `mlopt_onnx` climbed to
   the wall here, then split to handl-lang/kit-onnx in P3 Step D-1 —
   see `project/retros/onnx-package.md`; `kit_carriers` split to
-  handl-lang/kit-carriers in P3 Step D-1b the same way); new branches
+  handl-lang/kit-carriers in P3 Step D-1b and `kit_cuda` to
+  handl-lang/kit-cuda in P3 Step D-1c the same way); new branches
   need tests (or a justified `pragma: no cover`).
   `mlopt_discovery` joined the source list after its staged climb
   and sits under a **pinned ratchet floor** (`--fail-under=99` at

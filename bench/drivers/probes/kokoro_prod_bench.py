@@ -217,7 +217,7 @@ def arm(which: str, iters: int = 3) -> None:
 
     # ---- delivered + CUDA graph ---------------------------------------
     try:
-        from mlopt_cuda import CudaGraphRunner
+        from kit_cuda import CudaGraphRunner
 
         t0 = time.time()
         low_g = optz.lower(res, inp, verify=False, runner=CudaGraphRunner())

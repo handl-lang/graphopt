@@ -7,7 +7,7 @@
 
 The orchestration surface lives in `mlopt_orchestrator`
 (backend-neutral — it imports no torch); the torch ports, runners and
-autotune candidate builders live in `mlopt_torch` / `mlopt_cuda`;
+autotune candidate builders live in `mlopt_torch` / `kit_cuda`;
 the engine itself is `mlopt_core`.  There is no `mlopt` façade — import
 the domain packages directly.
 
@@ -26,7 +26,7 @@ carries `rule_fires`, `lowering`, `runner`, and the strategy's own keys.
 ## Choose how the result is delivered
 
 ```python
-from mlopt_cuda import CudaGraphRunner
+from kit_cuda import CudaGraphRunner
 from mlopt_orchestrator import (
     Autotuned, ChainedRunner, Compositional, Optimizer,
 )

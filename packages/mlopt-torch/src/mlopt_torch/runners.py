@@ -6,16 +6,16 @@ The delivery runners split by backend (plan 0007): the backend-neutral
 :func:`runner_candidate` live in the orchestrator
 (:mod:`mlopt_orchestrator.runners`); the torch-coupled
 :class:`TorchCompileRunner` lives here; and the CUDA-device-coupled
-:class:`CudaGraphRunner` lives in :mod:`mlopt_cuda`.
+:class:`CudaGraphRunner` lives in :mod:`kit_cuda`.
 
 This module re-exports the neutral runner surface so the historical
 ``mlopt_orchestrator.runners`` path (and ``from mlopt_torch.runners
 import …``) resolves it.  :class:`CudaGraphRunner` is deliberately NOT
-re-exported: it lives in :mod:`mlopt_cuda`, and importing it here
-would make ``mlopt_torch`` depend on ``mlopt_cuda`` (which in turn
+re-exported: it lives in :mod:`kit_cuda`, and importing it here
+would make ``mlopt_torch`` depend on ``kit_cuda`` (which in turn
 depends on ``mlopt_torch``), a cycle.  Import it from its home::
 
-    from mlopt_cuda import CudaGraphRunner
+    from kit_cuda import CudaGraphRunner
 """
 
 from __future__ import annotations

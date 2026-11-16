@@ -62,7 +62,7 @@ Honesty conventions:
 Usage:
     PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
 packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \\
-        /tmp/mlopt-cuda-venv/bin/python bench/suites/e2e/e2e_llm.py --device cuda
+        /tmp/kit-cuda-venv/bin/python bench/suites/e2e/e2e_llm.py --device cuda
 """
 # ruff: noqa: E402, RUF001, RUF003 -- ×, ·, → in strings are deliberate math
 # notation; sys.path setup must precede benchkit/mlopt imports.

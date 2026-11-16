@@ -47,7 +47,7 @@ opt_mod, stats = Optimizer(backend=TorchBackend()).optimize(
 ## Choose how the result is delivered
 
 ```python
-from mlopt_cuda import CudaGraphRunner
+from kit_cuda import CudaGraphRunner
 from mlopt_torch import TorchCompileRunner
 
 opt_mod, stats = opt.optimize(model, x, runner=TorchCompileRunner())

@@ -255,10 +255,10 @@ def _deliver_runner_arm(
         out["runner_note"] = "inputs not CUDA tensors"
         return out
     try:  # pragma: no cover — CUDA-only body
-        from mlopt_cuda import CudaGraphRunner
+        from kit_cuda import CudaGraphRunner
     except ImportError:  # pragma: no cover — optional dep absent
         out["cuda_graph"] = False
-        out["runner_note"] = "mlopt-cuda not installed"
+        out["runner_note"] = "kit-cuda not installed"
         return out
     stats: dict[str, Any] = {}
     try:  # pragma: no cover — CUDA-only body

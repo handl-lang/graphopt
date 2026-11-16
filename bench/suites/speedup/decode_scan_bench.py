@@ -67,7 +67,7 @@ Usage:
     .venv/bin/python bench/suites/speedup/decode_scan_bench.py --device cpu
     PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
 packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \
-        /tmp/mlopt-cuda-venv/bin/python bench/suites/speedup/decode_scan_bench.py \
+        /tmp/kit-cuda-venv/bin/python bench/suites/speedup/decode_scan_bench.py \
         --device cuda
 """
 # ruff: noqa: E402 RUF001 RUF002 RUF003 — ×, ·, −, ⊙, σ, γ in

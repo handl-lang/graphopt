@@ -5,7 +5,7 @@
  * `module` / `safetensors` / `state_dict` / `torchscript` artifact, and
  * a `.pt2` round-trips to a **standalone** program with no mlopt at
  * inference.  Beyond a file, delivery is also a *runner* — the CUDA-graph
- * runner captures an executor into one replay (`mlopt_cuda`), and the
+ * runner captures an executor into one replay (`kit_cuda`), and the
  * opt-in `mlopt-native` PyO3/Rust engine is a faster closure over the
  * same IR.
  *

@@ -628,7 +628,7 @@ def _gen_probe_impl(case: Any, *, budget: int, reps: int) -> dict:
     # *same* verified module into a CUDA graph and time the replay.
     # Additive keys only — ``gen_us``/``speedup`` stay the lowering
     # number; ``gen_graph_us`` is the runner-wrapped arm.  Optional
-    # dep (``mlopt-cuda`` is not in this package's requirements) and
+    # dep (``kit-cuda`` is not in this package's requirements) and
     # CUDA-only, so every failure path degrades to no keys.
     graph = _probe_graph_arm(module, xin, t_base, t_comp, reps)
     row.update(graph)
@@ -654,7 +654,7 @@ def _probe_graph_arm(
     import torch
 
     try:
-        from mlopt_cuda import CudaGraphRunner
+        from kit_cuda import CudaGraphRunner
     except ImportError:  # pragma: no cover — optional dep absent
         return {}
     args = xin if isinstance(xin, (tuple, list)) else (xin,)

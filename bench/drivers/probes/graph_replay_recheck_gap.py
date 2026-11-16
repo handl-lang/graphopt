@@ -92,7 +92,7 @@ def retnet_case(probe, *, t: int, k: int, chunk: int) -> dict:
 
     import torch.nn as nn
     from mlopt_core.ir import IR
-    from mlopt_cuda import CudaGraphRunner
+    from kit_cuda import CudaGraphRunner
     from mlopt_torch.adapters import TorchSink
 
     row: dict = {"case": f"retnet_T{t}_K{k}", "arms": []}
@@ -153,7 +153,7 @@ def chainfuse_case(probe, *, reps: int) -> dict:
 
     import torch.nn as nn
     from mlopt_core.ir import IR
-    from mlopt_cuda import CudaGraphRunner
+    from kit_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import Optimizer
     from mlopt_torch.adapters import TorchSink
     from mlopt_torch.backend import TorchBackend

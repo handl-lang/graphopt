@@ -24,7 +24,7 @@ against the source). `stats` records `rule_fires`, `lowering`, `runner`,
 ## 2. Choose how the result is delivered
 
 ```python
-from mlopt_cuda import CudaGraphRunner
+from kit_cuda import CudaGraphRunner
 from mlopt_orchestrator import Autotuned, ChainedRunner, Compositional
 from mlopt_torch import TorchCompileRunner
 from mlopt_torch.autotune import TORCH_BUILDERS

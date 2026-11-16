@@ -76,7 +76,7 @@ medians stable within ~10-20%):
 Usage:
     PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
 packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \
-        /tmp/mlopt-cuda-venv/bin/python bench/suites/speedup/real_win_hunt.py \
+        /tmp/kit-cuda-venv/bin/python bench/suites/speedup/real_win_hunt.py \
         --device cuda
     .venv/bin/python bench/suites/speedup/real_win_hunt.py --device cpu --quick
 """

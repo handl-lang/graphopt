@@ -175,7 +175,7 @@ import sys
 class _Blocker:
     def find_spec(self, name, path=None, target=None):
         if name.split(".")[0] in ("torch", "mlopt_torch",
-                                  "kit_carriers", "mlopt_cuda"):
+                                  "kit_carriers", "kit_cuda"):
             raise ModuleNotFoundError(f"blocked import: {name}")
         return None
 

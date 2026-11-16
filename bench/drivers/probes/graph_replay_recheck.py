@@ -228,7 +228,7 @@ def recheck_one(
     shape: tuple[int, int, int] = (64, 32, 8),
 ) -> dict:
     """Deliver one zoo workload and re-verify its graph arm on fresh inputs."""
-    from mlopt_cuda import CudaGraphRunner
+    from kit_cuda import CudaGraphRunner
     from mlopt_discovery import play as play_mod
     from mlopt_discovery import zoo as zoo_mod
 

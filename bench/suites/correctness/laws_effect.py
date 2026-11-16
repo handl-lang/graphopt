@@ -38,7 +38,7 @@ picked, or is picked but doesn't pay at runtime, is reported as such.
 Usage:
     PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
 packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \
-        /tmp/mlopt-cuda-venv/bin/python bench/suites/correctness/laws_effect.py \
+        /tmp/kit-cuda-venv/bin/python bench/suites/correctness/laws_effect.py \
         --device cuda
     .venv/bin/python bench/suites/correctness/laws_effect.py --device cpu --quick
 """

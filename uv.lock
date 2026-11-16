@@ -19,7 +19,6 @@ resolution-markers = [
 [manifest]
 members = [
     "mlopt",
-    "mlopt-cuda",
     "mlopt-discovery",
     "mlopt-host-tensor",
     "mlopt-torch",
@@ -1642,6 +1641,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "kit-cuda"
+version = "0.1.0"
+source = { git = "https://github.com/handl-lang/kit-cuda.git?tag=v0.1.0#331a13682cc04ee2c0e3fcdb1efa0b0ed861c658" }
+dependencies = [
+    { name = "mlopt-core" },
+    { name = "mlopt-torch" },
+    { name = "torch" },
+]
+
+[[package]]
 name = "kit-onnx"
 version = "0.1.0"
 source = { git = "https://github.com/handl-lang/kit-onnx.git?tag=v0.1.1#2784ce8aac90cdb02524895c81e8324caf27265d" }
@@ -2165,9 +2174,9 @@ dependencies = [
     { name = "discoverykit" },
     { name = "gamekit" },
     { name = "kit-carriers" },
+    { name = "kit-cuda" },
     { name = "kit-onnx" },
     { name = "mlopt-core" },
-    { name = "mlopt-cuda" },
     { name = "mlopt-discovery" },
     { name = "mlopt-dtypes" },
     { name = "mlopt-host-tensor" },
@@ -2245,9 +2254,9 @@ requires-dist = [
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.168.1" },
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.15" },
     { name = "kit-carriers", git = "https://github.com/handl-lang/kit-carriers.git?tag=v0.1.1" },
+    { name = "kit-cuda", git = "https://github.com/handl-lang/kit-cuda.git?tag=v0.1.0" },
     { name = "kit-onnx", git = "https://github.com/handl-lang/kit-onnx.git?tag=v0.1.1" },
     { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.9" },
-    { name = "mlopt-cuda", editable = "packages/mlopt-cuda" },
     { name = "mlopt-discovery", editable = "packages/mlopt-discovery" },
     { name = "mlopt-dtypes", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-dtypes&tag=v0.1.9" },
     { name = "mlopt-host-tensor", editable = "packages/mlopt-host-tensor" },
@@ -2307,23 +2316,6 @@ oracle = [{ name = "egglog", marker = "python_full_version >= '3.12'", specifier
 name = "mlopt-core"
 version = "0.1.0.dev0"
 source = { git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.9#414ec4e89401587cadf96691a9059ef8e298308e" }
-
-[[package]]
-name = "mlopt-cuda"
-version = "0.1.0.dev0"
-source = { editable = "packages/mlopt-cuda" }
-dependencies = [
-    { name = "mlopt-core" },
-    { name = "mlopt-torch" },
-    { name = "torch" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.9" },
-    { name = "mlopt-torch", editable = "packages/mlopt-torch" },
-    { name = "torch", specifier = ">=2.0" },
-]
 
 [[package]]
 name = "mlopt-discovery"

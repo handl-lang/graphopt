@@ -13,7 +13,7 @@ dependencies = [
     "mlopt-torch",
     "kit-carriers",
     "mlopt-orchestrator",
-    "mlopt-cuda",
+    "kit-cuda",
     "mlopt-discovery",
     "discoverykit",
     "kit-onnx",
@@ -141,7 +141,9 @@ mlopt-torch = { workspace = true }
 # kit-carriers (P3 Step D-1b): the semantic carriers, split to
 # handl-lang/kit-carriers — pinned git dep at the v0.1.1 tag.
 kit-carriers = { git = "https://github.com/handl-lang/kit-carriers.git", tag = "v0.1.1" }
-mlopt-cuda = { workspace = true }
+# kit-cuda (P3 Step D-1c): the CUDA-graph delivery runner, split to
+# handl-lang/kit-cuda — pinned git dep at the v0.1.0 tag.
+kit-cuda = { git = "https://github.com/handl-lang/kit-cuda.git", tag = "v0.1.0" }
 mlopt-discovery = { workspace = true }
 kit-onnx = { git = "https://github.com/handl-lang/kit-onnx.git", tag = "v0.1.1" }
 mlopt-host-tensor = { workspace = true }
@@ -173,11 +175,11 @@ paths = ["packages", "tests"]
 # game kernel is substrate-free" to handl-lang/gamekit.  What stays:
 # the domain stack's own layering — discovery sits above the backend
 # family.  (kit-onnx — the ONNX backend, formerly mlopt-onnx — split to
-# handl-lang/kit-onnx in P3 Step D-1; its layering contract lives there.)
+# handl-lang/kit-onnx in P3 Step D-1; kit-carriers and kit-cuda
+# followed in D-1b/D-1c — their layering contracts live there.)
 [tool.importlinter]
 root_packages = [
     "mlopt_torch",
-    "mlopt_cuda",
     "mlopt_discovery",
     "mlopt_dtypes",
     "mlopt_host_tensor",
@@ -191,15 +193,16 @@ include_external_packages = true
 # the carrier lowerings under a lazy import), so the two are
 # genuinely bidirectional and must not be split across layers — the
 # layering contract itself lives in kit-carriers now, and the
-# torch→carriers edge here stays undeclared + lazy.  `mlopt_cuda`
-# sits above `mlopt_torch`.  `mlopt_discovery` reads everything and
-# nothing may depend back on it, so it sits above the whole stack.
+# torch→carriers edge here stays undeclared + lazy.  `kit_cuda`
+# (the CUDA-graph runner, split to handl-lang/kit-cuda in P3 Step
+# D-1c) sits above `mlopt_torch` — its layering contract lives there.
+# `mlopt_discovery` reads everything and nothing may depend back on
+# it, so it sits above the whole stack.
 [[tool.importlinter.contracts]]
 name = "dependency layers"
 type = "layers"
 layers = [
     "mlopt_discovery",
-    "mlopt_cuda",
     "mlopt_torch",
     # The dtype registry is a leaf every backend reads — it sits below
     # the whole stack and nothing may depend back on it.
@@ -219,7 +222,6 @@ name = "domain packages never reach the game layer"
 type = "forbidden"
 source_modules = [
     "mlopt_torch",
-    "mlopt_cuda",
     "mlopt_host_tensor",
     "mlopt_dtypes",
 ]
@@ -259,7 +261,6 @@ ignore = [
 python-version = "3.13"
 extra-paths = [
     "packages/mlopt-torch/src",
-    "packages/mlopt-cuda/src",
     "packages/mlopt-discovery/src",
     "packages/mlopt-host-tensor/src",
     # mlopt-core/-orchestrator (eqsat) and gamekit resolve through the
@@ -282,10 +283,11 @@ error-on-warning = false
 # mlopt_onnx (the ONNX backend) climbed to the 100 wall in this repo
 # (see project/retros/onnx-package.md), then split to
 # handl-lang/kit-onnx in P3 Step D-1 — its coverage floor lives there
-# now.  kit_carriers (the semantic carriers) split to
-# handl-lang/kit-carriers in P3 Step D-1b the same way — its floor
-# lives there; the remaining packages report in the main wall.
-source = ["mlopt_torch", "mlopt_cuda", "mlopt_discovery"]
+# now.  kit_carriers split to handl-lang/kit-carriers in P3 Step D-1b
+# and kit_cuda to handl-lang/kit-cuda in P3 Step D-1c the same way —
+# their floors live there; the remaining packages report in the main
+# wall.
+source = ["mlopt_torch", "mlopt_discovery"]
 branch = true
 omit = ["*/tests/*"]
 

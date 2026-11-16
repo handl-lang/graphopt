@@ -17,7 +17,7 @@ from mlopt_orchestrator.optimize import _lower_extracted
 
 from mlopt_orchestrator.runners import ChainedRunner
 
-from mlopt_cuda import CudaGraphRunner
+from kit_cuda import CudaGraphRunner
 from mlopt_torch.runners import TorchCompileRunner
 
 from mlopt_torch.adapters import TorchSink

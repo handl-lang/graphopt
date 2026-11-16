@@ -62,7 +62,7 @@ units/s (embeddings, images, or tokens) per variant.
 Usage:
     PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
 packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \
-        /tmp/mlopt-cuda-venv/bin/python bench/suites/e2e/e2e_models2.py \
+        /tmp/kit-cuda-venv/bin/python bench/suites/e2e/e2e_models2.py \
         --device cuda
     .venv/bin/python bench/suites/e2e/e2e_models2.py --device cpu --quick
 """

@@ -96,7 +96,7 @@ def main() -> None:
 
     import kit_carriers  # noqa: F401
     import mlopt_torch  # noqa: F401
-    from mlopt_cuda import CudaGraphRunner
+    from kit_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import (
         Optimizer,
         VerifyDeclinedError,
@@ -264,7 +264,7 @@ def main() -> None:
                 flush=True,
             )
 
-    # ---- shipped alias-aware capture (mlopt_cuda alias_inputs) ----
+    # ---- shipped alias-aware capture (kit_cuda alias_inputs) ----
     # Same contract as _ZeroCopyGraphCapture but through the runner:
     # positions >= 2 (the 24 past tensors) bind by reference; hs/mask
     # (0,1) stay on the copy path.  ``inputs`` objects are stable

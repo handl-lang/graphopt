@@ -146,7 +146,7 @@ class _DecWrap(nn.Module):
 
 
 def opt(which: str, iters: int = 3) -> None:
-    from mlopt_cuda import CudaGraphRunner
+    from kit_cuda import CudaGraphRunner
 
     model, dtype = _parse(3)
     max_enodes = int(sys.argv[5]) if len(sys.argv) > 5 else 100_000

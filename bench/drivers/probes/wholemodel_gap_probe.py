@@ -412,7 +412,7 @@ def _retnet_case(
     # CudaGraphRunner's generic path now claims the IRModule tape;
     # record the outcome honestly and time the returned module, then
     # cross-check with a manual capture anyway.
-    from mlopt_cuda import CudaGraphRunner
+    from kit_cuda import CudaGraphRunner
 
     stats_generic: dict = {}
     carrier_run = CudaGraphRunner().apply(
@@ -648,7 +648,7 @@ def _mlp_case(reps: int) -> None:
     # Lane 2a — the shipped cheap lane on a generic IRModule:
     # the runner's generic path captures the tape; record honestly
     # and time the returned replay wrapper.
-    from mlopt_cuda import CudaGraphRunner
+    from kit_cuda import CudaGraphRunner
 
     stats_g: dict = {}
     generic_run = CudaGraphRunner().apply(generic, (x64,), stats_g)
