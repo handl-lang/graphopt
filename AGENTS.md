@@ -5,9 +5,12 @@ The GitHub repo is `handl-lang/graphopt` (renamed from
 name below are unchanged).
 
 Categorical optimization of neural-network computation graphs
-(Python 3.13, torch + numpy).  Every shipped Python package has now
-split to its own repo — `packages/` keeps only the Rust/maturin
-crates (`mlopt-kit`, `mlopt-experiments`, `mlopt-handl-peer`).  The
+(Python 3.13, torch + numpy).  Every shipped *domain* Python package
+has split to its own repo — `packages/` keeps the Rust/maturin
+crates (`mlopt-kit`, `mlopt-experiments`, `mlopt-handl-peer`) plus
+**`packages/mlopt`** — the product member merged in at **P3 Step
+D-2** (the `mlopt` CLI package; see `packages/mlopt/AGENTS.md`).
+The
 PyTorch adapters/backend `kit-torch` — **split to
 `handl-lang/kit-torch` in P3 Step D-1e** (was
 `packages/mlopt-torch`; pin `kit-torch` git dep, import
@@ -60,11 +63,16 @@ point (importing the module mutates nothing) — the plugin seam is
 The optional
 `mlopt-native` package — the PyO3/Rust search engine, excluded from
 the uv workspace and built with maturin — is opt-in via `engine=`.
-The `mlopt` façade is gone (plan 0008): `import mlopt` fails and
-every name lives at its real package path — `mlopt_core.egraph`,
+The domain `mlopt` façade is gone (plan 0008): engine names live at
+their real package paths — `mlopt_core.egraph`,
 `kit_torch.adapters`, `mlopt_orchestrator.optimize`,
-`kit_cuda.CudaGraphRunner`, … Tests in
-`tests/`. The dev virtualenv is `.venv/` (uv-managed).
+`kit_cuda.CudaGraphRunner`, … **P3 Step D-2** re-unified the
+*product* side: `packages/mlopt` is the mlopt member
+(`pip install mlopt` → the CLI `mlopt models|optimize|export|
+doctor|stage`; see `packages/mlopt/AGENTS.md`).  The root dist is
+`mlopt-meta` (pure meta-distribution, `packages = []`).  Tests in
+`tests/` (domain) and `packages/mlopt/tests` (product).  The dev
+virtualenv is `.venv/` (uv-managed).
 
 **Repo split (plan 0032 phase 4, landed).**  The substrate packages
 moved to `handl-lang/eqsat`: `mlopt-core`,
@@ -310,7 +318,7 @@ scripts/gates.sh
 ```
 
 ```sh
-# The shipped source: scripts/ + examples/ (packages/ holds no Python).
+# The shipped source: scripts/ + examples/ + packages/mlopt/src.
 .venv/bin/ty check            # typecheck — 0 errors required (warnings OK)
 .venv/bin/ruff check packages scripts examples   # lint
 .venv/bin/ruff format --check packages scripts examples   # formatting

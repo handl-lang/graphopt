@@ -1,0 +1,76 @@
+[project]
+name = "mlopt"
+version = "0.1.0"
+description = "mlopt — the product entrypoint: pipe models through the verified optimizer (graphopt/eqsat/kernelopt)."
+license = "MIT OR Apache-2.0"
+requires-python = ">=3.13"
+dependencies = [
+    "torch",
+    "mlopt-core",
+    "mlopt-orchestrator",
+    "kit-torch",
+    "kit-carriers",
+    "kit-cuda",
+    "gamekit",
+    # ADR-0172: the .hnl codec (hnl_import/hnl_surface) lives in
+    # handl-lang/kit-discovery (split from graphopt in P3 Step D-1d);
+    # discoverykit is its declared dep (the domain-free mining core —
+    # torch-free, stdlib+numpy).
+    "kit-discovery",
+    "discoverykit",
+    # ADR-0174 invariant 4 debt: emit._OPS drift-guards against the
+    # canonical tensor.* surface artifact (host_surface.json).
+    "kit-host-tensor",
+]
+
+[project.optional-dependencies]
+# HF model adapters (whisper + kokoro) need transformers at
+# load() time — kept optional so the base install stays lean.
+hf = ["transformers"]
+# Kokoro TTS adapter: the acoustic model's import chain
+# (kokoro/model.py -> modules/istftnet/custom_stft) needs transformers
+# (Albert), huggingface_hub, loguru and attrs at load() time; numpy is
+# declared for honesty (torch does not guarantee it).  misaki/espeak
+# are deliberately NOT deps — the adapter stub-imports the model code
+# and skips the G2P pipeline entirely.  The kokoro source tree itself
+# is NOT a pip dep: clone https://github.com/hexgrad/kokoro to
+# $KOKORO_SRC (default /tmp/kokoro-src) or pass kokoro_src= to load().
+kokoro = ["transformers", "huggingface_hub", "loguru", "attrs", "numpy"]
+
+[project.scripts]
+mlopt = "mlopt.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mlopt"]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "ty",
+]
+
+# Post-merge (P3 Step D-2): this package is a uv workspace member —
+# `[tool.uv.sources]` is only read from the workspace ROOT, so the
+# pre-merge git-pin table that lived here moved to the root
+# pyproject.toml (kit-torch stays a sibling-repo git dep there;
+# mlopt-core/-orchestrator/-dtypes, gamekit, kit-*, discoverykit pins
+# are shared with the root's existing table).
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ty.environment]
+python = ".venv"
+extra-paths = ["src"]

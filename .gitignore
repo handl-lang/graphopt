@@ -57,6 +57,7 @@ project/
 htmlcov/
 cov_ann/
 .pytest_cache/
+.ruff_cache/
 *.prof
 
 # Bench outputs
@@ -84,3 +85,8 @@ packages/mlopt-handl-peer/*.so
 # workspace; own lockfile is committed), fetched artifact + build dir
 /packages/mlopt-experiments/.cache/
 /packages/mlopt-experiments/target/
+
+# packages/mlopt (P3 Step D-2): arch-* model weights exceed GitHub's
+# 100 MB file limit — the .hnl specs are committed, the safetensors
+# payloads are fetched/regenerated locally, never committed.
+/packages/mlopt/arch-*.safetensors
