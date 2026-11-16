@@ -45,7 +45,9 @@ def scan() -> dict[str, int]:
     out: dict[str, int] = {}
     for target in TARGETS:
         for path in sorted((ROOT / target).rglob("*.py")):
-            if "__pycache__" in path.parts:
+            if {"__pycache__", "build", "dist", ".venv", "venv"} & set(
+                path.parts
+            ):
                 continue
             rel = path.relative_to(ROOT).as_posix()
             for block in _iter_blocks(cc_visit(path.read_text())):
