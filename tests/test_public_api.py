@@ -674,10 +674,15 @@ class TestScoringSpec:
 class TestBoundaryNotes:
     """The documented internal/unfrozen edges stay where they are."""
 
-    def test_mlopt_facade_still_gone(self):
-        """Plan 0008: there is no ``mlopt`` façade."""
-        with pytest.raises(ModuleNotFoundError):
-            importlib.import_module("mlopt")
+    def test_mlopt_facade_is_composition_only(self):
+        """Post-D-2: ``mlopt`` imports but exposes only the product
+        façade — substrate/domain names live at their real package
+        paths and are not re-exported at top level."""
+        mlopt = importlib.import_module("mlopt")
+        assert mlopt.__version__
+        assert not hasattr(mlopt, "Optimizer")
+        assert not hasattr(mlopt, "EGraph")
+        assert not hasattr(mlopt, "mlopt_core")
 
     def test_provenance_registry_classifies(self):
         """The registry contract — total over names, two classes."""

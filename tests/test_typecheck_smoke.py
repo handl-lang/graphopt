@@ -2,14 +2,15 @@
 
 Pairs with the ty ratchet in pyproject.toml — if module-level code
 breaks at import time, this fails before any typecheck output matters.
-Plan 0008 removed the ``mlopt`` façade: ``import mlopt`` must fail
-and every public name lives at its real package path.
+Plan 0008 removed the old ``mlopt`` façade; the D-2 merge reinstated
+``packages/mlopt`` as a workspace member, so ``import mlopt`` must
+succeed — but as a composition-only product package that re-exports
+nothing from the substrate/domain packages (their names live at
+their real package paths).
 """
 
 import importlib
 import sys
-
-import pytest
 
 
 def test_modules_import():
@@ -39,8 +40,14 @@ def test_submodules_import():
     assert mlopt_orchestrator.optimize.Optimizer
 
 
-def test_mlopt_facade_is_gone():
-    """Plan 0008 deleted the ``mlopt`` façade — the name fails."""
+def test_mlopt_facade_is_composition_only():
+    """Post-D-2 ``mlopt`` imports cleanly but exposes no substrate
+    names — ``__init__`` carries only the product version."""
     sys.modules.pop("mlopt", None)
-    with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("mlopt")
+    mlopt = importlib.import_module("mlopt")
+    assert mlopt.__version__
+    assert not hasattr(mlopt, "Optimizer")
+    assert not hasattr(mlopt, "EGraph")
+    assert not hasattr(mlopt, "IR")
+    assert not hasattr(mlopt, "mlopt_core")
+    assert not hasattr(mlopt, "kit_torch")
