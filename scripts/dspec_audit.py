@@ -50,15 +50,18 @@ ROOT = Path(__file__).resolve().parent.parent
 REV_CORE = "34eb570^"  # laws: dspec — declarative derive=, core laws
 REV_CARRIERS = "4f586f8^"  # derive-as-data: carrier hooks migrate
 
-TENSOR_PY = "packages/mlopt-core/src/mlopt_core/laws/tensor.py"
-SCAN_PY = "packages/mlopt-core/src/mlopt_core/laws/scan.py"
-OM_PY = "packages/mlopt-carriers/src/mlopt_carriers/om.py"
-TRACE_PY = "packages/mlopt-carriers/src/mlopt_carriers/trace.py"
+# Git-archaeology paths: the pinned revs predate the catopt→mlopt rename,
+# so the historical blobs live under the catopt-* names (ORACLE_MODULE
+# maps each to the *current* module for helper imports).
+TENSOR_PY = "packages/catopt-core/src/catopt_core/laws/tensor.py"
+SCAN_PY = "packages/catopt-core/src/catopt_core/laws/scan.py"
+OM_PY = "packages/catopt-carriers/src/catopt_carriers/om.py"
+TRACE_PY = "packages/catopt-carriers/src/catopt_carriers/trace.py"
 DECODE_LAWS_PY = (
-    "packages/mlopt-carriers/src/mlopt_carriers/decode_laws.py"
+    "packages/catopt-carriers/src/catopt_carriers/decode_laws.py"
 )
 DECODE_GEOM_PY = (
-    "packages/mlopt-carriers/src/mlopt_carriers/decode_geom.py"
+    "packages/catopt-carriers/src/catopt_carriers/decode_geom.py"
 )
 
 #: (revision, file, function) for each dspec rule's procedural oracle.
