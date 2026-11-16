@@ -203,6 +203,10 @@ name = "dependency layers"
 type = "layers"
 layers = [
     "mlopt_discovery",
+    # kit_cuda (the CUDA-graph runner, split to handl-lang/kit-cuda)
+    # sits above mlopt_torch — restoring the upward-edge ban the
+    # pre-split layers entry enforced (audit-14 P14-N2).
+    "kit_cuda",
     "mlopt_torch",
     # The dtype registry is a leaf every backend reads — it sits below
     # the whole stack and nothing may depend back on it.
