@@ -38,6 +38,7 @@ from mlopt_dtypes import canonical_name
 from mlopt_dtypes import get as _dtype_info
 from torch.nn.attention import SDPBackend, sdpa_kernel
 
+from mlopt_torch import dtype_ctx
 from mlopt_torch.aten_classify import (
     ATEN_TO_IR as _GEN_ATEN_TO_IR,
 )
@@ -464,8 +465,35 @@ def _arange_torch(*a: Any, **kw: Any) -> Any:
                 key=lambda k: int(k[3:]),
             )
         ]
-    return torch.arange(
-        *vals, dtype=_creator_dtype(kw), device=_creator_device(kw)
+    # Float bounds with no dtype attr mint at the computation's dtype
+    # (``dtype_ctx`` — the eval *like*), not torch's ambient default:
+    # an unpinned float arange inside an fp64 eval must not silently
+    # compute in f32 (the llama verify-run RoPE divergence).  Int
+    # bounds keep torch's int64 inference.
+    dtype = _creator_dtype(kw)
+    if dtype is None and any(isinstance(v, float) for v in vals):
+        dtype = dtype_ctx.like_dtype()
+    return torch.arange(*vals, dtype=dtype, device=_creator_device(kw))
+
+
+def _full_torch(*a: Any, **kw: Any) -> Any:
+    """``full`` — float fills mint at the computation dtype.
+
+    ``torch.full`` infers the dtype from the fill value: an int fill
+    yields int64 (kept — ``_creator_dtype`` alone), a float fill
+    yields the ambient default, which inside an eval is the
+    ``dtype_ctx`` *like* dtype instead (the same no-ambient-default
+    contract the other float creators follow).
+    """
+    fill = _scalar_value(a[0]) if a else kw.get("fill_value", 0)
+    dtype = _creator_dtype(kw)
+    if dtype is None and isinstance(fill, float):
+        dtype = dtype_ctx.like_dtype()
+    return torch.full(
+        tuple(attr_of(kw, "shape", "dim", default=())),
+        fill,
+        dtype=dtype,
+        device=_creator_device(kw),
     )
 
 
@@ -1662,7 +1690,7 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
         attr_of(kw, "start", "arg0", default=0.0),
         attr_of(kw, "end", "arg1", default=1.0),
         int(attr_of(kw, "steps", "arg2", default=100)),
-        dtype=_creator_dtype(kw),
+        dtype=_creator_dtype_ctx(kw),
         device=_creator_device(kw),
     ),
     # Corpus-observed (intake ``Cdist``): batchwise p-norm distances.
@@ -1880,35 +1908,30 @@ _CORE_TORCH_BINDINGS: dict[str, Any] = {
     "arange": _arange_torch,
     "zeros": lambda *a, **kw: torch.zeros(
         tuple(attr_of(kw, "shape", "dim", default=a[0] if a else ())),
-        dtype=_creator_dtype(kw),
+        dtype=_creator_dtype_ctx(kw),
         device=_creator_device(kw),
     ),
     "ones": lambda *a, **kw: torch.ones(
         tuple(attr_of(kw, "shape", "dim", default=a[0] if a else ())),
-        dtype=_creator_dtype(kw),
+        dtype=_creator_dtype_ctx(kw),
         device=_creator_device(kw),
     ),
     "empty": lambda *a, **kw: torch.empty(
         tuple(attr_of(kw, "shape", "dim", default=a[0] if a else ())),
-        dtype=_creator_dtype(kw),
+        dtype=_creator_dtype_ctx(kw),
         device=_creator_device(kw),
     ),
     "randn": lambda *a, **kw: torch.randn(
         tuple(attr_of(kw, "shape", "dim", default=a[0] if a else ())),
-        dtype=_creator_dtype(kw),
+        dtype=_creator_dtype_ctx(kw),
         device=_creator_device(kw),
     ),
     "rand": lambda *a, **kw: torch.rand(
         tuple(attr_of(kw, "shape", "dim", default=a[0] if a else ())),
-        dtype=_creator_dtype(kw),
+        dtype=_creator_dtype_ctx(kw),
         device=_creator_device(kw),
     ),
-    "full": lambda *a, **kw: torch.full(
-        tuple(attr_of(kw, "shape", "dim", default=())),
-        _scalar_value(a[0]) if a else kw.get("fill_value", 0),
-        dtype=_creator_dtype(kw),
-        device=_creator_device(kw),
-    ),
+    "full": _full_torch,
     "zeros_like": lambda t, *a, **kw: torch.zeros_like(
         t, dtype=_creator_dtype(kw), device=_creator_device(kw)
     ),
@@ -2560,6 +2583,21 @@ def _creator_device(kw: dict) -> Any:
     if isinstance(d, torch.device):
         return d
     return torch.device(str(d))
+
+
+def _creator_dtype_ctx(kw: dict) -> Any:
+    """``_creator_dtype`` with the eval-context fallback.
+
+    The always-float creators (``zeros``/``ones``/``empty``/``randn``/
+    ``rand``/``linspace``) mint at the computation's dtype — the
+    ``dtype_ctx`` *like* tensor ``_mint_const`` uses for Const
+    scalars — instead of torch's ambient default (fp32).  Int-valued
+    spellings (int-bound ``arange``, int-fill ``full``) keep torch's
+    int inference, and ``to``/``*_like``/``new_*`` keep ``None`` for
+    operand-dtype inheritance — they must not use this helper.
+    """
+    d = _creator_dtype(kw)
+    return d if d is not None else dtype_ctx.like_dtype()
 
 
 def _creator_dtype(kw: dict) -> Any:

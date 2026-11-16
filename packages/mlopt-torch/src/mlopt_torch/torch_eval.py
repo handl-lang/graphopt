@@ -20,6 +20,8 @@ from mlopt_core.ir import IR, Const, Op, Param, Var
 from mlopt_core.opmeta import FOLD_OPS
 from mlopt_core.ops import OpTable
 
+from mlopt_torch import dtype_ctx
+
 #: Sentinel for "no default supplied" — distinct from ``None`` so a
 #: legitimate ``None`` default (e.g. a zero-arg forward's ``x``) still
 #: resolves instead of reading as failure.
@@ -282,36 +284,45 @@ class _EvalPlan:
                 raise ValueError(f"No torch binding for op '{nm}'")
             fns.append(f)
         releases = self.releases
-        for k, (o, fi, a, kw) in enumerate(self.steps):
-            f = fns[fi]
-            if kw is None:
-                na = len(a)
-                if na == 1:
-                    v[o] = f(v[a[0]])
-                elif na == 2:
-                    v[o] = f(v[a[0]], v[a[1]])
-                elif na == 3:
-                    v[o] = f(v[a[0]], v[a[1]], v[a[2]])
+        # Creator ops with no dtype attr (float ``arange``/``full``/
+        # ``zeros``/…) mint at the computation's dtype — the same
+        # *like* ``_mint_const`` uses — via ``dtype_ctx``; outside this
+        # window they keep torch's ambient default.
+        ctx_tok = dtype_ctx.LIKE_CTX.set(like)
+        try:
+            for k, (o, fi, a, kw) in enumerate(self.steps):
+                f = fns[fi]
+                if kw is None:
+                    na = len(a)
+                    if na == 1:
+                        v[o] = f(v[a[0]])
+                    elif na == 2:
+                        v[o] = f(v[a[0]], v[a[1]])
+                    elif na == 3:
+                        v[o] = f(v[a[0]], v[a[1]], v[a[2]])
+                    else:
+                        v[o] = f(*[v[i] for i in a])
                 else:
-                    v[o] = f(*[v[i] for i in a])
-            else:
-                na = len(a)
-                if na == 0:
-                    v[o] = f(**kw)
-                elif na == 1:
-                    v[o] = f(v[a[0]], **kw)
-                elif na == 2:
-                    v[o] = f(v[a[0]], v[a[1]], **kw)
-                elif na == 3:
-                    v[o] = f(v[a[0]], v[a[1]], v[a[2]], **kw)
-                else:
-                    v[o] = f(*[v[i] for i in a], **kw)
-            # Liveness: drop arg slots whose last consumer just ran.
-            # The output is already stored under ``o`` before any arg
-            # is released, so an aliasing binding (out IS an arg
-            # tensor) keeps the storage alive through ``v[o]``.
-            for i in releases[k]:
-                v[i] = None
+                    na = len(a)
+                    if na == 0:
+                        v[o] = f(**kw)
+                    elif na == 1:
+                        v[o] = f(v[a[0]], **kw)
+                    elif na == 2:
+                        v[o] = f(v[a[0]], v[a[1]], **kw)
+                    elif na == 3:
+                        v[o] = f(v[a[0]], v[a[1]], v[a[2]], **kw)
+                    else:
+                        v[o] = f(*[v[i] for i in a], **kw)
+                # Liveness: drop arg slots whose last consumer just
+                # ran.  The output is already stored under ``o`` before
+                # any arg is released, so an aliasing binding (out IS
+                # an arg tensor) keeps the storage alive through
+                # ``v[o]``.
+                for i in releases[k]:
+                    v[i] = None
+        finally:
+            dtype_ctx.LIKE_CTX.reset(ctx_tok)
         return v[self.root_slot]
 
 
@@ -567,7 +578,13 @@ def eval_term(
             raise TypeError(f"Cannot evaluate term: {t}")
         return None
 
-    return go(term, go)
+    # Creator ops with no dtype attr mint at the computation's dtype
+    # through ``dtype_ctx`` — the same *like* ``_mint_const`` uses.
+    ctx_tok = dtype_ctx.LIKE_CTX.set(like)
+    try:
+        return go(term, go)
+    finally:
+        dtype_ctx.LIKE_CTX.reset(ctx_tok)
 
 
 class IRModule(torch.nn.Module):
