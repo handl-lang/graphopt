@@ -41,6 +41,26 @@ _PUBLIC_SURFACE: dict[str, tuple[str, ...]] = {
         "term_to_data",
         "term_from_data",
     ),
+    "mlopt_core.term": (
+        "IR",
+        "Op",
+        "Var",
+        "Param",
+        "Const",
+        "TensorType",
+        "op_repr",
+        "op_repr_dag",
+        "attr_to_data",
+        "attr_from_data",
+        "op_def",
+        "generator",
+    ),
+    "mlopt_core.term_json": (
+        "TermJsonError",
+        "term_to_json",
+        "term_from_json",
+        "terms_to_json",
+    ),
     "mlopt_core.egraph": (
         "EGraph",
         "ENode",
@@ -230,8 +250,6 @@ _PUBLIC_SURFACE: dict[str, tuple[str, ...]] = {
 }
 
 
-
-
 # ---------------------------------------------------------------------------
 #  The mechanical pin — every frozen name resolves at its canonical path
 # ---------------------------------------------------------------------------
@@ -249,11 +267,7 @@ class TestFrozenSurface:
 
     @pytest.mark.parametrize(
         "mod_name,name",
-        [
-            (m, n)
-            for m, names in _PUBLIC_SURFACE.items()
-            for n in names
-        ],
+        [(m, n) for m, names in _PUBLIC_SURFACE.items() for n in names],
     )
     def test_frozen_name_resolves(self, mod_name, name):
         mod = importlib.import_module(mod_name)
@@ -279,8 +293,6 @@ class TestFrozenSurface:
 # ---------------------------------------------------------------------------
 #  The version constant
 # ---------------------------------------------------------------------------
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -472,7 +484,9 @@ class TestSignaturePins:
         assert not inspect.signature(IdentityRunner).parameters
         chained = inspect.signature(ChainedRunner).parameters
         assert list(chained) == ["runners"]
-        compile_params = inspect.signature(TorchCompileRunner).parameters
+        compile_params = inspect.signature(
+            TorchCompileRunner
+        ).parameters
         assert list(compile_params) == ["compile_kwargs"]
         assert (
             compile_params["compile_kwargs"].kind

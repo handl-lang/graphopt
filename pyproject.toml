@@ -129,27 +129,56 @@ exclude = [
 # pinned git deps on ``packages/`` subdirectories at the ``v0.1.0``
 # tag (git-URL-at-tag distribution; see
 # docs/reports/git_url_distribution.md).  Bump the tag on releases.
-mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", tag = "v0.1.10" }
-mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", tag = "v0.1.10" }
-gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.12" }
-benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", tag = "v0.1.12" }
+mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", tag = "v0.1.12" }
+mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", tag = "v0.1.12" }
+gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.14" }
+benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", tag = "v0.1.14" }
 # discoverykit (plan 0034 phase 1): the domain-free mining core
 # extracted from the discovery engine (mlopt-discovery, now
 # handl-lang/kit-discovery in P3 Step D-1d) — pinned git dep below.
+# Stays v0.1.20 like kit-discovery@v0.1.2 expects: v0.1.21+ renamed
+# its lazy torch bind mlopt_torch -> kit_torch, which does not exist
+# in this repo until P3 Step D-1e lands.
 discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.20" }
 mlopt-torch = { workspace = true }
 # kit-carriers (P3 Step D-1b): the semantic carriers, split to
 # handl-lang/kit-carriers — pinned git dep at the v0.1.1 tag.
+# NOTE: stays v0.1.3 — v0.1.4+ renamed its torch dep mlopt-torch ->
+# kit-torch, but this repo still ships the mlopt-torch workspace
+# member until P3 Step D-1e lands.  Its eqsat-v0.1.10 sources are
+# overridden to v0.1.12 below.
 kit-carriers = { git = "https://github.com/handl-lang/kit-carriers.git", tag = "v0.1.3" }
 # kit-cuda (P3 Step D-1c): the CUDA-graph delivery runner, split to
 # handl-lang/kit-cuda — pinned git dep at the v0.1.0 tag.
+# Same mlopt-torch-era hold as kit-carriers: v0.1.4+ deps kit-torch.
 kit-cuda = { git = "https://github.com/handl-lang/kit-cuda.git", tag = "v0.1.3" }
 kit-discovery = { git = "https://github.com/handl-lang/kit-discovery.git", tag = "v0.1.2" }
-kit-onnx = { git = "https://github.com/handl-lang/kit-onnx.git", tag = "v0.1.2" }
+kit-onnx = { git = "https://github.com/handl-lang/kit-onnx.git", tag = "v0.1.3" }
 # kit-host-tensor (P3 Step D-1f): the host-tensor backend, split to
 # handl-lang/kit-host-tensor — pinned git dep at the v0.1.2 tag.
-kit-host-tensor = { git = "https://github.com/handl-lang/kit-host-tensor.git", tag = "v0.1.3" }
-mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-dtypes", tag = "v0.1.10" }
+kit-host-tensor = { git = "https://github.com/handl-lang/kit-host-tensor.git", tag = "v0.1.4" }
+mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-dtypes", tag = "v0.1.12" }
+
+# Step E tail dry-run: kit-discovery@v0.1.2 is the newest tag and the
+# mlopt-torch-era kit-carriers/kit-cuda v0.1.3 + discoverykit v0.1.20
+# tags still carry their own [tool.uv.sources] pinning eqsat v0.1.10 /
+# gamekit v0.1.12 — uv propagates those transitively and fails with
+# "conflicting URLs" against the bumps above.  These overrides force
+# the bumped URLs for local resolution (same mechanism the
+# kit-discovery stepe worktree uses).  They stay needed until EVERY
+# consumed tag carries eqsat-v0.1.12 sources — i.e. until kit-discovery
+# is repinned+tagged AND the mlopt-torch-era holdouts
+# (kit-carriers/kit-cuda/discoverykit) either get repinned mlopt_torch
+# tags or D-1e removes packages/mlopt-torch and the kit-torch-era tags
+# (kit-carriers v0.1.5, kit-cuda v0.1.5, discoverykit v0.1.21+) can be
+# adopted.
+[tool.uv]
+override-dependencies = [
+    "mlopt-core @ git+https://github.com/handl-lang/eqsat.git@v0.1.12#subdirectory=packages/mlopt-core",
+    "mlopt-orchestrator @ git+https://github.com/handl-lang/eqsat.git@v0.1.12#subdirectory=packages/mlopt-orchestrator",
+    "mlopt-dtypes @ git+https://github.com/handl-lang/eqsat.git@v0.1.12#subdirectory=packages/mlopt-dtypes",
+    "gamekit @ git+https://github.com/handl-lang/gamekit.git@v0.1.14#subdirectory=packages/gamekit",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
