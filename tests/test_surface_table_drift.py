@@ -38,8 +38,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from kit_host_tensor.surface import host_ops
 from mlopt_core.ir import Op, TensorType, Var
-from mlopt_host_tensor.surface import host_ops
 
 _T = TensorType((2, 3))
 
@@ -409,7 +409,7 @@ class TestTorchBindingsSurface:
         resolve — ``eye`` binds through a carrier module, not
         ``_CORE_TORCH_BINDINGS``.
         """
-        from mlopt_host_tensor.bindings import HOST_BINDINGS
+        from kit_host_tensor.bindings import HOST_BINDINGS
         from mlopt_torch.torch_bindings import _IR_TO_TORCH
 
         missing = sorted(

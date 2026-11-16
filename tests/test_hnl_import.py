@@ -13,20 +13,20 @@ into ``mlopt_core.ir`` terms.  These tests pin:
   results, malformed syntax and ambiguous spellings all refuse by
   name, never silently;
 * **drift** — every covered op name is a real mlopt IR op
-  (``mlopt_host_tensor.bindings.HOST_BINDINGS`` plus the three
+  (``kit_host_tensor.bindings.HOST_BINDINGS`` plus the three
   surface ops the executor table does not carry).
 """
 
 from __future__ import annotations
 
 import pytest
-from mlopt_core.ir import Const, Op, Param, TensorType, Var
 from kit_discovery.hnl_import import (
     HnlImportError,
     covered_ops,
     hnl_to_term,
 )
 from kit_discovery.hnl_surface import UnsupportedOpError, emit
+from mlopt_core.ir import Const, Op, Param, TensorType, Var
 
 
 def _x() -> Var:
@@ -976,8 +976,8 @@ class TestCoveredSetDrift:
     def test_covered_ops_are_ir_ops(self) -> None:
         """Every handler name is a HOST_BINDINGS key or the three
         surface ops the executor table does not carry."""
-        pytest.importorskip("mlopt_host_tensor")
-        from mlopt_host_tensor.bindings import HOST_BINDINGS
+        pytest.importorskip("kit_host_tensor")
+        from kit_host_tensor.bindings import HOST_BINDINGS
 
         # Tensor-name space: ``batch_norm``/``max_pool`` are the host
         # spellings of IR ``batch_norm``/``max_pool2d`` (neither is a

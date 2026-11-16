@@ -17,7 +17,7 @@ dependencies = [
     "kit-discovery",
     "discoverykit",
     "kit-onnx",
-    "mlopt-host-tensor",
+    "kit-host-tensor",
     "mlopt-dtypes",
     "gamekit",
     "benchkit",
@@ -146,7 +146,9 @@ kit-carriers = { git = "https://github.com/handl-lang/kit-carriers.git", tag = "
 kit-cuda = { git = "https://github.com/handl-lang/kit-cuda.git", tag = "v0.1.0" }
 kit-discovery = { git = "https://github.com/handl-lang/kit-discovery.git", tag = "v0.1.0" }
 kit-onnx = { git = "https://github.com/handl-lang/kit-onnx.git", tag = "v0.1.1" }
-mlopt-host-tensor = { workspace = true }
+# kit-host-tensor (P3 Step D-1f): the host-tensor backend, split to
+# handl-lang/kit-host-tensor — pinned git dep at the v0.1.2 tag.
+kit-host-tensor = { git = "https://github.com/handl-lang/kit-host-tensor.git", tag = "v0.1.2" }
 mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-dtypes", tag = "v0.1.9" }
 
 [tool.pytest.ini_options]
@@ -181,7 +183,6 @@ paths = ["packages", "tests"]
 root_packages = [
     "mlopt_torch",
     "mlopt_dtypes",
-    "mlopt_host_tensor",
 ]
 include_external_packages = true
 
@@ -230,7 +231,6 @@ name = "domain packages never reach the game layer"
 type = "forbidden"
 source_modules = [
     "mlopt_torch",
-    "mlopt_host_tensor",
     "mlopt_dtypes",
 ]
 forbidden_modules = [
@@ -273,9 +273,9 @@ ignore = [
 python-version = "3.13"
 extra-paths = [
     "packages/mlopt-torch/src",
-    "packages/mlopt-host-tensor/src",
-    # mlopt-core/-orchestrator (eqsat) and gamekit resolve through the
-    # installed git deps — no src path needed.
+    # mlopt-core/-orchestrator (eqsat), gamekit and kit_host_tensor
+    # (P3 Step D-1f) resolve through the installed git deps — no src
+    # path needed.
 ]
 
 [tool.ty.src]
@@ -292,8 +292,10 @@ error-on-warning = false
 # handl-lang/kit-onnx in P3 Step D-1 — its coverage floor lives there
 # now.  kit_carriers split to handl-lang/kit-carriers in P3 Step D-1b,
 # kit_cuda to handl-lang/kit-cuda in P3 Step D-1c and kit_discovery
-# (the discovery engine, P3 Step D-1d) to handl-lang/kit-discovery the
-# same way — their floors live in the kit repos now.
+# (the discovery engine, P3 Step D-1d) to handl-lang/kit-discovery and
+# kit_host_tensor (the host-tensor backend, P3 Step D-1f) to
+# handl-lang/kit-host-tensor the same way — their floors live in the
+# kit repos now.
 source = ["mlopt_torch"]
 branch = true
 omit = ["*/tests/*"]

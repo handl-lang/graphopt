@@ -19,7 +19,6 @@ resolution-markers = [
 [manifest]
 members = [
     "mlopt",
-    "mlopt-host-tensor",
     "mlopt-torch",
 ]
 
@@ -1664,6 +1663,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "kit-host-tensor"
+version = "0.1.0"
+source = { git = "https://github.com/handl-lang/kit-host-tensor.git?tag=v0.1.2#899bf7f6ebe2fb04a818dd8e7a6042affaf59c5d" }
+dependencies = [
+    { name = "mlopt-core" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
+
+[[package]]
 name = "kit-onnx"
 version = "0.1.0"
 source = { git = "https://github.com/handl-lang/kit-onnx.git?tag=v0.1.1#2784ce8aac90cdb02524895c81e8324caf27265d" }
@@ -2189,10 +2198,10 @@ dependencies = [
     { name = "kit-carriers" },
     { name = "kit-cuda" },
     { name = "kit-discovery" },
+    { name = "kit-host-tensor" },
     { name = "kit-onnx" },
     { name = "mlopt-core" },
     { name = "mlopt-dtypes" },
-    { name = "mlopt-host-tensor" },
     { name = "mlopt-orchestrator" },
     { name = "mlopt-torch" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -2269,10 +2278,10 @@ requires-dist = [
     { name = "kit-carriers", git = "https://github.com/handl-lang/kit-carriers.git?tag=v0.1.1" },
     { name = "kit-cuda", git = "https://github.com/handl-lang/kit-cuda.git?tag=v0.1.0" },
     { name = "kit-discovery", git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.0" },
+    { name = "kit-host-tensor", git = "https://github.com/handl-lang/kit-host-tensor.git?tag=v0.1.2" },
     { name = "kit-onnx", git = "https://github.com/handl-lang/kit-onnx.git?tag=v0.1.1" },
     { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.9" },
     { name = "mlopt-dtypes", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-dtypes&tag=v0.1.9" },
-    { name = "mlopt-host-tensor", editable = "packages/mlopt-host-tensor" },
     { name = "mlopt-orchestrator", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&tag=v0.1.9" },
     { name = "mlopt-torch", editable = "packages/mlopt-torch" },
     { name = "mutmut", marker = "extra == 'dev'", specifier = ">=3.8.0" },
@@ -2334,22 +2343,6 @@ source = { git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%
 name = "mlopt-dtypes"
 version = "0.1.0.dev0"
 source = { git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-dtypes&tag=v0.1.9#414ec4e89401587cadf96691a9059ef8e298308e" }
-
-[[package]]
-name = "mlopt-host-tensor"
-version = "0.1.0.dev0"
-source = { editable = "packages/mlopt-host-tensor" }
-dependencies = [
-    { name = "mlopt-core" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.9" },
-    { name = "numpy", specifier = ">=1.24" },
-]
 
 [[package]]
 name = "mlopt-orchestrator"

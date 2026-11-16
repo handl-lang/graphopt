@@ -200,7 +200,7 @@ PyO3, no cdylib. What exists is exactly the right seam for one:
   atoms.
 
 Recommendation: **PyO3 shim over `tensor_op_registry()`** (host-tensor
-side, small), consumed by a `mlopt-host-tensor` adapter package or a
+side, small), consumed by a `kit-host-tensor` adapter package or a
 `mlopt_torch`-adjacent module — keeping `mlopt-core` torch-free per
 the hexagon (the binding lives adapter-side, like `TorchSink`).
 
@@ -238,7 +238,7 @@ there, not via import-time mutation).
 
 ## 4. Phase-1 implementation sketch
 
-1. **Binding (host-tensor repo or new `mlopt-host-tensor` crate):**
+1. **Binding (host-tensor repo or new `kit-host-tensor` crate):**
    PyO3 extension exposing `call(op: &str, args: Vec<Value>) ->
    Value` over `tensor_op_registry()`; plus `ops() -> Vec<String>`.
    Alternative if PyO3 is unwelcome: C ABI over the same registry.

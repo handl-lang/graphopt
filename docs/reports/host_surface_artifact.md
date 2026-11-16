@@ -1,6 +1,6 @@
 # Host `tensor.*` surface artifact — one table, three readers
 
-Date: 2026-11.  Scope: `packages/mlopt-host-tensor`,
+Date: 2026-11.  Scope: `packages/kit-host-tensor`,
 `packages/mlopt-discovery`, `scripts/dump_host_surface.py`.  Read-only
 references: `handl-lang/host-tensor` (`src/index.hnl`,
 `tools/aten_port_list.txt`, `tools/aten_schemas.json`,
@@ -14,7 +14,7 @@ Four hand-maintained "op → signature" tables had drifted apart:
 | table | home | size |
 |---|---|---|
 | `_SPECS` (term → `.hnl` emit) | `mlopt_discovery.hnl_surface` (was `bench/drivers/kit/term_hnl.py`) | 12 ops |
-| `HOST_BINDINGS` (IR op → host positional args) | `mlopt_host_tensor.bindings` | 137 ops |
+| `HOST_BINDINGS` (IR op → host positional args) | `kit_host_tensor.bindings` | 137 ops |
 | `_OPS` (IR op → emit signature) | sibling `mlopt` repo `emit.py` | 137 ops |
 | `spec_to_hnl` (spec → `.hnl` model) | `mlopt_discovery.modelproj` | spec-side |
 
@@ -25,14 +25,14 @@ The authoritative data lives in host-tensor: the handwritten
 
 ## What landed
 
-* **`mlopt_host_tensor/host_surface.json`** — the checked-in,
+* **`kit_host_tensor/host_surface.json`** — the checked-in,
   generated artifact: 237 ops (`handwritten` + `generated` kinds),
   each `{op, signature, schema?, min_args, max_args, status, kind,
   reason}`.  Regenerate:
   `.venv/bin/python scripts/dump_host_surface.py`
   (`HOST_TENSOR_DIR` overrides the sibling-checkout default;
   `--check` is the CI-shaped drift gate).
-* **`mlopt_host_tensor/surface.py`** — `host_ops()` (artifact
+* **`kit_host_tensor/surface.py`** — `host_ops()` (artifact
   reader), `collect_host_surface()` (fresh collect from a
   host-tensor checkout, read-only), `render_surface()` (canonical
   bytes).  `[tool.setuptools.package-data]` ships the JSON.
@@ -60,7 +60,7 @@ handl-native `.hnl` models enter mlopt search: source → term → e-graph.
 `mlopt`'s `emit.py::_OPS` cannot be edited from this repo.  The
 adoption path, when that repo picks it up:
 
-1. `emit.py` loads `mlopt_host_tensor.surface.host_ops()` (or vendors
+1. `emit.py` loads `kit_host_tensor.surface.host_ops()` (or vendors
    `host_surface.json` if the dep direction forbids it) instead of
    hand-writing `_OPS` entries.
 2. Its per-op emit logic keys off `signature`/`min_args`/`max_args`

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate ``mlopt_host_tensor/host_surface.json``.
+"""Regenerate ``kit_host_tensor/host_surface.json``.
 
 Reads the host-tensor checkout *read-only* — the handwritten
 ``op "tensor.X"`` decls in ``src/index.hnl`` plus
@@ -12,7 +12,11 @@ Usage::
 
 ``HOST_TENSOR_DIR`` overrides the sibling-checkout default.  ``--check``
 exits non-zero when the artifact is stale — the drift gate the
-``test_host_surface`` suite runs when the checkout is present.
+kit-host-tensor repo's ``test_host_surface`` suite runs when the
+checkout is present.  (The package split to handl-lang/kit-host-tensor
+in P3 Step D-1f; its own ``scripts/dump_host_surface.py`` is the
+canonical regenerator — this copy resolves the artifact inside the
+installed ``kit_host_tensor`` package.)
 """
 
 from __future__ import annotations
@@ -20,7 +24,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from mlopt_host_tensor.surface import (
+from kit_host_tensor.surface import (
     collect_host_surface,
     render_surface,
     surface_json_path,

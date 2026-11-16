@@ -26,7 +26,7 @@ python`:
 - `src/lib.rs` — `#[cfg(feature = "python")] pub mod python;`.
 
 **Python adapter (graphopt repo).** New workspace package
-`packages/mlopt-host-tensor` (`mlopt_host_tensor`):
+`packages/kit-host-tensor` (`kit_host_tensor`):
 
 - `_binding.py` — extension loader.  Resolution order:
   `import handl_host_tensor` → `$MLOPT_HOST_TENSOR_LIB` → the
@@ -60,7 +60,7 @@ python`:
 
 Workspace wiring: root `pyproject.toml` gained the dependency, the
 `workspace = true` source, the ty `extra-paths` entry, and
-`mlopt_host_tensor` in the import-linter bottom layer beside
+`kit_host_tensor` in the import-linter bottom layer beside
 `mlopt_onnx`.
 
 ## Honest boundaries (unchanged from Phase 0)
@@ -112,7 +112,7 @@ Workspace wiring: root `pyproject.toml` gained the dependency, the
   pre-existing warning: `out_has_ell` unused in `aten_kernels.rs`).
 - `ruff check` + `ruff format --check`: clean on the new package and
   test file.  `lint-imports`: 1 contract kept.
-- `ty check`: **0 diagnostics in `mlopt_host_tensor`**; the run
+- `ty check`: **0 diagnostics in `kit_host_tensor`**; the run
   reports 406 pre-existing diagnostics in `mlopt_discovery` that are
   identical on unmodified `HEAD` `pyproject.toml` (verified by
   reverting the config and re-running) — unrelated to this change.
@@ -129,16 +129,16 @@ Workspace wiring: root `pyproject.toml` gained the dependency, the
 **handl-lang/graphopt**
 
 - `pyproject.toml` — dep, uv source, ty path, import-linter layer.
-- `uv.lock` — workspace resolution for `mlopt-host-tensor`.
-- `packages/mlopt-host-tensor/pyproject.toml` — new package.
-- `packages/mlopt-host-tensor/src/mlopt_host_tensor/__init__.py`
-- `packages/mlopt-host-tensor/src/mlopt_host_tensor/_binding.py`
-- `packages/mlopt-host-tensor/src/mlopt_host_tensor/bindings.py`
-- `packages/mlopt-host-tensor/src/mlopt_host_tensor/errors.py`
-- `packages/mlopt-host-tensor/src/mlopt_host_tensor/executor.py`
-- `packages/mlopt-host-tensor/src/mlopt_host_tensor/report.py`
-- `packages/mlopt-host-tensor/src/mlopt_host_tensor/sink.py`
-- `packages/mlopt-host-tensor/src/mlopt_host_tensor/wire.py`
+- `uv.lock` — workspace resolution for `kit-host-tensor`.
+- `packages/kit-host-tensor/pyproject.toml` — new package.
+- `packages/kit-host-tensor/src/kit_host_tensor/__init__.py`
+- `packages/kit-host-tensor/src/kit_host_tensor/_binding.py`
+- `packages/kit-host-tensor/src/kit_host_tensor/bindings.py`
+- `packages/kit-host-tensor/src/kit_host_tensor/errors.py`
+- `packages/kit-host-tensor/src/kit_host_tensor/executor.py`
+- `packages/kit-host-tensor/src/kit_host_tensor/report.py`
+- `packages/kit-host-tensor/src/kit_host_tensor/sink.py`
+- `packages/kit-host-tensor/src/kit_host_tensor/wire.py`
 - `tests/test_host_tensor_sink.py` — new.
 - `docs/reports/host_tensor_sink_phase1.md` — this report.
 
