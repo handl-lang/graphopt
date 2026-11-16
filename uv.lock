@@ -1645,7 +1645,7 @@ dependencies = [
 [[package]]
 name = "kit-discovery"
 version = "0.1.0"
-source = { git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.3#88d93db99d146aa8bc44085d109dba1b26786ac6" }
+source = { git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.4#84910901354c3232be3e5a756169760ba901923b" }
 dependencies = [
     { name = "discoverykit" },
     { name = "gamekit" },
@@ -1682,7 +1682,7 @@ dependencies = [
 [[package]]
 name = "kit-torch"
 version = "0.1.0"
-source = { git = "https://github.com/handl-lang/kit-torch.git?tag=v0.1.4#9cabf1af6f6da0c25dffe834d86b2b368e93692c" }
+source = { git = "https://github.com/handl-lang/kit-torch.git?tag=v0.1.5#3bb7039e4c8917e75f2b0f0af0bf254bbedd579c" }
 dependencies = [
     { name = "mlopt-core" },
     { name = "mlopt-dtypes" },
@@ -2284,10 +2284,10 @@ requires-dist = [
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.15" },
     { name = "kit-carriers", git = "https://github.com/handl-lang/kit-carriers.git?tag=v0.1.5" },
     { name = "kit-cuda", git = "https://github.com/handl-lang/kit-cuda.git?tag=v0.1.5" },
-    { name = "kit-discovery", git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.3" },
+    { name = "kit-discovery", git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.4" },
     { name = "kit-host-tensor", git = "https://github.com/handl-lang/kit-host-tensor.git?tag=v0.1.4" },
     { name = "kit-onnx", git = "https://github.com/handl-lang/kit-onnx.git?tag=v0.1.4" },
-    { name = "kit-torch", git = "https://github.com/handl-lang/kit-torch.git?tag=v0.1.4" },
+    { name = "kit-torch", git = "https://github.com/handl-lang/kit-torch.git?tag=v0.1.5" },
     { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.12" },
     { name = "mlopt-dtypes", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-dtypes&tag=v0.1.12" },
     { name = "mlopt-orchestrator", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&tag=v0.1.12" },
