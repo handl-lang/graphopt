@@ -139,33 +139,46 @@ exclude = [
 # pinned git deps on ``packages/`` subdirectories at the ``v0.1.0``
 # tag (git-URL-at-tag distribution; see
 # docs/reports/git_url_distribution.md).  Bump the tag on releases.
-mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", tag = "v0.1.12" }
-mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", tag = "v0.1.12" }
-gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.14" }
-benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", tag = "v0.1.14" }
+mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", tag = "v0.1.13" }
+mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", tag = "v0.1.13" }
+gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.15" }
+benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", tag = "v0.1.15" }
 # discoverykit (plan 0034 phase 1): the domain-free mining core
 # extracted from the discovery engine (mlopt-discovery, now
 # handl-lang/kit-discovery in P3 Step D-1d) — pinned git dep below.
-discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.23" }
+discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.24" }
 # kit-torch (P3 Step D-1e): the PyTorch adapters/backend, split to
 # handl-lang/kit-torch — pinned git dep at the v0.1.4 tag.
-kit-torch = { git = "https://github.com/handl-lang/kit-torch.git", tag = "v0.1.5" }
+kit-torch = { git = "https://github.com/handl-lang/kit-torch.git", tag = "v0.1.7" }
 # kit-carriers (P3 Step D-1b): the semantic carriers, split to
 # handl-lang/kit-carriers — pinned git dep at the v0.1.5 tag.
-kit-carriers = { git = "https://github.com/handl-lang/kit-carriers.git", tag = "v0.1.5" }
+kit-carriers = { git = "https://github.com/handl-lang/kit-carriers.git", tag = "v0.1.7" }
 # kit-cuda (P3 Step D-1c): the CUDA-graph delivery runner, split to
 # handl-lang/kit-cuda — pinned git dep at the v0.1.5 tag.
-kit-cuda = { git = "https://github.com/handl-lang/kit-cuda.git", tag = "v0.1.5" }
+kit-cuda = { git = "https://github.com/handl-lang/kit-cuda.git", tag = "v0.1.8" }
 kit-discovery = { git = "https://github.com/handl-lang/kit-discovery.git", tag = "v0.1.4" }
-kit-onnx = { git = "https://github.com/handl-lang/kit-onnx.git", tag = "v0.1.4" }
+kit-onnx = { git = "https://github.com/handl-lang/kit-onnx.git", tag = "v0.1.5" }
 # kit-host-tensor (P3 Step D-1f): the host-tensor backend, split to
 # handl-lang/kit-host-tensor — pinned git dep at the v0.1.4 tag.
-kit-host-tensor = { git = "https://github.com/handl-lang/kit-host-tensor.git", tag = "v0.1.4" }
-mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-dtypes", tag = "v0.1.12" }
+kit-host-tensor = { git = "https://github.com/handl-lang/kit-host-tensor.git", tag = "v0.1.5" }
+mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-dtypes", tag = "v0.1.13" }
 # packages/mlopt (P3 Step D-2): the product member — workspace dep so
 # `uv sync` installs it and its `mlopt` console script lands in
 # .venv/bin.
 mlopt = { workspace = true }
+
+# kit-discovery v0.1.4's own [tool.uv.sources] still pins
+# discoverykit@v0.1.23 (no v0.1.5 tag yet); uv honours dep sources
+# transitively, so the root pin needs an override to unify on v0.1.24.
+[tool.uv]
+override-dependencies = [
+    "discoverykit @ git+https://github.com/handl-lang/discoverykit.git@v0.1.24#subdirectory=packages/discoverykit",
+    "gamekit @ git+https://github.com/handl-lang/gamekit.git@v0.1.15#subdirectory=packages/gamekit",
+    "kit-carriers @ git+https://github.com/handl-lang/kit-carriers.git@v0.1.7",
+    "mlopt-core @ git+https://github.com/handl-lang/eqsat.git@v0.1.13#subdirectory=packages/mlopt-core",
+    "mlopt-orchestrator @ git+https://github.com/handl-lang/eqsat.git@v0.1.13#subdirectory=packages/mlopt-orchestrator",
+    "mlopt-dtypes @ git+https://github.com/handl-lang/eqsat.git@v0.1.13#subdirectory=packages/mlopt-dtypes",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
