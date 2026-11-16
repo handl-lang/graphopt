@@ -102,7 +102,7 @@ dependencies = [
 [[package]]
 name = "handl-egraph"
 version = "0.1.0"
-source = "git+https://github.com/handl-lang/egraph?branch=main#b873c128a582879b8d1c3d5e7220965b0eccf7d3"
+source = "git+https://github.com/handl-lang/egraph?branch=main#2b83e748a1f2766fe8e4eb2cd307ee6e811fd83b"
 dependencies = [
  "handl-language",
  "handl-value",
