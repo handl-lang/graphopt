@@ -484,6 +484,11 @@ def _ledger_notes(stats: dict[str, Any], notes: list[str]) -> None:
         notes.append("cuda_graph: per-device capture armed (lazy)")
     if stats.get("cuda_graph_failure") is not None:
         notes.append(f"cuda_graph: capture failed — {stats['cuda_graph_failure']}")
+    if stats.get("cuda_graph_skipped"):
+        # The runner declined to capture (e.g. an inner compile won
+        # precedence) — say so rather than letting the config name
+        # imply an armed graph.
+        notes.append(f"cuda_graph: skipped — {stats['cuda_graph_skipped']}")
     rf = stats.get("region_fuse")
     if isinstance(rf, dict):
         if rf.get("applied"):

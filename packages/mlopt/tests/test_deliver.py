@@ -256,6 +256,30 @@ def test_deliver_stats_ledger_notes() -> None:
     assert any("region_fuse: applied" in n for n in out.notes)
 
 
+def test_deliver_stats_ledger_notes_cuda_graph_skipped() -> None:
+    """A compile+graph config whose inner compile won precedence
+    records the skip — the notes must not imply an armed graph."""
+    delivered = SimpleNamespace(
+        module=_Callable(),
+        stats={
+            "compiled": True,
+            "cuda_graph": False,
+            "cuda_graph_skipped": "inner runner already compiled",
+        },
+        verified=SimpleNamespace(passed=True, max_abs=0.0, max_rel=0.0),
+    )
+    out = deliver(
+        optz=_FakeOptz([delivered]),
+        res=_res(),
+        lowered_eager=_lowered(_Callable()),
+        inputs=(1,),
+        bench_iters=2,
+        runner=_FakeRunner(),
+    )
+    assert any("cuda_graph: skipped" in n for n in out.notes)
+    assert not any("capture armed" in n for n in out.notes)
+
+
 # ---------------------------------------------------------------------------
 #  _bench
 # ---------------------------------------------------------------------------
