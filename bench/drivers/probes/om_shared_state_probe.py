@@ -23,7 +23,7 @@ the two families in SCHEDULED STAGES instead:
                              REPLACED by its inverse ``div_into_matmul``,
                              plus ``om_shared_state_laws()``
 
-(both lists come from :func:`mlopt_carriers.om.om_shared_state_stages`).
+(both lists come from :func:`kit_carriers.om.om_shared_state_stages`).
 Staging is successive :class:`~mlopt_core.egraph.EGraph` ``run`` calls
 on the same graph, so the split costs nothing but the second pass.
 
@@ -96,7 +96,7 @@ import time
 from collections import Counter
 
 import torch
-from mlopt_carriers.om import (
+from kit_carriers.om import (
     om_shared_state_budgets,
     om_shared_state_laws,
     om_shared_state_stages,

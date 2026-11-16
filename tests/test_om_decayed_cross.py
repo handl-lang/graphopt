@@ -13,7 +13,7 @@ import pytest
 torch = pytest.importorskip("torch")
 
 import mlopt_torch.torch_bridge as tb  # noqa: E402
-from mlopt_carriers.om import (  # noqa: E402
+from kit_carriers.om import (  # noqa: E402
     DECAY_BLOCK_CROSS,
     DECAY_BLOCK_CROSS_FLAT,
     DECAY_STATE_WEIGHT_EXIT,
@@ -1158,7 +1158,7 @@ class TestStateFoldLaws:
         assert UNSQ_MUL.check({"$attr:UD": -1, "a": _v("a", 4)})
 
     def test_decay_state_like(self):
-        from mlopt_carriers.om import _decay_state_like
+        from kit_carriers.om import _decay_state_like
 
         # matrix state + scalar weight → lifts
         assert _decay_state_like({"h": _v("h", 3, 6), "a": _v("a")})

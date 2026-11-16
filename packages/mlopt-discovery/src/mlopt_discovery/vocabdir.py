@@ -733,10 +733,10 @@ def collect_ops() -> list[dict]:
     except Exception:  # pragma: no cover — torch always present here
         torch_ops = set()
     # The carrier modules declare their ops via ``op_def`` at import
-    # and ``mlopt_carriers`` keeps them lazy — without these imports
+    # and ``kit_carriers`` keeps them lazy — without these imports
     # the op census depends on which tests happened to run first.
-    import mlopt_carriers.om
-    import mlopt_carriers.trace  # noqa: F401
+    import kit_carriers.om
+    import kit_carriers.trace  # noqa: F401
 
     prim_ops = set(minted.SYNOP_SHIPPED)
 

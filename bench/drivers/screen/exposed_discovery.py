@@ -46,7 +46,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-import mlopt_carriers  # noqa: F401 — registers the carrier machinery
+import kit_carriers  # noqa: F401 — registers the carrier machinery
 import torch
 from mlopt_core.ir import Op, op_repr, term_to_data
 from mlopt_core.laws import ALL_RULES

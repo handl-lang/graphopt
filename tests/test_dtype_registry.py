@@ -4,7 +4,7 @@
 tables duplicated across ``mlopt_torch.export`` (torch.dtype ↔
 safetensors tag), ``kit_onnx.arrays`` (IR name ↔ NumPy ↔ ONNX ↔
 onnxruntime) and the name-resolution idiom in ``torch_bridge`` /
-``mlopt_carriers.trace``.  ``mlopt_dtypes`` is the single table; these
+``kit_carriers.trace``.  ``mlopt_dtypes`` is the single table; these
 tests pin that every consumer's derived view still agrees with the
 foreign dtype systems it serves — a registry edit that drifts from
 torch/NumPy/ONNX/safetensors fails here, not in a delivered artifact.

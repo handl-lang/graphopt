@@ -66,7 +66,7 @@ Usage:
     .venv/bin/python bench/suites/speedup/decode_scan_bench.py --device cpu --quick
     .venv/bin/python bench/suites/speedup/decode_scan_bench.py --device cpu
     PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
-packages/mlopt-carriers/src:packages/mlopt-orchestrator/src:." \
+packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \
         /tmp/mlopt-cuda-venv/bin/python bench/suites/speedup/decode_scan_bench.py \
         --device cuda
 """

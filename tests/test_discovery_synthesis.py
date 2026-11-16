@@ -870,7 +870,7 @@ def _om_chunk2() -> synth.ConstructedObject:
     into the composite, so the composite is admissible exactly where
     ``om_split`` would have fired.
     """
-    from mlopt_carriers.om import OM_LAWS
+    from kit_carriers.om import OM_LAWS
 
     om_split = next(r for r in OM_LAWS if r.name == "om_split")
     obj = synth.compose_objects(
@@ -936,7 +936,7 @@ def test_first_premise_guard_is_transported():
     ``_check_om_lift`` — softmax over the key axis) rides the composite as
     a procedural step when the caller declares no ``cond``: the composite
     fires only where the head premise would."""
-    from mlopt_carriers.om import OM_LAWS
+    from kit_carriers.om import OM_LAWS
 
     by_name = {r.name: r for r in OM_LAWS}
     obj = synth.compose_objects(

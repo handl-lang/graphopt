@@ -61,7 +61,7 @@ Honesty conventions:
 
 Usage:
     PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
-packages/mlopt-carriers/src:packages/mlopt-orchestrator/src:." \\
+packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \\
         /tmp/mlopt-cuda-venv/bin/python bench/suites/e2e/e2e_llm.py --device cuda
 """
 # ruff: noqa: E402, RUF001, RUF003 -- ×, ·, → in strings are deliberate math

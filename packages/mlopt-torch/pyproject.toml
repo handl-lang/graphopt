@@ -18,11 +18,11 @@ dependencies = [
     # previously only pulled in transitively by the dev environment.
     "numpy>=1.24",
 ]
-# `mlopt-carriers` is a deliberate *optional* runtime dependency: the
+# `kit-carriers` is a deliberate *optional* runtime dependency: the
 # torch sink builds its carrier executor table from the carrier
 # lowerings (`mlopt_torch.adapters._executor_specs`) under a
 # `try/except ModuleNotFoundError`, degrading to the trace + generic
-# table without them.  It is not declared here because `mlopt-carriers`
+# table without them.  It is not declared here because `kit-carriers`
 # already depends on `mlopt-torch` (its law modules carry
 # `TORCH_BINDINGS`), and a declared cycle is not installable.  The
 # `dependency layers` import-linter contract groups the two as one

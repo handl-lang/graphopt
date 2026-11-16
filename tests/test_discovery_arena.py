@@ -1556,11 +1556,11 @@ def test_composite_spec_walkers_skip_consts_and_attr_dicts(tmp_path):
 
 
 def test_default_carrier_basis_survives_missing_carriers(monkeypatch):
-    """Without ``mlopt_carriers`` the basis degrades to the scan
+    """Without ``kit_carriers`` the basis degrades to the scan
     lifts — the import failure is the honest edge."""
     import sys
 
-    monkeypatch.setitem(sys.modules, "mlopt_carriers", None)
+    monkeypatch.setitem(sys.modules, "kit_carriers", None)
     rules = ar._default_carrier_rules()
     from mlopt_core.laws.scan import SCAN_DIAG_LAWS, SCAN_LAWS
 

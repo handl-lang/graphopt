@@ -48,7 +48,7 @@ per step, so forward latency is the honest unit.
 
 Usage:
     PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
-packages/mlopt-carriers/src:packages/mlopt-orchestrator/src:." \
+packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \
         /tmp/mlopt-cuda-venv/bin/python bench/suites/e2e/e2e_model.py \
         --device cuda
     .venv/bin/python bench/suites/e2e/e2e_model.py --device cpu --quick

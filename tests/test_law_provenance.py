@@ -15,7 +15,7 @@ the machine arm loses the ``LoRAAdapter`` win, both exactly as the
 provenance registry predicts.
 """
 
-import mlopt_carriers  # noqa: F401 — register carriers before rules
+import kit_carriers  # noqa: F401 — register carriers before rules
 import pytest
 import torch
 from mlopt_core.cost import dag_cost
@@ -206,7 +206,7 @@ def _search(w_name, rules):
 
 def test_om_lift_collision_is_resolved_for_the_shipped_law():
     """``om_lift`` names two objects: the human-authored carrier law
-    (``mlopt_carriers.om.OM_LIFT``, metavar-dim guard) and a
+    (``kit_carriers.om.OM_LIFT``, metavar-dim guard) and a
     constructed store object (literal ``dim=-1``).  The registry
     classifies *shipped* names, so the name resolves human; the store
     object's provenance rides its construction record."""

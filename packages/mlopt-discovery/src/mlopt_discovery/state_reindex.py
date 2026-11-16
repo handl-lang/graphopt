@@ -61,8 +61,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from mlopt_carriers.om import SPLIT_TRANSPOSE
-from mlopt_carriers.xcarrier import _xshape
+from kit_carriers.om import SPLIT_TRANSPOSE
+from kit_carriers.xcarrier import _xshape
 from mlopt_core.egraph import Rewrite
 from mlopt_core.ir import Op
 from mlopt_core.laws import R as _R

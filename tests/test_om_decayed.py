@@ -28,7 +28,7 @@ Covered:
 
 import time
 
-import mlopt_carriers.om as OM
+import kit_carriers.om as OM
 import pytest
 import torch
 from mlopt_core import meta

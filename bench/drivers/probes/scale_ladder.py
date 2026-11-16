@@ -78,7 +78,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import mlopt_carriers  # noqa: F401 — registers the carrier machinery
+import kit_carriers  # noqa: F401 — registers the carrier machinery
 import torch
 from mlopt_core.cost import dag_cost
 from mlopt_discovery.impact import TermCase, _iter_subterms

@@ -26,7 +26,7 @@ Usage:
 
     # CUDA dev venv (see bench/README.md for the recipe):
     PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
-packages/mlopt-carriers/src:packages/mlopt-orchestrator/src:." \
+packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \
         <cuda-venv>/bin/python -m bench run killer_demo --device cuda
 """
 # ruff: noqa: E402, RUF001 -- sys.path setup must precede the benchkit/mlopt

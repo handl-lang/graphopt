@@ -1480,7 +1480,7 @@ export class Course {
           note: "the CUDA-graph runner",
         },
         {
-          path: "packages/mlopt-carriers/src/mlopt_carriers/machinery.py",
+          path: "packages/kit-carriers/src/kit_carriers/machinery.py",
           note: "the carrier seam — whole-subgraph lowerers",
         },
         {

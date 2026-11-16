@@ -177,7 +177,7 @@ def test_retnet_fold_expands_and_chains():
 
 def test_retnet_fold_verifies_against_model():
     """End-to-end: the spelled loop IS chunked retention."""
-    import mlopt_carriers  # noqa: F401 — carrier op bindings
+    import kit_carriers  # noqa: F401 — carrier op bindings
     from mlopt_core.ir import IR
     from mlopt_discovery.zoo import _ChunkedRetention
     from mlopt_torch.adapters import TorchSink

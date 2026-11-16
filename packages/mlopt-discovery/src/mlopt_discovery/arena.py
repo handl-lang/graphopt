@@ -1868,7 +1868,7 @@ def _default_carrier_rules() -> list:
     """Return the shipped lift exemplars the default basis mines.
 
     The scan lifts live in core (``aff``/``aff_diag``); the online
-    softmax carrier lives in ``mlopt_carriers`` — not a declared
+    softmax carrier lives in ``kit_carriers`` — not a declared
     dependency of this package, so its absence degrades the basis to
     the scan carriers rather than failing.
     """
@@ -1876,7 +1876,7 @@ def _default_carrier_rules() -> list:
 
     rules = [*SCAN_LAWS, *SCAN_DIAG_LAWS]
     try:
-        from mlopt_carriers import om
+        from kit_carriers import om
     except ImportError:
         return rules
     return [*rules, *om.OM_LAWS, *om.OM_MASK_LAWS]

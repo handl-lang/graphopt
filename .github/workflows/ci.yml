@@ -102,7 +102,7 @@ jobs:
       - name: coverage run (full suite)
         run: >-
           .venv/bin/coverage run
-          --source=mlopt_torch,mlopt_carriers,mlopt_cuda,mlopt_discovery
+          --source=mlopt_torch,mlopt_cuda,mlopt_discovery
           -m pytest tests/ -q
 
       - name: coverage report (fail_under=100, shipped packages)

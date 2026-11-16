@@ -94,7 +94,7 @@ def _export(workload: str, args: argparse.Namespace) -> tuple:
 def _rules(workload: str, args: argparse.Namespace) -> list:
     """Return the saturation set for the workload's stage(s)."""
     if workload == "retnet":
-        from mlopt_carriers.om import om_shared_state_stages
+        from kit_carriers.om import om_shared_state_stages
 
         reach, _reassoc = om_shared_state_stages(args.k)
         return reach
@@ -106,7 +106,7 @@ def _rules(workload: str, args: argparse.Namespace) -> list:
 def _budgets(workload: str, args: argparse.Namespace) -> dict | None:
     """Rule budgets for the workload (None when the set is unbudgeted)."""
     if workload == "retnet":
-        from mlopt_carriers.om import om_shared_state_budgets
+        from kit_carriers.om import om_shared_state_budgets
 
         return om_shared_state_budgets(args.k, kway=args.budget)
     return None  # DEFAULT sets run unbudgeted for delta/deq

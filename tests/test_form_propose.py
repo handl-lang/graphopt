@@ -156,8 +156,8 @@ def test_irregular_family_reports_obstruction():
 @pytest.mark.slow
 def test_real_winner_gate3():
     """The actual gate-3 measurement: the extracted winner loops."""
-    import mlopt_carriers  # noqa: F401
-    from mlopt_carriers.om import (
+    import kit_carriers  # noqa: F401
+    from kit_carriers.om import (
         om_shared_state_budgets,
         om_shared_state_stages,
     )
@@ -208,9 +208,9 @@ def test_boundary_residual_is_a_value_mismatch():
     non-resident wire (block 4's read scale) plus one true reach gap
     (the steered block-5 state: same value, unmerged class).
     """
-    import mlopt_carriers  # noqa: F401
+    import kit_carriers  # noqa: F401
     import torch
-    from mlopt_carriers.om import (
+    from kit_carriers.om import (
         om_shared_state_budgets,
         om_shared_state_stages,
     )

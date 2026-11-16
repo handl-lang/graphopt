@@ -60,8 +60,8 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 import tyro
-from mlopt_carriers.trace_lift import lift_scan_to_trace
-from mlopt_carriers.xcarrier import (
+from kit_carriers.trace_lift import lift_scan_to_trace
+from kit_carriers.xcarrier import (
     gather_apply_stack,
     gather_applyd_stack,
     omd_tree_lift,

@@ -69,7 +69,7 @@ from pathlib import Path
 sys.setrecursionlimit(400_000)
 
 import torch
-from mlopt_carriers.scan_lower import (
+from kit_carriers.scan_lower import (
     is_scan_apply_term,
     to_batched_scan_module,
 )

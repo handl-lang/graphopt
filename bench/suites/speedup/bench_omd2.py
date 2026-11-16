@@ -71,9 +71,9 @@ import time
 sys.setrecursionlimit(400_000)
 
 import torch
-from mlopt_carriers.omd_lower import to_batched_omd_module
-from mlopt_carriers.trace_lift import lift_scan_to_trace
-from mlopt_carriers.xcarrier import (
+from kit_carriers.omd_lower import to_batched_omd_module
+from kit_carriers.trace_lift import lift_scan_to_trace
+from kit_carriers.xcarrier import (
     XC_LAWS,
     _elem_affine_options,
     gather_apply_stack,

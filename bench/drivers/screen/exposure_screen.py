@@ -49,7 +49,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import mlopt_carriers  # noqa: F401 — registers the carrier machinery
+import kit_carriers  # noqa: F401 — registers the carrier machinery
 import torch
 from mlopt_core.cost.basic import _flops_of
 from mlopt_core.egraph import EGraph

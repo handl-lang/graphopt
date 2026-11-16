@@ -180,7 +180,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
 
-    from mlopt_carriers.om import (
+    from kit_carriers.om import (
         om_shared_state_budgets,
         om_shared_state_stages,
     )
@@ -396,7 +396,7 @@ def main(argv: list[str] | None = None) -> int:
 
 def _verify_pair_terms(t: int, a: Any, b: Any) -> None:
     """Lower two terms with ``TorchSink`` and report ``max|Δ|``."""
-    import mlopt_carriers  # noqa: F401 — carrier op bindings
+    import kit_carriers  # noqa: F401 — carrier op bindings
     import torch
     from mlopt_core.ir import IR
     from mlopt_discovery.zoo import _ChunkedRetention

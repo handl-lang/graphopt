@@ -257,12 +257,12 @@ def test_lift_scan_to_applyd_offers_carrier_member():
     without saturating the carrier laws."""
     from mlopt_core.egraph import EGraph
     from mlopt_torch.models import LinearRecurrence
-    from mlopt_carriers.scan_lower import (
+    from kit_carriers.scan_lower import (
         is_scan_apply_term,
         to_batched_scan_module,
     )
     from mlopt_torch.torch_bridge import export_to_ir
-    from mlopt_carriers.trace_lift import lift_scan_to_applyd
+    from kit_carriers.trace_lift import lift_scan_to_applyd
 
     torch.manual_seed(0)
     m = LinearRecurrence(4, 8).eval().double()
@@ -305,7 +305,7 @@ def test_lift_scan_to_applyd_skips_existing_carrier():
     from mlopt_core.egraph import EGraph
     from mlopt_torch.models import LinearRecurrence
     from mlopt_torch.torch_bridge import export_to_ir
-    from mlopt_carriers.trace_lift import lift_scan_to_applyd
+    from kit_carriers.trace_lift import lift_scan_to_applyd
 
     torch.manual_seed(0)
     m = LinearRecurrence(4, 8).eval().double()

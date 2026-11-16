@@ -28,7 +28,7 @@ an equivalent module on shipped defaults — no opt-in.
 
 from __future__ import annotations
 
-import mlopt_carriers  # noqa: F401 — carrier bindings in the ambient table
+import kit_carriers  # noqa: F401 — carrier bindings in the ambient table
 import pytest
 import torch
 from mlopt_core.cost import count_cost

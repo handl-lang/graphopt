@@ -7,7 +7,10 @@ name = "mlopt-discovery"
 version = "0.1.0dev"
 description = "Law-discovery engine for mlopt: census, proposal, oracles, evidence store and intake (formerly tools/law_*.py)."
 requires-python = ">=3.11"
-dependencies = ["mlopt-core", "mlopt-torch", "mlopt-orchestrator", "gamekit", "discoverykit", "torch>=2.0"]
+# kit-carriers: state_reindex imports kit_carriers.om/.xcarrier at
+# module level (the carrier law tables it reindexes over) — declared
+# here; it resolves through the consumer's [tool.uv.sources].
+dependencies = ["mlopt-core", "mlopt-torch", "mlopt-orchestrator", "kit-carriers", "gamekit", "discoverykit", "torch>=2.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

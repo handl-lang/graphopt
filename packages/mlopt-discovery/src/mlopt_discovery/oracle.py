@@ -849,7 +849,7 @@ def _op_terms(mv: str) -> list[Op]:
 
     Each is ``apply(aff(A, c), h)`` — the carrier member whose *value*
     shape differs from the cost convention, so a derive reading the
-    carrier-aware shape (:func:`mlopt_carriers.xcarrier._xshape`) is
+    carrier-aware shape (:func:`kit_carriers.xcarrier._xshape`) is
     measurable only when the metavariable resolves to one of these.
     Fresh leaves per metavariable keep the bindings disjoint (a shape
     spec resolves the metavar name, not the nested leaf).

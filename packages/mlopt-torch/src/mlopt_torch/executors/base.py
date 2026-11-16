@@ -1,9 +1,9 @@
 """Shared machinery for the planned batched executors.
 
 The three batched lowering adapters —
-:class:`mlopt_carriers.scan_lower.BatchedScanModule`,
-:class:`mlopt_carriers.om_lower.BatchedOMModule`, and
-:class:`mlopt_carriers.omd_lower.BatchedOmdModule` — all embed a plain
+:class:`kit_carriers.scan_lower.BatchedScanModule`,
+:class:`kit_carriers.om_lower.BatchedOMModule`, and
+:class:`kit_carriers.omd_lower.BatchedOmdModule` — all embed a plain
 ``IRModule`` as submodule ``eval_mod``, analyse their root term into
 ``self._plan`` once in ``__init__``, and carry byte-identical
 CUDA-graph capture state plus input-env/eval-closure plumbing.  This

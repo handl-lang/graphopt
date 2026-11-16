@@ -91,7 +91,7 @@ class TorchSink:
         The table ``_lower_extracted`` / the regime planner route
         through: carrier families first (scan / om / omd / om
         streaming / trace), the generic lowering last — mapping order
-        IS routing order.  Built lazily: ``mlopt-carriers`` imports
+        IS routing order.  Built lazily: ``kit-carriers`` imports
         this package, so the carrier lowerers resolve at first
         access, never at import time.
         """
@@ -167,11 +167,11 @@ def _executor_specs(ops: OpTable) -> dict[str, ExecutorSpec]:
     preceding the streaming alternative — the catch-all ``generic``
     last.
 
-    Carrier machinery resolves at call time (``mlopt_carriers``
+    Carrier machinery resolves at call time (``kit_carriers``
     imports ``mlopt_torch``, so module-level carrier references are
     impossible here); the generic/trace lowerers bind *ops* so a
     custom table lowers through its own registry.  A partial install
-    without ``mlopt_carriers`` still yields ``trace`` + ``generic``
+    without ``kit_carriers`` still yields ``trace`` + ``generic``
     (the missing carrier families simply never route).
     """
 
@@ -180,20 +180,20 @@ def _executor_specs(ops: OpTable) -> dict[str, ExecutorSpec]:
 
     table: dict[str, ExecutorSpec] = {}
     try:
-        from mlopt_carriers.decayed_lower import (
+        from kit_carriers.decayed_lower import (
             is_decayed_chunked_term,
             to_chunked_decayed_module,
         )
-        from mlopt_carriers.om_lower import (
+        from kit_carriers.om_lower import (
             is_om_apply_term,
             to_batched_om_module,
             to_streaming_om_module,
         )
-        from mlopt_carriers.omd_lower import (
+        from kit_carriers.omd_lower import (
             is_omd_apply_term,
             to_batched_omd_module,
         )
-        from mlopt_carriers.scan_lower import (
+        from kit_carriers.scan_lower import (
             is_scan_apply_term,
             to_batched_scan_module,
         )

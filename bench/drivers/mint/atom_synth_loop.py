@@ -72,7 +72,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import mlopt_carriers  # noqa: F401 — registers carrier bindings
+import kit_carriers  # noqa: F401 — registers carrier bindings
 import torch
 from mlopt_core.ir import Const, Op, TensorType, Var
 from mlopt_core.laws.serialize import law_to_data, missing_hooks
@@ -889,7 +889,7 @@ def _fragment(need: Need, handler_row: dict, certified: list) -> dict:
     The emergent-runtime thesis as a fragment record: one handle cell
     for the atom's binding (the minted handler record, or the ambient
     torch-binding name) plus the certified law rows — the same shape
-    ``mlopt-carriers`` grew by hand.  Emitted for every admitted
+    ``kit-carriers`` grew by hand.  Emitted for every admitted
     need; the store machinery that merges it is ``cellstore``.
     """
     from mlopt_core.cells import Provenance

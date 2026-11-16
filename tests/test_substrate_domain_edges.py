@@ -7,7 +7,7 @@ moved to ``handl-lang/eqsat`` (``test_cond_laws.py``,
 ``test_cost.py``, ``test_native_extract.py``,
 ``test_backend_neutral.py``, ``test_opmeta.py``): each exercises
 substrate machinery *through* a domain package that stays here
-(``mlopt_discovery``, ``mlopt_carriers``, ``mlopt_torch``, ``torch``,
+(``mlopt_discovery``, ``kit_carriers``, ``mlopt_torch``, ``torch``,
 or the ambient carrier registry), so they run against the pinned
 eqsat git dep from this repo.  The private helpers below are
 verbatim copies of the ones the source files carried.
@@ -188,7 +188,7 @@ def test_migrated_carrier_rules_carry_dspec():
     is the spec-only closure — and the spec must survive the
     law-record JSON hop minting identical attrs.
     """
-    from mlopt_carriers import decode_geom, decode_laws, om, trace
+    from kit_carriers import decode_geom, decode_laws, om, trace
     from mlopt_core.laws.serialize import (
         law_from_data,
         law_to_data,
@@ -223,7 +223,7 @@ def test_migrated_carrier_rules_carry_dspec():
 
 def test_migrated_carrier_derives_mint_identically():
     """The specs produce the same attr maps the Python hooks did."""
-    from mlopt_carriers import decode_geom, decode_laws, om, trace
+    from kit_carriers import decode_geom, decode_laws, om, trace
 
     v = lambda n, *s: Var(n, TensorType(tuple(s)))  # noqa: E731
     # tr_vanish_split: usize (u,v) → two int dims
@@ -611,7 +611,7 @@ def test_pairing_exact_equal_is_value_agnostic():
 def test_full_without_ambient_returns_private_table(monkeypatch):
     """With no backend ambient dict registered ``full()`` returns a
     private composed table rather than raising — and the ambiently
-    installed carriers still compose in (needs mlopt_carriers, so it
+    installed carriers still compose in (needs kit_carriers, so it
     runs here, not in eqsat)."""
     monkeypatch.setattr(ops_mod, "_AMBIENT_BINDINGS", None)
     t = OpTable.full()
@@ -778,12 +778,12 @@ def test_torch_sink_executors_degrade_without_carriers(monkeypatch):
     from mlopt_torch.adapters import TorchSink
 
     monkeypatch.setitem(
-        _sys.modules, "mlopt_carriers.scan_lower", None
+        _sys.modules, "kit_carriers.scan_lower", None
     )
-    monkeypatch.setitem(_sys.modules, "mlopt_carriers.om_lower", None)
-    monkeypatch.setitem(_sys.modules, "mlopt_carriers.omd_lower", None)
+    monkeypatch.setitem(_sys.modules, "kit_carriers.om_lower", None)
+    monkeypatch.setitem(_sys.modules, "kit_carriers.omd_lower", None)
     monkeypatch.setitem(
-        _sys.modules, "mlopt_carriers.om_streaming", None
+        _sys.modules, "kit_carriers.om_streaming", None
     )
     sink = TorchSink()
     sink._executors = None  # rebuild under the blocked names

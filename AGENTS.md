@@ -7,8 +7,12 @@ name below are unchanged).
 Categorical optimization of neural-network computation graphs
 (Python 3.13, torch + numpy). Monorepo layout: the domain packages
 live under `packages/` (`mlopt-core` — the torch-free engine;
-`mlopt-torch` — PyTorch adapters; `mlopt-carriers` — carrier
-laws/executors; `mlopt-cuda` — the CUDA-graph runner;
+`mlopt-torch` — PyTorch adapters; the carrier
+laws/executors — `kit-carriers`, **split to
+`handl-lang/kit-carriers` in P3 Step D-1b** (was
+`packages/mlopt-carriers`; pin `kit-carriers` git dep, import
+`kit_carriers`; package-bound tests travelled with it);
+`mlopt-cuda` — the CUDA-graph runner;
 `mlopt-orchestrator` — the backend-neutral pipeline;
 the ONNX backend `kit-onnx` — ADR 0006: `OnnxSink` lowers IR to
 a checked ONNX artifact, `OnnxSource` lifts ONNX graphs back to IR;
@@ -61,8 +65,10 @@ package/import names are unchanged.  The substrate-only test files
 travelled with them — domain-bound test functions carved out live in
 `tests/test_substrate_domain_edges.py`.  Coverage floors now apply
 per-repo: this repo's wall is the domain packages
-(`fail_under=100` on `mlopt_torch`/`mlopt_carriers`/`mlopt_cuda`;
-`mlopt_onnx` split to handl-lang/kit-onnx in P3 Step D-1) + the 99%
+(`fail_under=100` on `mlopt_torch`/`mlopt_cuda`;
+`mlopt_onnx` split to handl-lang/kit-onnx in P3 Step D-1 and
+`kit_carriers` to handl-lang/kit-carriers in P3 Step D-1b — their
+floors live there) + the 99%
 `mlopt_discovery` ratchet); the substrate and
 game floors were re-measured in their own repos (56% / 98%).
 
@@ -438,7 +444,7 @@ configured in `pyproject.toml`):
   configured `paths`); a non-zero exit (3) means dead code.
 - **import-linter** (`[tool.importlinter]`) pins the hexagonal boundary:
   a `forbidden` contract makes `mlopt_core` importing `mlopt_torch` /
-  `mlopt_carriers` / `mlopt_orchestrator` — or the `torch`
+  `kit_carriers` / `mlopt_orchestrator` — or the `torch`
   / `numpy` external packages — a hard error.  Run
   `.venv/bin/lint-imports`.  Core is a *sink* for adapter-pushed state
   (see `mlopt_core.ops` *Backend wiring*), never a puller: the adapter
@@ -497,9 +503,11 @@ error.  The gate applies to shipped code only — `tests/**` and
 
 `typeguard` (dev dep) enforces annotations at runtime.
 `scripts/runtime_types.sh` instruments only the domain packages —
-`--typeguard-packages=mlopt_torch,mlopt_carriers` (the substrate's own
-instrumentation moved to `eqsat` with it) — and runs the curated
-51-file list (1,096 tests) — a manual-stage gate that CI also
+`--typeguard-packages=mlopt_torch,kit_carriers` (the substrate's own
+instrumentation moved to `eqsat` with it; `kit_carriers` is the
+installed kit-carriers git dep) — and runs the curated
+21-file list (the carrier-bound files moved to kit-carriers with the
+D-1b split) — a manual-stage gate that CI also
 runs (~11 min).  It caught several real annotation bugs, all fixed:
 `laws/tensor._head` was annotated `str` but takes an `Op`;
 `typing._infer_op_shape` passed a `tuple` to zero-arg shape rules typed
@@ -583,18 +591,19 @@ implements `Sink`; nothing in `mlopt-core` changes.
 Carrier machinery is the second half of the boundary.  The
 orchestrator's carrier-aware passes (batched plan builders, non-local
 lifts, carrier rule sets, carrier-root probes) reach the torch-coupled
-`mlopt_carriers` package through the `register_carriers` seam
+`kit_carriers` package (handl-lang/kit-carriers since P3 Step D-1b)
+through the `register_carriers` seam
 (`mlopt_orchestrator.carriers`), never by importing it: the carrier
 package registers a `CarrierMachinery` value — all thunks, so
 registration loads no tensor library — when it is imported.  Without a
 registration the passes degrade to their carrier-free defaults.  The
-resulting package graph is pinned by the import-linter `dependency
-layers` contract: `mlopt_cuda` above `mlopt_torch`/`mlopt_carriers`
-(one mutually-dependent backend layer — the carriers' law modules
-carry `TORCH_BINDINGS`, and the torch sink builds its executor table
-from the carrier lowerings), above `mlopt_orchestrator`, above
-`mlopt_native`, above `mlopt_core`.  `mlopt_torch` does not depend
-on `mlopt_cuda`; import `CudaGraphRunner` from `mlopt_cuda`.
+remaining package graph is pinned by the import-linter `dependency
+layers` contract: `mlopt_cuda` above `mlopt_torch`, above
+`mlopt_orchestrator`, above `mlopt_native`, above `mlopt_core` (the
+carriers' own layering contract lives in the kit-carriers repo; the
+`mlopt_torch` → `kit_carriers` edge here stays lazy and undeclared —
+the declared direction is carriers → torch).  `mlopt_torch` does not
+depend on `mlopt_cuda`; import `CudaGraphRunner` from `mlopt_cuda`.
 
 ## Conventions
 
@@ -602,10 +611,11 @@ on `mlopt_cuda`; import `CudaGraphRunner` from `mlopt_cuda`.
   `[tool.ruff.lint]` for rationale.
 - Coverage floor: `fail_under = 100` in `[tool.coverage.report]` —
   the suite is pinned at 100% for the shipped packages
-  (`mlopt_torch`/`mlopt_carriers`/`mlopt_cuda`; `mlopt_onnx` climbed to
+  (`mlopt_torch`/`mlopt_cuda`; `mlopt_onnx` climbed to
   the wall here, then split to handl-lang/kit-onnx in P3 Step D-1 —
-  see `project/retros/onnx-package.md`); new branches need tests (or a
-  justified `pragma: no cover`).
+  see `project/retros/onnx-package.md`; `kit_carriers` split to
+  handl-lang/kit-carriers in P3 Step D-1b the same way); new branches
+  need tests (or a justified `pragma: no cover`).
   `mlopt_discovery` joined the source list after its staged climb
   and sits under a **pinned ratchet floor** (`--fail-under=99` at
   landing — tighten the number as the residual gaps close, never

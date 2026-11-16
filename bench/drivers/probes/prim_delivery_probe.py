@@ -76,7 +76,7 @@ from typing import Any
 # parallel warning is measured; a probe needn't spawn 16 workers).
 os.environ.setdefault("TORCHINDUCTOR_COMPILE_THREADS", "4")
 
-import mlopt_carriers  # noqa: F401 — carrier bindings in the ambient table
+import kit_carriers  # noqa: F401 — carrier bindings in the ambient table
 import torch
 from mlopt_core.ir import IR, Op
 from mlopt_core.laws import minted

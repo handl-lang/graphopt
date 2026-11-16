@@ -244,7 +244,7 @@ class TestMigration:
     old hook stays as the oracle (``_derive_score_concat_dim``)."""
 
     def test_matmul_t_concat_dspec_matches_oracle(self):
-        from mlopt_carriers.om import (
+        from kit_carriers.om import (
             MATMUL_T_CONCAT,
             _derive_score_concat_dim,
         )
@@ -429,7 +429,7 @@ class TestOpTermBank:
     ``_vshape`` read diverges from the cost convention)."""
 
     def test_op_terms_differ_in_value_shape(self):
-        import mlopt_carriers.xcarrier  # noqa: F401  registers _xshape
+        import kit_carriers.xcarrier  # noqa: F401  registers _xshape
         from mlopt_core.typing import _shape_of, value_shape_of
         from mlopt_discovery import oracle as lvo
 
@@ -453,14 +453,14 @@ class TestDeepDomain:
     are.  It is opt-in: the leaf domain is the guard-synthesis default."""
 
     def _rule(self):
-        from mlopt_carriers.om import MATMUL_T_CONCAT
+        from kit_carriers.om import MATMUL_T_CONCAT
 
         return MATMUL_T_CONCAT
 
     @staticmethod
     def _vshape_gap(dom):
         """Envs where some bound term's value shape differs."""
-        import mlopt_carriers.xcarrier  # noqa: F401  registers _xshape
+        import kit_carriers.xcarrier  # noqa: F401  registers _xshape
         from mlopt_core.typing import _shape_of, value_shape_of
 
         return [
@@ -508,7 +508,7 @@ class TestShippedDspecFaithfulOnTheDeepDomain:
     agreement on both domains, vetoes included."""
 
     def _rule(self):
-        from mlopt_carriers.om import MATMUL_T_CONCAT
+        from kit_carriers.om import MATMUL_T_CONCAT
 
         return MATMUL_T_CONCAT
 
@@ -520,7 +520,7 @@ class TestShippedDspecFaithfulOnTheDeepDomain:
         assert "('shape', 'q')" not in spec
 
     def test_agrees_on_the_leaf_domain(self):
-        from mlopt_carriers.om import _derive_score_concat_dim
+        from kit_carriers.om import _derive_score_concat_dim
         from mlopt_discovery import object_synthesis as osyn
 
         rule = self._rule()
@@ -532,8 +532,8 @@ class TestShippedDspecFaithfulOnTheDeepDomain:
     def test_agrees_on_the_deep_domain(self):
         # carrier-member sites included — the window where ``shape``
         # and ``vshape`` disagree
-        import mlopt_carriers.xcarrier  # noqa: F401  registers _xshape
-        from mlopt_carriers.om import _derive_score_concat_dim
+        import kit_carriers.xcarrier  # noqa: F401  registers _xshape
+        from kit_carriers.om import _derive_score_concat_dim
         from mlopt_core.typing import _shape_of, value_shape_of
         from mlopt_discovery import object_synthesis as osyn
 

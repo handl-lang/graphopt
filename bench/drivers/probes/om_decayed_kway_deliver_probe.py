@@ -41,7 +41,7 @@ import argparse
 import time
 
 import torch
-from mlopt_carriers.om import OM_CHUNKIFY, OM_LAWS, om_kway_laws
+from kit_carriers.om import OM_CHUNKIFY, OM_LAWS, om_kway_laws
 from mlopt_core.cost import dag_cost, flops_cost
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import IR, Op

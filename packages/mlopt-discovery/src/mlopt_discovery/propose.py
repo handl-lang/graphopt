@@ -488,7 +488,7 @@ def _synthetic_measure(
 
 def _carrier_rules() -> list[Any]:
     """Return every carrier law (the residual procedural derives)."""
-    from mlopt_carriers import (
+    from kit_carriers import (
         decode_geom,
         decode_laws,
         om,

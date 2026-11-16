@@ -2,7 +2,7 @@
 
 The runtime-assembly loop, proven on the hand-built carrier atoms
 (``om_decayed`` / ``applyd`` / ``decay_vec`` — the ops
-:mod:`mlopt_carriers.om` ships with hand-written law sets).  Given an
+:mod:`kit_carriers.om` ships with hand-written law sets).  Given an
 atom the driver runs the closed loop:
 
 1. **candidate enumeration** — small declarative schema batteries per
@@ -48,7 +48,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-import mlopt_carriers  # noqa: F401 — registers carrier bindings
+import kit_carriers  # noqa: F401 — registers carrier bindings
 import torch
 from mlopt_core.egraph import Rewrite
 from mlopt_core.egraph.terms import _term_instantiate

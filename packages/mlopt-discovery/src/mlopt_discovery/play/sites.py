@@ -329,7 +329,7 @@ def _scan_sites(term: Any) -> list:
     with no raw member (a carrier synthesized wholesale) records
     no route and delivers spelled, as before.
     """
-    from mlopt_carriers.om import OM_CHUNKIFY, OM_LAWS
+    from kit_carriers.om import OM_CHUNKIFY, OM_LAWS
     from mlopt_core.egraph import EGraph
     from mlopt_core.laws.tensor import SPLIT_SCALAR_RULES
 

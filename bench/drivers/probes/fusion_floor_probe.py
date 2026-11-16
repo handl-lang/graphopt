@@ -294,7 +294,7 @@ def main() -> None:
     ntok = int(sys.argv[2]) if len(sys.argv) > 2 else 12
     L = int(sys.argv[3]) if len(sys.argv) > 3 else 40
 
-    import mlopt_carriers  # noqa: F401
+    import kit_carriers  # noqa: F401
     import mlopt_torch  # noqa: F401
     from mlopt_orchestrator.optimize import Optimizer
     from mlopt_torch.backend import TorchBackend

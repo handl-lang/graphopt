@@ -1369,7 +1369,7 @@ def main(argv: list[str] | None = None) -> int:
     if not built:
         print("no modules selected", file=sys.stderr)
         return 2
-    import mlopt_carriers  # noqa: F401 — carrier op bindings
+    import kit_carriers  # noqa: F401 — carrier op bindings
     from mlopt_discovery.model_corpus import export_ir
 
     env: dict[str, tuple] = {}

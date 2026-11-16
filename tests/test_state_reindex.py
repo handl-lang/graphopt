@@ -395,8 +395,8 @@ def test_state_reindex_closes_boundary():
     all six covered blocks verify, and the emitted single-loop program
     lowers into the winner's root class.
     """
-    import mlopt_carriers  # noqa: F401
-    from mlopt_carriers.om import (
+    import kit_carriers  # noqa: F401
+    from kit_carriers.om import (
         om_shared_state_budgets,
         om_shared_state_stages,
     )

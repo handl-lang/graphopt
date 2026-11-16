@@ -175,7 +175,7 @@ import sys
 class _Blocker:
     def find_spec(self, name, path=None, target=None):
         if name.split(".")[0] in ("torch", "mlopt_torch",
-                                  "mlopt_carriers", "mlopt_cuda"):
+                                  "kit_carriers", "mlopt_cuda"):
             raise ModuleNotFoundError(f"blocked import: {name}")
         return None
 
@@ -196,7 +196,7 @@ for _info in pkgutil.walk_packages(
 
 assert "torch" not in sys.modules, sorted(sys.modules)
 assert "mlopt_torch" not in sys.modules
-assert "mlopt_carriers" not in sys.modules
+assert "kit_carriers" not in sys.modules
 assert "mlopt_orchestrator" not in sys.modules
 
 from mlopt_core.ports import Sink

@@ -54,7 +54,7 @@ Protocol per model (same contract as ``real_win_hunt``):
 
 Usage:
     PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
-packages/mlopt-carriers/src:packages/mlopt-orchestrator/src:." \
+packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \
         /tmp/mlopt-cuda-venv/bin/python bench/suites/e2e/model_bench.py \
         --device cuda
     .venv/bin/python bench/suites/e2e/model_bench.py --device cpu --quick

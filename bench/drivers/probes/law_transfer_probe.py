@@ -69,7 +69,7 @@ import time
 from collections import Counter
 from pathlib import Path
 
-import mlopt_carriers  # noqa: F401 — registers the CARRIERS preset
+import kit_carriers  # noqa: F401 — registers the CARRIERS preset
 import mlopt_torch  # noqa: F401 — torch bindings for export
 import torch
 import torch.nn as nn

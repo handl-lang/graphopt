@@ -34,7 +34,6 @@ mkdir -p "$sandbox"
 
 for spec in \
     mlopt-torch:mlopt_torch \
-    mlopt-carriers:mlopt_carriers \
     mlopt-cuda:mlopt_cuda \
     mlopt-discovery:mlopt_discovery
 do
@@ -51,7 +50,7 @@ sel=$(printf '%s' "$tests" | sed 's/ /", "/g')
 
 {
     echo '[tool.mutmut]'
-    echo 'source_paths = ["mlopt_torch", "mlopt_carriers", "mlopt_cuda", "mlopt_discovery"]'
+    echo 'source_paths = ["mlopt_torch", "mlopt_cuda", "mlopt_discovery"]'
     echo 'pytest_add_cli_args = ["-p", "no:cacheprovider", "-q"]'
     echo "pytest_add_cli_args_test_selection = [\"$sel\"]"
     [ -n "$only" ] && echo "only_mutate = [\"$only\"]"

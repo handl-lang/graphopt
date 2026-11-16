@@ -287,7 +287,7 @@ def gate2(
     form_propose: bool = False,
 ) -> None:
     """Spell the RetNet fold as ``loop (arr step)``; verify + project."""
-    import mlopt_carriers  # noqa: F401 — carrier op bindings
+    import kit_carriers  # noqa: F401 — carrier op bindings
     from mlopt_core.cost import dag_cost, flops_cost
     from mlopt_core.ir import IR, Const, Param, TensorType, Var
     from mlopt_discovery.zoo import _ChunkedRetention
@@ -378,7 +378,7 @@ def _gate2_projection(
     (``bench/drivers/bridge/sharing_extract.py``) instead of plain
     ``extract_best`` — the gate-3 fix arm.
     """
-    from mlopt_carriers.om import (
+    from kit_carriers.om import (
         om_shared_state_budgets,
         om_shared_state_stages,
     )
@@ -482,7 +482,7 @@ def _gate2_projection(
 
 def _verify_winner_terms(t: int, a: Any, b: Any) -> float:
     """Lower two winner-shaped terms through TorchSink; return max|Δ|."""
-    import mlopt_carriers  # noqa: F401
+    import kit_carriers  # noqa: F401
     from mlopt_core.ir import IR
     from mlopt_discovery.zoo import _ChunkedRetention
     from mlopt_torch.adapters import TorchSink
@@ -559,7 +559,7 @@ def _fold_depth(term: Any) -> int:
 
 def _expanded_fold_term(t: int, k: int) -> Any:
     """Expand the spelled ``loop`` program to a DAG at (t, k)."""
-    import mlopt_carriers  # noqa: F401
+    import kit_carriers  # noqa: F401
     from mlopt_core.ir import Const, Param, TensorType, Var
 
     d, b = 16, 2

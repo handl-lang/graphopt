@@ -27,7 +27,7 @@ from __future__ import annotations
 import pytest
 pytestmark = pytest.mark.e2e  # boundary-purpose file: crosses an external engine boundary
 import torch
-from mlopt_carriers.om import OM_CHUNKIFY, OM_LAWS, om_kway_laws
+from kit_carriers.om import OM_CHUNKIFY, OM_LAWS, om_kway_laws
 from mlopt_core.cost import flops_cost
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import IR, Op

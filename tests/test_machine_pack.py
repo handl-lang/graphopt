@@ -14,7 +14,7 @@ win, shipped through ``machine_default`` — the opt-in
 
 import json
 
-import mlopt_carriers  # noqa: F401 — register carriers before rules
+import kit_carriers  # noqa: F401 — register carriers before rules
 import pytest
 import torch
 from mlopt_core.cost import dag_cost

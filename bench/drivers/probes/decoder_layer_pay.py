@@ -51,7 +51,7 @@ def count_ops(term, op):
 
 def main() -> None:
     iters = int(sys.argv[1]) if len(sys.argv) > 1 else 3
-    import mlopt_carriers  # noqa: F401 — registers carriers + new laws
+    import kit_carriers  # noqa: F401 — registers carriers + new laws
     import mlopt_torch  # noqa: F401
     from mlopt_orchestrator.optimize import (
         Optimizer,

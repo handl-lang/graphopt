@@ -6,7 +6,7 @@ search paths:
 * **LAYOUT_RULES** (``mlopt_core.laws.layout``, in ``ALL_RULES``) —
   transpose migration through pointwise ops, product transposes, and
   the NT-GEMM bridge ``matmul(x, W.mT) ≡ linear(x, W)``.
-* **DECODE_LAWS** (``mlopt_carriers.decode_laws``, wired into
+* **DECODE_LAWS** (``kit_carriers.decode_laws``, wired into
   ``CARRIER_LAWS`` in ``regime.py``) — ``cat(prefix_view(buf), new) ≡
   slice_scatter``, static ``index_select`` dedup, and the
   unsqueeze→expand→reshape head-repeat as an ``index_select``
@@ -37,7 +37,7 @@ picked, or is picked but doesn't pay at runtime, is reported as such.
 
 Usage:
     PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
-packages/mlopt-carriers/src:packages/mlopt-orchestrator/src:." \
+packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \
         /tmp/mlopt-cuda-venv/bin/python bench/suites/correctness/laws_effect.py \
         --device cuda
     .venv/bin/python bench/suites/correctness/laws_effect.py --device cpu --quick

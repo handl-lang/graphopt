@@ -27,11 +27,11 @@ Everything fp64: the reassociation is exact to ~1e-15.
 
 import math
 
-import mlopt_carriers.trace_lift as TL
+import kit_carriers.trace_lift as TL
 import pytest
 import torch
 import torch.nn as nn
-from mlopt_carriers.scan_lower import (
+from kit_carriers.scan_lower import (
     build_scan_plan,
     is_scan_apply_term,
     to_batched_scan_module,

@@ -161,7 +161,7 @@ def _verify_vs_hf(ref, feats, delivered, tag: str) -> None:
 
 
 def opt(model: str, iters: int, exclude: str = "") -> None:
-    import mlopt_carriers  # noqa: F401
+    import kit_carriers  # noqa: F401
     import mlopt_torch  # noqa: F401
     from mlopt_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import Optimizer
@@ -326,7 +326,7 @@ def diag(model: str, iters: int, exclude: str = "") -> None:
     UNOPTIMIZED exported IR vs HF eager — isolates whether a
     delivered-vs-HF gap is export fidelity or extraction/lowering.
     """
-    import mlopt_carriers  # noqa: F401
+    import kit_carriers  # noqa: F401
     import mlopt_torch  # noqa: F401
     from mlopt_orchestrator.optimize import Optimizer
     from mlopt_torch.backend import TorchBackend
@@ -414,7 +414,7 @@ def termtest(model: str, mode: str, dtype: str = "") -> None:
     ``nosdpa`` is meaningless here (term already contains sdpa).
     """
     import pickle
-    import mlopt_carriers  # noqa: F401  (seats carrier bindings)
+    import kit_carriers  # noqa: F401  (seats carrier bindings)
     import mlopt_torch  # noqa: F401
     from mlopt_torch.torch_eval import ir_to_torch_module
     from mlopt_torch.adapters import TorchSink
@@ -510,7 +510,7 @@ def e2e(model: str, iters: int, ntok: int) -> None:
     re-implementing the composition: ehs comes from the DELIVERED
     encoder module (not HF eager), everything else identical.
     """
-    import mlopt_carriers  # noqa: F401
+    import kit_carriers  # noqa: F401
     import mlopt_torch  # noqa: F401
     from mlopt_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import (

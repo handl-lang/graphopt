@@ -19,7 +19,7 @@ exact stage where it did not.  The per-gap write-up lives in
 """
 
 import torch
-from mlopt_carriers.decode_laws import DECODE_LAWS
+from kit_carriers.decode_laws import DECODE_LAWS
 from mlopt_core.egraph import EGraph, Rewrite
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
 from mlopt_core.laws import ALL_RULES

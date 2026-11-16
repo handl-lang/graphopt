@@ -10,7 +10,7 @@ Two carriers live side by side here:
   ``applyd`` — see ``SCAN_DIAG_LAWS`` in :mod:`mlopt_core.laws`) over the
   Mamba-faithful recurrence ``h_t = a_t ⊙ h_{t-1} + b_t ⊙ x_t``;
 * the *online-softmax* monoid (``om_elem`` / ``om_compose`` /
-  ``om_apply`` — see ``OM_LAWS`` in :mod:`mlopt_carriers.om`) over the chunked
+  ``om_apply`` — see ``OM_LAWS`` in :mod:`kit_carriers.om`) over the chunked
   attention ``softmax(q @ cat(k_i)ᵀ) @ cat(v_i)``.
 
 The point of the exercise is the *seam*: the SSM emits a per-timestep

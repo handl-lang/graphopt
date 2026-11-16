@@ -719,7 +719,7 @@ class _RealArena(og.OpenArena):
     """
 
     def __init__(self, case: dict) -> None:
-        import mlopt_carriers  # noqa: F401 — carrier op bindings
+        import kit_carriers  # noqa: F401 — carrier op bindings
         from mlopt_discovery import pipeline as pipe
         from mlopt_discovery.census import CorpusTerm, op_tuple_census
         from mlopt_discovery.proposal import Candidate
@@ -956,7 +956,7 @@ def _real_referee_ctx(env: dict, referees: Any) -> Any:
     intake cases that carry a feed; ``sink`` is the same
     ``TorchSink`` the zoo arm verifies through.
     """
-    import mlopt_carriers  # noqa: F401 — carrier op bindings
+    import kit_carriers  # noqa: F401 — carrier op bindings
     from mlopt_torch.adapters import TorchSink
 
     intake = _intake_cases()
@@ -1134,7 +1134,7 @@ def _xanti_proposals(roots: dict, k: int) -> list:
     bound binding — an ``rhs-err`` site drops the variant before it
     can spend an episode slot or the gauntlet.
     """
-    import mlopt_carriers  # noqa: F401 — carrier op bindings for eval
+    import kit_carriers  # noqa: F401 — carrier op bindings for eval
     from mlopt_core.egraph import EGraph
     from mlopt_core.egraph.terms import _term_match
     from mlopt_core.ir import Op
@@ -1545,7 +1545,7 @@ def _prim_pool(
     Returns ``(candidates, meta, stats)`` exactly as before the
     promotion.
     """
-    import mlopt_carriers  # noqa: F401 — carrier op bindings
+    import kit_carriers  # noqa: F401 — carrier op bindings
     import mlopt_torch.torch_bridge as tb
     from mlopt_discovery import shipped_primitives as _sp
     from mlopt_discovery.oracle import eval_instance

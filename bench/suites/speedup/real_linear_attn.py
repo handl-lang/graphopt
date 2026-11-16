@@ -100,7 +100,7 @@ sys.setrecursionlimit(400_000)
 
 import torch
 import torch.nn as nn
-from mlopt_carriers.scan_lower import (
+from kit_carriers.scan_lower import (
     build_scan_plan,
     is_scan_apply_term,
     to_batched_scan_module,

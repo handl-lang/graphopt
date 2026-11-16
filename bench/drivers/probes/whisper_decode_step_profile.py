@@ -94,7 +94,7 @@ def main() -> None:
     ntok = int(sys.argv[2]) if len(sys.argv) > 2 else 32
     L = int(sys.argv[3]) if len(sys.argv) > 3 else max(40, ntok)
 
-    import mlopt_carriers  # noqa: F401
+    import kit_carriers  # noqa: F401
     import mlopt_torch  # noqa: F401
     from mlopt_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import (

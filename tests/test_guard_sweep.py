@@ -47,7 +47,7 @@ from __future__ import annotations
 import itertools
 
 import pytest
-from mlopt_carriers.om import OM_LAWS
+from kit_carriers.om import OM_LAWS
 from mlopt_core.egraph import EGraph
 from mlopt_core.egraph.terms import _term_instantiate, _term_match
 from mlopt_core.ir import Const, Op, Param, TensorType, Var, op_repr
@@ -808,7 +808,7 @@ def test_om_split_scalar_operand_declines_cleanly():
     the concat used to crash ``_check_om_concat_dims``
     (``ZeroDivisionError`` on ``sd % len(s1)``) — after the rank
     guard it declines like every other false-region binding."""
-    from mlopt_carriers.om import OM_SPLIT
+    from kit_carriers.om import OM_SPLIT
 
     t = Op.make(
         "om_elem",

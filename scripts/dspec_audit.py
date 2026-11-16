@@ -147,10 +147,10 @@ ORACLE_TABLE: dict[str, tuple[str, str, str]] = {
 ORACLE_MODULE = {
     TENSOR_PY: "mlopt_core.laws.tensor",
     SCAN_PY: "mlopt_core.laws.scan",
-    OM_PY: "mlopt_carriers.om",
-    TRACE_PY: "mlopt_carriers.trace",
-    DECODE_LAWS_PY: "mlopt_carriers.decode_laws",
-    DECODE_GEOM_PY: "mlopt_carriers.decode_geom",
+    OM_PY: "kit_carriers.om",
+    TRACE_PY: "kit_carriers.trace",
+    DECODE_LAWS_PY: "kit_carriers.decode_laws",
+    DECODE_GEOM_PY: "kit_carriers.decode_geom",
 }
 
 
@@ -167,7 +167,7 @@ LAMBDA_ORACLES = {
 #: In-tree oracle — kept deliberately as the migration's audit twin.
 INTREE_ORACLES = {
     "matmul_t_concat": (
-        "mlopt_carriers.om",
+        "kit_carriers.om",
         "_derive_score_concat_dim",
     ),
 }
@@ -221,7 +221,7 @@ def collect_rules() -> dict[str, Any]:
     import importlib
     import pkgutil
 
-    import mlopt_carriers
+    import kit_carriers
     import mlopt_core
     import mlopt_core.laws
     from mlopt_core.egraph import Rewrite
@@ -232,10 +232,10 @@ def collect_rules() -> dict[str, Any]:
         mods.append(
             importlib.import_module(f"mlopt_core.laws.{m.name}")
         )
-    for m in pkgutil.iter_modules(mlopt_carriers.__path__):
+    for m in pkgutil.iter_modules(kit_carriers.__path__):
         try:
             mods.append(
-                importlib.import_module(f"mlopt_carriers.{m.name}")
+                importlib.import_module(f"kit_carriers.{m.name}")
             )
         except Exception:
             continue
@@ -649,7 +649,7 @@ def audit_shipped(rules: dict, limit: int) -> list[dict]:
     """Compare every shipped ``dspec`` to its oracle on the deep domain."""
     import importlib
 
-    import mlopt_carriers.xcarrier  # noqa: F401  registers _xshape
+    import kit_carriers.xcarrier  # noqa: F401  registers _xshape
     from mlopt_core.laws.cond import eval_derive
 
     rows = []
@@ -755,7 +755,7 @@ def residual_table(
     measure_s: float,
 ) -> list[dict]:
     """Per-rule row: samples, synth outcome, veto agreement, gap."""
-    import mlopt_carriers.xcarrier  # noqa: F401  registers _xshape
+    import kit_carriers.xcarrier  # noqa: F401  registers _xshape
     from mlopt_core.laws.cond import eval_derive
 
     rows = []
