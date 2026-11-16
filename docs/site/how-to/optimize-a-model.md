@@ -1,6 +1,6 @@
 # Optimize a model
 
-<!-- provenance: graphopt:docs/api.md@bac1a61 + mlopt_torch.export + eqsat:packages/mlopt-orchestrator/src/mlopt_orchestrator/optimize.py -->
+<!-- provenance: graphopt:docs/api.md@bac1a61 + kit_torch.export + eqsat:packages/mlopt-orchestrator/src/mlopt_orchestrator/optimize.py -->
 
 Take a `torch.nn.Module` and an example input to a verified, delivered
 optimized module. Assumes [the dev environment is set up](../tutorials/setup);
@@ -10,7 +10,7 @@ for the guided walkthrough see [your first `search()`](../tutorials/first-search
 
 ```python
 from mlopt_orchestrator import Optimizer
-from mlopt_torch import TorchBackend
+from kit_torch import TorchBackend
 
 opt = Optimizer(backend=TorchBackend())
 opt_mod, stats = opt.optimize(model, x)
@@ -26,8 +26,8 @@ against the source). `stats` records `rule_fires`, `lowering`, `runner`,
 ```python
 from kit_cuda import CudaGraphRunner
 from mlopt_orchestrator import Autotuned, ChainedRunner, Compositional
-from mlopt_torch import TorchCompileRunner
-from mlopt_torch.autotune import TORCH_BUILDERS
+from kit_torch import TorchCompileRunner
+from kit_torch.autotune import TORCH_BUILDERS
 
 opt_mod, stats = opt.optimize(model, x, runner=TorchCompileRunner())
 # torch.compile wraps the delivered module (stats["compiled"])
@@ -70,7 +70,7 @@ mod = opt.lower(res, x, verify=True)  # re-lower without re-saturating
 ## 5. Ship the artifact — no mlopt at inference
 
 ```python
-from mlopt_torch.export import export_optimized, load_optimized
+from kit_torch.export import export_optimized, load_optimized
 
 manifest = export_optimized(model, opt_mod, "out/model", fmt="module")
 mod = load_optimized("out/model.pt2")   # runnable nn.Module, torch only

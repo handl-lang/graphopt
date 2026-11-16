@@ -54,14 +54,14 @@ from collections import Counter
 
 import torch
 import torch.nn as nn
+from kit_torch.adapters import TorchSink, TorchSource
+from kit_torch.backend import TorchBackend
+from kit_torch.composer import param_report
 from mlopt_core.egraph import verify_certificate
 from mlopt_core.ir import Op, Param, Var, op_repr
 from mlopt_core.laws import FULL
 from mlopt_orchestrator import Optimizer
 from mlopt_orchestrator.optimize import discover_alternatives
-from mlopt_torch.adapters import TorchSink, TorchSource
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.composer import param_report
 
 # ----------------------------------------------------------------------
 #  The model

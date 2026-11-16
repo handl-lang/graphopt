@@ -1,7 +1,7 @@
 /** Delivery artifacts — what "runnable" means.
  *
  * Plan 0028 §D3: a delivered term has to ship as something that runs.
- * `mlopt_torch.export.export_optimized` / `load_optimized` write a
+ * `kit_torch.export.export_optimized` / `load_optimized` write a
  * `module` / `safetensors` / `state_dict` / `torchscript` artifact, and
  * a `.pt2` round-trips to a **standalone** program with no mlopt at
  * inference.  Beyond a file, delivery is also a *runner* — the CUDA-graph

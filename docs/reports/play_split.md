@@ -100,7 +100,7 @@ same dict object as before.
 `radon_ratchet.py` keys complexity by path, so the move orphaned all
 62 `play.py::…` entries.  The baseline was **already failing at HEAD**
 (113 pre-existing `rose to`/`new function` entries in
-`mlopt-torch/torch_bridge.py`, `meta_player.py`, etc. — drift from
+`kit-torch/torch_bridge.py`, `meta_player.py`, etc. — drift from
 other in-flight work, untouched here).  For the moved code I dropped
 the stale `play.py::` keys and recorded the *current* measured
 complexity under the new `play/<mod>.py::` paths (139 entries) —

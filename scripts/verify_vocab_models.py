@@ -12,7 +12,7 @@ For each model row:
 
 * ``kind: "denotation"`` — the ``.hnl`` is the ``synop_*`` op's
   definitional spec projected; the reference is the same spec
-  evaluated through ``mlopt_torch.torch_bridge._IR_TO_TORCH``.
+  evaluated through ``kit_torch.torch_bridge._IR_TO_TORCH``.
 * ``kind: "handler"`` — the ``.hnl`` is the minted ``handler_body``
   projected; the reference is the handler *pattern* spec (what the
   shipped ``verify_body`` measured the body against).

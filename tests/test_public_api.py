@@ -229,12 +229,12 @@ _PUBLIC_SURFACE: dict[str, tuple[str, ...]] = {
     # The torch delivery surface — the narrow user-facing set frozen
     # by the Phase-A decision (docs/public_api.md § Torch delivery):
     # optimize → export → load, plus the runner constructors a
-    # ``runner=`` kwarg binds.  Everything else in ``mlopt_torch``
+    # ``runner=`` kwarg binds.  Everything else in ``kit_torch``
     # (IRModule, executors, adapters, autotune builders, calibrate,
     # the model zoo) stays public-but-unfrozen.
-    "mlopt_torch": ("TorchBackend", "TorchCompileRunner"),
-    "mlopt_torch.backend": ("TorchBackend",),
-    "mlopt_torch.export": (
+    "kit_torch": ("TorchBackend", "TorchCompileRunner"),
+    "kit_torch.backend": ("TorchBackend",),
+    "kit_torch.export": (
         "ARTIFACT_SCHEMA",
         "ExportError",
         "export_optimized",
@@ -242,7 +242,7 @@ _PUBLIC_SURFACE: dict[str, tuple[str, ...]] = {
         "save_optimized",
         "save_optimized_weights",
     ),
-    "mlopt_torch.runners": ("TorchCompileRunner",),
+    "kit_torch.runners": ("TorchCompileRunner",),
     # kit_cuda.CudaGraphRunner left with the package in P3 Step D-1c —
     # its frozen surface lives in handl-lang/kit-cuda; the
     # constructor-shape pin below still exercises it as a ``runner=``
@@ -399,7 +399,7 @@ class TestSignaturePins:
     def test_torch_backend_factory_shape(self):
         """``TorchBackend()`` assembles the port value — the port
         slots plus ``device_policy`` are all keyword-only."""
-        from mlopt_torch import TorchBackend
+        from kit_torch import TorchBackend
 
         params = inspect.signature(TorchBackend).parameters
         assert set(params) == {
@@ -417,7 +417,7 @@ class TestSignaturePins:
         assert all(p.default is None for p in params.values())
 
     def test_export_optimized_shape(self):
-        from mlopt_torch.export import export_optimized
+        from kit_torch.export import export_optimized
 
         params = inspect.signature(export_optimized).parameters
         assert list(params)[:3] == [
@@ -440,14 +440,14 @@ class TestSignaturePins:
         assert params["verify"].default is True
 
     def test_load_optimized_shape(self):
-        from mlopt_torch.export import load_optimized
+        from kit_torch.export import load_optimized
 
         assert list(inspect.signature(load_optimized).parameters) == [
             "path"
         ]
 
     def test_save_optimized_weights_shape(self):
-        from mlopt_torch.export import save_optimized_weights
+        from kit_torch.export import save_optimized_weights
 
         assert list(
             inspect.signature(save_optimized_weights).parameters
@@ -458,7 +458,7 @@ class TestSignaturePins:
         an iterable chain — the three call shapes docs promise."""
         from kit_cuda import CudaGraphRunner
         from mlopt_orchestrator import ChainedRunner, IdentityRunner
-        from mlopt_torch import TorchCompileRunner
+        from kit_torch import TorchCompileRunner
 
         cuda_params = inspect.signature(CudaGraphRunner).parameters
         assert list(cuda_params) == [

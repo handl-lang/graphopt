@@ -56,7 +56,7 @@ def main() -> None:
     iters = int(sys.argv[1]) if len(sys.argv) > 1 else 3
     from transformers import WhisperForConditionalGeneration
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     model = WhisperForConditionalGeneration.from_pretrained(
         MODEL, torch_dtype=torch.float32, attn_implementation="eager"

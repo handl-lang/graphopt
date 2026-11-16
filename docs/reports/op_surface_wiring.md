@@ -1,6 +1,6 @@
-# Op-surface wiring — host-tensor ATen ports × mlopt-torch bindings
+# Op-surface wiring — host-tensor ATen ports × kit-torch bindings
 
-Date: 2026-11-13.  Scope: `packages/mlopt-torch/src/mlopt_torch/torch_bridge.py`
+Date: 2026-11-13.  Scope: `packages/kit-torch/src/kit_torch/torch_bridge.py`
 (+ `tests/test_torch_integration.py`).  Read-only references:
 `handl-lang/host-tensor` @ `d0de077`, `handl-lang/lib-tensor` @ `82f6f63`.
 

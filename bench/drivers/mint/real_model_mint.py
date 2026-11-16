@@ -222,7 +222,7 @@ def _install_dag_patches() -> dict:
     """Install the r2 DAG-safety patches; return a description row."""
     import kit_discovery.prim_mint as pm
     import kit_discovery.proposal as lp
-    import mlopt_torch.meta_eval as me
+    import kit_torch.meta_eval as me
     from mlopt_core.ir import Const, Param, Var
 
     def _leaves(term: Any, out: set | None = None) -> set:
@@ -241,7 +241,7 @@ def _install_dag_patches() -> dict:
         return out
 
     def _eval_term(term: Any, env: dict) -> Any:
-        from mlopt_torch.torch_bridge import (
+        from kit_torch.torch_bridge import (
             _IR_TO_TORCH,
             _const_like,
             _mint_const,
@@ -849,7 +849,7 @@ def _pay_arm(
         lower,
         search,
     )
-    from mlopt_torch.adapters import TorchSink, TorchSource
+    from kit_torch.adapters import TorchSink, TorchSource
 
     mod, feed = mod_feed
     feeds = feed if isinstance(feed, tuple) else (feed,)
@@ -1139,7 +1139,7 @@ def _seat_prim_denotations(rules: list) -> int:
     ``name in _IR_TO_TORCH`` check skips them.  Returns the count of
     newly-seated ops.
     """
-    import mlopt_torch.torch_bridge as tb
+    import kit_torch.torch_bridge as tb
     from mlopt_core.ir import Op, op_def
     from kit_discovery import prim_mint as pm
     from kit_discovery import shipped_primitives as sp
@@ -1695,8 +1695,8 @@ def main(argv: list[str] | None = None) -> int:
     _write(report, args.out)
 
     # -- referee ctx ----------------------------------------------------
-    import mlopt_torch  # noqa: F401 — torch bindings
-    from mlopt_torch.adapters import TorchSink
+    import kit_torch  # noqa: F401 — torch bindings
+    from kit_torch.adapters import TorchSink
 
     from bench import referees
 

@@ -40,7 +40,7 @@ The end state is not here, and the *shipped product path depends on the duplicat
 - `host_surface.json` (237 generated signatures) — drift-guarded metadata (`tests/test_host_surface.py`), consumed by `host_ops()`/`bindings` validation but **not** by either emitter.
 - `mlopt_discovery.hnl_import` — the `.hnl`→term importer covers *more* ops than `_SPECS` emits (per `tests/test_hnl_import.py:146`), so the codec is asymmetric today.
 - `mlopt_discovery.modelproj` — a third `.hnl` emitter (spec-side).
-- `mlopt_torch.torch_bindings` — the IR→torch arg table (same role as `HOST_BINDINGS` for the torch sink).
+- `kit_torch.torch_bindings` — the IR→torch arg table (same role as `HOST_BINDINGS` for the torch sink).
 
 ADR-0172's "Why" says the split "produced four divergent op tables"; ADR-0174 invariant 4 says "No fourth op table." Today there are **at least five** Python-side term↔surface tables plus the generated JSON. This is *phase-consistent* (P3 migration is pending, and ADR-0172 §4 explicitly keeps `mlopt_core.ir` canonical meanwhile) — but the audit should record that `mlopt export`, the product's flagship deliverable, is built on the table designated for retirement, and `emit._OPS` has **no drift guard** against `host_surface.json` (grep: no reference; `tests/test_emit.py` never mentions it). The 199-op table is validated only at authoring time against `hnl-run`.
 
@@ -50,7 +50,7 @@ Also note: `emit.py:125-128` declines non-finite literals outright — honest, b
 
 - `eqsat/pyproject.toml:85-118` — import-linter contracts: `mlopt_core` forbidden from `mlopt_orchestrator`/`mlopt_native`/`torch`/`numpy`; orchestrator forbidden from all backends; layers contract. Grep confirms zero `import torch|numpy` under `eqsat/packages`.
 - `gamekit/pyproject.toml:61-84` — kernel modules (`engine`, `scoring`, `calibrate`, `advantage`, `gamedata`, `players._base`, `players.registry`) forbidden from all substrate/backend/domain packages + torch + numpy.
-- Domain packages clean: `mlopt-torch`, `mlopt-carriers`, `mlopt-cuda`, `mlopt-onnx` contain only *comments* referencing `mlopt_discovery`/`gamekit` — no imports. `kit-host-tensor` imports only `mlopt_core` (the Sink port — correct direction).
+- Domain packages clean: `kit-torch`, `mlopt-carriers`, `mlopt-cuda`, `mlopt-onnx` contain only *comments* referencing `mlopt_discovery`/`gamekit` — no imports. `kit-host-tensor` imports only `mlopt_core` (the Sink port — correct direction).
 - `mlopt` is composition: `src/mlopt` has zero module-level torch/numpy imports (all lazy); `optimize.py` delegates to `Optimizer`/`TorchBackend`; `crates/hnl-ext-mlopt` is a pure argv-forwarding shim (`lib.rs:37-78`).
 
 Soft spot: `gamekit/packages/gamekit/src/gamekit/players/neural/__init__.py:76-78` lazily imports `torch` + `mlopt_core.features`/`trajectories` inside a factory — the import-linter contract *deliberately excludes* player folders for this reason, but ADR-0174's "gamekit ⊥ eqsat (stdlib-only)" is only true of the kernel modules, not the package. Also `benchkit` (same repo) hard-depends on `torch` and `mlopt-core` (`packages/benchkit/pyproject.toml:14-17`) — reasonable for a "measured ledger" but it means the gamekit *repo* is not stdlib-only; only the `gamekit` package's kernel is.

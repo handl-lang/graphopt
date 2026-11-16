@@ -310,7 +310,7 @@ def diagram_chain_costs(dims: tuple[int, ...]) -> dict[str, float]:
     """
     import torch
     from mlopt_orchestrator import ContractionSearch, Optimizer
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     torch.manual_seed(0)
     x = torch.randn(4, dims[0], dtype=torch.float64)

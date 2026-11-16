@@ -53,7 +53,7 @@ from mlopt_core.ir import IR, Op
 from mlopt_core.laws import tags as _law_tags
 from kit_discovery.play import _time_module
 from mlopt_orchestrator import default_rules
-from mlopt_torch.adapters import TorchSink, TorchSource
+from kit_torch.adapters import TorchSink, TorchSource
 
 try:
     from timm.models.swin_transformer import SwinTransformerBlock

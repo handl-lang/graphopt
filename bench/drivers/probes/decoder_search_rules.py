@@ -49,7 +49,7 @@ def main() -> None:
     from mlopt_core.egraph.core import EGraph as _EG
     from transformers import WhisperForConditionalGeneration
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     orig_apply = _EG.apply_rule
     orig_run = _EG.run

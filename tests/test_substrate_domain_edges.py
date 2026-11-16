@@ -7,7 +7,7 @@ moved to ``handl-lang/eqsat`` (``test_cond_laws.py``,
 ``test_cost.py``, ``test_native_extract.py``,
 ``test_backend_neutral.py``, ``test_opmeta.py``): each exercises
 substrate machinery *through* a domain package that stays here
-(``kit_discovery``, ``kit_carriers``, ``mlopt_torch``, ``torch``,
+(``kit_discovery``, ``kit_carriers``, ``kit_torch``, ``torch``,
 or the ambient carrier registry), so they run against the pinned
 eqsat git dep from this repo.  The private helpers below are
 verbatim copies of the ones the source files carried.
@@ -346,7 +346,7 @@ def test_share_duplicate_param_slices_offers_dedup_member():
     from mlopt_core.egraph import EGraph
     from mlopt_core.ir import IR
     from mlopt_core.laws import share_duplicate_param_slices
-    from mlopt_torch.torch_bridge import ir_to_torch_module
+    from kit_torch.torch_bridge import ir_to_torch_module
 
     torch.manual_seed(0)
     h, d, i = 4, 3, 5
@@ -487,7 +487,7 @@ def test_share_duplicate_param_slices_bf16():
     from mlopt_core.egraph import EGraph
     from mlopt_core.ir import IR
     from mlopt_core.laws import share_duplicate_param_slices
-    from mlopt_torch.torch_bridge import ir_to_torch_module
+    from kit_torch.torch_bridge import ir_to_torch_module
 
     torch.manual_seed(0)
     h, d, i = 4, 3, 5
@@ -546,7 +546,7 @@ def test_search_plumbs_stop_and_patience():
     import torch
     import torch.nn as nn
     from mlopt_orchestrator import search
-    from mlopt_torch.adapters import TorchSource
+    from kit_torch.adapters import TorchSource
 
     torch.manual_seed(0)
     m = nn.Linear(8, 8, bias=False).double()
@@ -569,7 +569,7 @@ def test_search_plumbs_stop_and_patience():
 
 def test_register_core_bindings_is_idempotent():
     """Re-registering the same table object does not duplicate it."""
-    from mlopt_torch.torch_bridge import _CORE_TORCH_BINDINGS
+    from kit_torch.torch_bridge import _CORE_TORCH_BINDINGS
 
     before = len(ops_mod._CORE_BINDING_TABLES)
     ops_mod.register_core_bindings(_CORE_TORCH_BINDINGS)
@@ -581,7 +581,7 @@ def test_register_core_bindings_is_idempotent():
 def test_concrete_eval_backend_is_registered():
     """Importing the torch adapter registers the backend; core reads it
     only through the injected object."""
-    import mlopt_torch.meta_eval  # noqa: F401
+    import kit_torch.meta_eval  # noqa: F401
 
     assert meta._concrete_eval is not None
     assert hasattr(meta._concrete_eval, "eval_term")
@@ -646,7 +646,7 @@ def test_param_bytes_source_tensors():
 
 
 # --- from eqsat tests/test_native_extract.py --------------------------
-# These need BOTH mlopt_native (eqsat, maturin-only) and mlopt_torch
+# These need BOTH mlopt_native (eqsat, maturin-only) and kit_torch
 # (graphopt): dormant unless the optional engine is built into this env.
 
 
@@ -688,7 +688,7 @@ def _ref_greedy(
 def test_native_contraction_parity() -> None:
     """greedy/cost_of_order identical on seeded bond networks."""
     _ncon = pytest.importorskip("mlopt_native.contraction")
-    from mlopt_torch.contraction_policy import random_bond_network
+    from kit_torch.contraction_policy import random_bond_network
 
     for n in (3, 8, 16, 24, 40):
         tensors, sizes = random_bond_network(n, seed=n * 31)
@@ -707,7 +707,7 @@ def test_native_contraction_parity() -> None:
 def test_native_contraction_shipped_fns() -> None:
     """``contraction_policy`` delegates to the native core when built."""
     _ncon = pytest.importorskip("mlopt_native.contraction")
-    from mlopt_torch import contraction_policy as cp
+    from kit_torch import contraction_policy as cp
 
     tensors, sizes = cp.random_bond_network(12, seed=5)
     assert cp.greedy(tensors, sizes) == _ref_greedy(tensors, sizes)
@@ -723,7 +723,7 @@ def test_native_contraction_delegation_contract(monkeypatch) -> None:
     pinned with a stub so the delegation is covered where the
     maturin wheel is absent (real parity lives in the two
     ``test_native_contraction_*`` tests above)."""
-    from mlopt_torch import contraction_policy as cp
+    from kit_torch import contraction_policy as cp
 
     class _StubNcon:
         def pair_cost(self, x, y, sizes):
@@ -752,30 +752,30 @@ def test_native_contraction_delegation_contract(monkeypatch) -> None:
 
 
 def test_torch_package_delegations():
-    import mlopt_torch
-    from mlopt_torch.autotune import TORCH_BUILDERS
-    from mlopt_torch.backend import TorchBackend
-    from mlopt_torch.runners import TorchCompileRunner
+    import kit_torch
+    from kit_torch.autotune import TORCH_BUILDERS
+    from kit_torch.backend import TorchBackend
+    from kit_torch.runners import TorchCompileRunner
 
-    assert mlopt_torch.TorchBackend is TorchBackend
-    assert mlopt_torch.TorchCompileRunner is TorchCompileRunner
-    assert mlopt_torch.TORCH_BUILDERS is TORCH_BUILDERS
+    assert kit_torch.TorchBackend is TorchBackend
+    assert kit_torch.TorchCompileRunner is TorchCompileRunner
+    assert kit_torch.TORCH_BUILDERS is TORCH_BUILDERS
     for gone in (
         "optimize_model",
         "optimize_compositional",
         "optimize_model_autotuned",
     ):
         with pytest.raises(AttributeError):
-            getattr(mlopt_torch, gone)
+            getattr(kit_torch, gone)
     with pytest.raises(AttributeError):
-        _ = mlopt_torch.bogus_name
+        _ = kit_torch.bogus_name
 
 
 def test_torch_sink_executors_degrade_without_carriers(monkeypatch):
     """Blocked carrier imports leave the trace+generic routing table."""
     import sys as _sys
 
-    from mlopt_torch.adapters import TorchSink
+    from kit_torch.adapters import TorchSink
 
     monkeypatch.setitem(
         _sys.modules, "kit_carriers.scan_lower", None
@@ -794,8 +794,8 @@ def test_torch_sink_executors_degrade_without_carriers(monkeypatch):
 def test_build_egraph_accepts_explicit_source():
     import torch
     import torch.nn as nn
-    from mlopt_torch.adapters import TorchSource
-    from mlopt_torch.regime import build_egraph
+    from kit_torch.adapters import TorchSource
+    from kit_torch.regime import build_egraph
 
     m = nn.Linear(4, 4).eval()
     x = torch.randn(2, 4)
@@ -810,7 +810,7 @@ def test_torch_builder_requires_ir():
         AutotuneContext,
         CandidateUnavailableError,
     )
-    from mlopt_torch.autotune import TORCH_BUILDERS
+    from kit_torch.autotune import TORCH_BUILDERS
 
     ctx = AutotuneContext(
         model=None,
@@ -828,11 +828,11 @@ def test_torch_builder_requires_ir():
 
 
 def test_torch_backend_value():
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     b = TorchBackend()
     assert isinstance(b, Backend)
-    from mlopt_torch.adapters import TorchSink, TorchSource
+    from kit_torch.adapters import TorchSink, TorchSource
 
     assert isinstance(b.source, TorchSource)
     assert isinstance(b.sink, TorchSink)
@@ -843,7 +843,7 @@ def test_torch_backend_value():
 def test_torch_backend_optimizes_end_to_end():
     import torch
     import torch.nn as nn
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     torch.manual_seed(0)
 
@@ -913,7 +913,7 @@ def test_fold_alphabet_is_single_sourced():
     side's 13-op subset) is what this pins."""
     from mlopt_core.cost import params as cost_params
     from mlopt_core.egraph import extract as ex
-    from mlopt_torch import torch_bridge as tb
+    from kit_torch import torch_bridge as tb
 
     assert ex._FOLDABLE_OPS is om.FOLD_OPS
     assert tb.FOLD_OPS is om.FOLD_OPS
@@ -951,7 +951,7 @@ def test_aten_alias_map_mints_only_registered_ops():
     The alias map legitimately lives in the adapter (core is
     torch-free); this is the check that keeps it honest.
     """
-    from mlopt_torch.torch_bridge import (
+    from kit_torch.torch_bridge import (
         _ATEN_TO_IR,
         _IR_TO_TORCH_EXTRA,
     )

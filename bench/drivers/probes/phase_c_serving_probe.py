@@ -46,7 +46,7 @@ def _mlp() -> nn.Module:
 
 def _optimize(mod: nn.Module, x: torch.Tensor, **kw):
     from mlopt_orchestrator import Optimizer
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     module, _stats = Optimizer(backend=TorchBackend()).optimize(
         mod, x, verify=False, verbose=False, **kw
@@ -65,7 +65,7 @@ def _cell(fn):
 def artifact_paths(workdir: Path) -> dict:
     """The serving-artifact matrix: pt2 / torchscript / onnx."""
     import numpy as np
-    from mlopt_torch.export import export_optimized, load_optimized
+    from kit_torch.export import export_optimized, load_optimized
 
     x = torch.randn(2, 8)
     opt = _optimize(_mlp(), x)
@@ -108,7 +108,7 @@ def artifact_paths(workdir: Path) -> dict:
         from kit_onnx import OnnxSink
         from kit_onnx.executor import OnnxExecutor
         from mlopt_orchestrator import Optimizer
-        from mlopt_torch.backend import TorchSource
+        from kit_torch.backend import TorchSource
 
         torch.manual_seed(0)
         mod2 = _mlp()
@@ -176,7 +176,7 @@ def artifact_paths(workdir: Path) -> dict:
 
 def dynamic_shapes(workdir: Path) -> dict:
     """Which delivered forms accept off-example shapes."""
-    from mlopt_torch.export import export_optimized, load_optimized
+    from kit_torch.export import export_optimized, load_optimized
     from torch.export import Dim
 
     x = torch.randn(2, 8)
@@ -239,7 +239,7 @@ def dynamic_shapes_compositional() -> dict:
     except Exception as e:
         return {"skip": f"{type(e).__name__}: {e}"[:200]}
     from mlopt_orchestrator import Compositional, Optimizer
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     torch.manual_seed(0)
     model = MiniGPT(dim=32, n_heads=2, depth=2, hidden_mult=2).eval()
@@ -257,7 +257,7 @@ def dynamic_shapes_compositional() -> dict:
 
 def autograd(workdir: Path, use_cuda: bool) -> dict:
     """The measured autograd surface of delivered modules."""
-    from mlopt_torch.export import export_optimized, load_optimized
+    from kit_torch.export import export_optimized, load_optimized
 
     dev = "cuda" if use_cuda and torch.cuda.is_available() else "cpu"
     x = torch.randn(2, 8, device=dev)

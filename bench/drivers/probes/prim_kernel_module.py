@@ -57,7 +57,7 @@ def run(
     warmup: int = 20,
 ) -> dict[str, Any]:
     """Measure the same module with both prim bodies."""
-    import mlopt_torch.torch_bridge as tb
+    import kit_torch.torch_bridge as tb
 
     dt = torch.float64 if dtype == "float64" else torch.float32
     binds, notes = kprobe.kernels_for(sorted(kprobe.elementwise_ops(8)))

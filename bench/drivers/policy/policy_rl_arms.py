@@ -7,7 +7,7 @@ This script runs the dedicated neural-RL arms the repo actually
 ships, under the same held-out protocol, and asks whether the
 dedicated-RL machinery beats the trained linear prior:
 
-* **open** — ``mlopt_torch.rl.PolicyNet`` (the ``SearchEnv``
+* **open** — ``kit_torch.rl.PolicyNet`` (the ``SearchEnv``
   REINFORCE net: MLP 64->64->1 over ``(state (+) rule)`` inputs,
   Categorical sampling, gamma 0.95, Adam 3e-3, cross-episode EMA
   advantage baseline) ported to the open-domain episode loop
@@ -89,8 +89,8 @@ from kit_discovery import open_game as og
 from kit_discovery import play
 from kit_discovery import proposal as lp
 from kit_discovery.meta_arena import Action
-from mlopt_torch import rl as rl_mod
-from mlopt_torch.learned_policy import input_vector
+from kit_torch import rl as rl_mod
+from kit_torch.learned_policy import input_vector
 from torch import nn
 from torch.distributions import Categorical
 
@@ -290,7 +290,7 @@ def train_open_net(
     by *gamma* and an Adam step per episode — the shipped recipe, with
     only the featurization adapted to the arena.  ``adv_mode`` picks
     the advantage baseline: ``"shipped"`` is whatever
-    ``mlopt_torch.rl`` trains with — since the stop-collapse fix, a
+    ``kit_torch.rl`` trains with — since the stop-collapse fix, a
     cross-episode :class:`rl.EmaBaseline` (``G_t - ema``, ``ema`` a
     0.2-EMA of episode totals, clipped); ``"ema"`` is the same
     baseline inlined here as an implementation-parity cross-check;
@@ -754,10 +754,10 @@ def _load_artifact_model(name: str, device: str) -> tuple[Any, dict]:
     """
     from importlib import resources
 
-    from mlopt_torch import contraction_policy as mcp
-    from mlopt_torch.contraction_policy import PairPolicyNet
+    from kit_torch import contraction_policy as mcp
+    from kit_torch.contraction_policy import PairPolicyNet
 
-    path = resources.files("mlopt_torch") / "artifacts" / name
+    path = resources.files("kit_torch") / "artifacts" / name
     payload = torch.load(path, map_location="cpu", weights_only=True)
     meta = dict(payload["meta"])
     if meta.get("feature_contract") != mcp._FEATURE_CONTRACT:

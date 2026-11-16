@@ -9,8 +9,8 @@ import time
 import torch
 import torch.nn as nn
 from mlopt_orchestrator import Optimizer
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.models import ParallelBlock
+from kit_torch.backend import TorchBackend
+from kit_torch.models import ParallelBlock
 
 
 class MiniGPT(nn.Module):

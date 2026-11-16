@@ -3,7 +3,7 @@
 Plan 0016 stage 12 (ADR 0003, the EVALUATION dimension).  The search
 game (:mod:`mlopt_core.game`) has several players —
 :mod:`mlopt_core.policies` plus a learned one,
-:mod:`mlopt_torch.learned_policy` — and this suite asks the only
+:mod:`kit_torch.learned_policy` — and this suite asks the only
 question that matters about them:
 
     Does a learned search policy pick better rules than random,
@@ -64,7 +64,7 @@ from mlopt_core.policies import (
     RandomPolicy,
 )
 from mlopt_core.trajectories import rule_samples
-from mlopt_torch.learned_policy import LearnedPolicy, train_rule_value
+from kit_torch.learned_policy import LearnedPolicy, train_rule_value
 
 from bench.benchkit import (
     Case,

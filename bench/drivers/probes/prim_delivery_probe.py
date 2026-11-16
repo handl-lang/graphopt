@@ -87,8 +87,8 @@ from mlopt_orchestrator.optimize import (
     lower,
     search,
 )
-from mlopt_torch.adapters import TorchSink, TorchSource
-from mlopt_torch.torch_bridge import (
+from kit_torch.adapters import TorchSink, TorchSource
+from kit_torch.torch_bridge import (
     export_to_ir,
     ir_to_torch_module,
 )

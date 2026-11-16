@@ -31,7 +31,7 @@ The highest-leverage next step is **Phase A: make the install/artifact contract 
 ### What exists
 
 - `Optimizer.optimize(model, x)` → `search`/`lower` through port-based `Source`/`Sink`/`Executor`/`Runner`/`Strategy`/`Meter`/`Verifier` contracts (`mlopt_core.ports`).
-- Torch lifting: `nn.Module` → `torch.export.export` → `ExportedProgram` graph → mlopt IR + `param_values` (`mlopt_torch/torch_bridge.py:export_to_ir`).
+- Torch lifting: `nn.Module` → `torch.export.export` → `ExportedProgram` graph → mlopt IR + `param_values` (`kit_torch/torch_bridge.py:export_to_ir`).
 - `IRModule` plan-tape lowering; params/buffers preserved; `_align_to` migrates tensors toward computation device/dtype.
 - Strategies: `Monolithic`, `Compositional` (per-block hooks + graft + e2e verify/rollback), `Autotuned` (measured winner).
 - Runners: `IdentityRunner`, `ChainedRunner`, `TorchCompileRunner`, `CudaGraphRunner` (device-coupled, single capture context).
@@ -39,7 +39,7 @@ The highest-leverage next step is **Phase A: make the install/artifact contract 
 - Tests already prove `.pt2` clean-interpreter round-trip, dynamic shapes, kwargs (`tests/test_export.py`).
 - Device: operand-driven, no literal `cuda:0`; but no multi-device policy — `_align_to` is one-device-at-a-time, `TorchMeter` syncs globally, `CudaGraphRunner` has no per-device cache.
 - Autograd: joint fwd+bwd domain real (+13% vs `torch.autograd`, verified) but partial VJP table, not integrated into `Optimizer.optimize`, not a training API.
-- Packaging: all `0.1.0dev`, git+ssh subdir deps, no wheel CI; frozen API covers substrate/orchestrator/game but NOT `mlopt_torch`/`export_optimized`/runners.
+- Packaging: all `0.1.0dev`, git+ssh subdir deps, no wheel CI; frozen API covers substrate/orchestrator/game but NOT `kit_torch`/`export_optimized`/runners.
 
 ### Gaps → phases
 

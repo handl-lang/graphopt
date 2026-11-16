@@ -4,7 +4,7 @@ Follow-up to `docs/reports/whisper_experiment.md` — the whisper-small
 fp32 encoder OOM'd on the 4 GB RTX 2050 in two places: `lower()`'s
 verify/lower footprint (~3× the weight set) and the first delivered
 forward (the eval tape pinned **every** intermediate until the root
-returned).  Both are fixed in `packages/mlopt-torch/src/mlopt_torch/
+returned).  Both are fixed in `packages/kit-torch/src/kit_torch/
 torch_bridge.py`; measured end-to-end below.
 
 ## What retained memory (root cause)
@@ -29,7 +29,7 @@ Three independent retention sites, all inside `IRModule`:
    lifetime — together with the `SearchResult`'s exported leaf
    tensors that is the ~3× weight blowup the report measured.
 3. **Verify itself is cheap once (1) and (2) are fixed.**  The
-   orchestrator's `verify_module` (`mlopt_torch/report.py:168`)
+   orchestrator's `verify_module` (`kit_torch/report.py:168`)
    runs ref and opt forwards *sequentially* under `no_grad` and
    retains only the two output tensors — the OOM was never the
    comparison, it was the delivered module's own footprint.

@@ -30,7 +30,7 @@ from mlopt_core.laws import all_rules
 from mlopt_core.search_env import SearchEnv
 from mlopt_core.trajectories import rule_samples
 from kit_discovery import families
-from mlopt_torch.rl import RLPolicy, train_reinforce
+from kit_torch.rl import RLPolicy, train_reinforce
 
 
 def _parse_families(spec: str) -> list[str]:
@@ -119,7 +119,7 @@ def main() -> None:
     # Keep the episode-progress logs, silence the egraph's per-extraction
     # INFO chatter (which would otherwise drown the report tables).
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
-    logging.getLogger("mlopt_torch.rl").setLevel(logging.INFO)
+    logging.getLogger("kit_torch.rl").setLevel(logging.INFO)
 
     dev = (
         ("cuda" if torch.cuda.is_available() else "cpu")

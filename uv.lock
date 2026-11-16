@@ -16,18 +16,6 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 
-[manifest]
-members = [
-    "mlopt",
-    "mlopt-torch",
-]
-overrides = [
-    { name = "gamekit", git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&tag=v0.1.12" },
-    { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.12" },
-    { name = "mlopt-dtypes", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-dtypes&tag=v0.1.12" },
-    { name = "mlopt-orchestrator", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&tag=v0.1.12" },
-]
-
 [[package]]
 name = "annotated-types"
 version = "0.8.0"
@@ -984,7 +972,7 @@ wheels = [
 [[package]]
 name = "discoverykit"
 version = "0.1.0.dev0"
-source = { git = "https://github.com/handl-lang/discoverykit.git?subdirectory=packages%2Fdiscoverykit&tag=v0.1.20#0e8a94598469697815c50ef02259c09998e963ce" }
+source = { git = "https://github.com/handl-lang/discoverykit.git?subdirectory=packages%2Fdiscoverykit&tag=v0.1.23#4464acf4f8e1abd09dcd4cc0643be04ed7a24114" }
 dependencies = [
     { name = "gamekit" },
     { name = "mlopt-core" },
@@ -1179,7 +1167,7 @@ wheels = [
 [[package]]
 name = "gamekit"
 version = "0.1.0.dev0"
-source = { git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&tag=v0.1.12#194ac5531c03df5f1425713b61d3a4b551230707" }
+source = { git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&tag=v0.1.14#00263df9a1a2ede4799ec68f9151643d3fe05aad" }
 
 [[package]]
 name = "glom"
@@ -1636,35 +1624,35 @@ wheels = [
 [[package]]
 name = "kit-carriers"
 version = "0.1.0"
-source = { git = "https://github.com/handl-lang/kit-carriers.git?tag=v0.1.3#b4dc4b8fe7b9410977c83ed88e7de01278f43895" }
+source = { git = "https://github.com/handl-lang/kit-carriers.git?tag=v0.1.5#34c1339dd457566fe952034982dcd993b07fe536" }
 dependencies = [
+    { name = "kit-torch" },
     { name = "mlopt-core" },
     { name = "mlopt-orchestrator" },
-    { name = "mlopt-torch" },
     { name = "torch" },
 ]
 
 [[package]]
 name = "kit-cuda"
 version = "0.1.0"
-source = { git = "https://github.com/handl-lang/kit-cuda.git?tag=v0.1.3#2be4a79bd54374d0ebe0e0d06a88fd1ab9c987bb" }
+source = { git = "https://github.com/handl-lang/kit-cuda.git?tag=v0.1.5#e361eb92ce86c5771d5e2e3a0397c3fb10bba98d" }
 dependencies = [
+    { name = "kit-torch" },
     { name = "mlopt-core" },
-    { name = "mlopt-torch" },
     { name = "torch" },
 ]
 
 [[package]]
 name = "kit-discovery"
 version = "0.1.0"
-source = { git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.2#fefc0057b1568b90a2196682c541bba7714a7a46" }
+source = { git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.3#88d93db99d146aa8bc44085d109dba1b26786ac6" }
 dependencies = [
     { name = "discoverykit" },
     { name = "gamekit" },
     { name = "kit-carriers" },
+    { name = "kit-torch" },
     { name = "mlopt-core" },
     { name = "mlopt-orchestrator" },
-    { name = "mlopt-torch" },
     { name = "torch" },
 ]
 
@@ -1681,7 +1669,7 @@ dependencies = [
 [[package]]
 name = "kit-onnx"
 version = "0.1.0"
-source = { git = "https://github.com/handl-lang/kit-onnx.git?tag=v0.1.3#084897d4cbce89cc637acedb1b452f4a6080b1fb" }
+source = { git = "https://github.com/handl-lang/kit-onnx.git?tag=v0.1.4#b2c8ff63ba555dca564a329110f1438744d826aa" }
 dependencies = [
     { name = "mlopt-core" },
     { name = "mlopt-dtypes" },
@@ -1689,6 +1677,19 @@ dependencies = [
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "onnx" },
     { name = "onnxruntime" },
+]
+
+[[package]]
+name = "kit-torch"
+version = "0.1.0"
+source = { git = "https://github.com/handl-lang/kit-torch.git?tag=v0.1.4#9cabf1af6f6da0c25dffe834d86b2b368e93692c" }
+dependencies = [
+    { name = "mlopt-core" },
+    { name = "mlopt-dtypes" },
+    { name = "mlopt-orchestrator" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "torch" },
 ]
 
 [[package]]
@@ -2206,10 +2207,10 @@ dependencies = [
     { name = "kit-discovery" },
     { name = "kit-host-tensor" },
     { name = "kit-onnx" },
+    { name = "kit-torch" },
     { name = "mlopt-core" },
     { name = "mlopt-dtypes" },
     { name = "mlopt-orchestrator" },
-    { name = "mlopt-torch" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "torch" },
@@ -2277,19 +2278,19 @@ requires-dist = [
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.9.4" },
     { name = "benchkit", git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fbenchkit&tag=v0.1.14" },
     { name = "coverage", marker = "extra == 'dev'", specifier = ">=7.0" },
-    { name = "discoverykit", git = "https://github.com/handl-lang/discoverykit.git?subdirectory=packages%2Fdiscoverykit&tag=v0.1.20" },
-    { name = "gamekit", git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&tag=v0.1.12" },
+    { name = "discoverykit", git = "https://github.com/handl-lang/discoverykit.git?subdirectory=packages%2Fdiscoverykit&tag=v0.1.23" },
+    { name = "gamekit", git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&tag=v0.1.14" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.168.1" },
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.15" },
-    { name = "kit-carriers", git = "https://github.com/handl-lang/kit-carriers.git?tag=v0.1.3" },
-    { name = "kit-cuda", git = "https://github.com/handl-lang/kit-cuda.git?tag=v0.1.3" },
-    { name = "kit-discovery", git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.2" },
+    { name = "kit-carriers", git = "https://github.com/handl-lang/kit-carriers.git?tag=v0.1.5" },
+    { name = "kit-cuda", git = "https://github.com/handl-lang/kit-cuda.git?tag=v0.1.5" },
+    { name = "kit-discovery", git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.3" },
     { name = "kit-host-tensor", git = "https://github.com/handl-lang/kit-host-tensor.git?tag=v0.1.4" },
-    { name = "kit-onnx", git = "https://github.com/handl-lang/kit-onnx.git?tag=v0.1.3" },
+    { name = "kit-onnx", git = "https://github.com/handl-lang/kit-onnx.git?tag=v0.1.4" },
+    { name = "kit-torch", git = "https://github.com/handl-lang/kit-torch.git?tag=v0.1.4" },
     { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.12" },
     { name = "mlopt-dtypes", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-dtypes&tag=v0.1.12" },
     { name = "mlopt-orchestrator", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&tag=v0.1.12" },
-    { name = "mlopt-torch", editable = "packages/mlopt-torch" },
     { name = "mutmut", marker = "extra == 'dev'", specifier = ">=3.8.0" },
     { name = "numpy", specifier = ">=1.24" },
     { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.10.1" },
@@ -2356,28 +2357,6 @@ version = "0.1.0.dev0"
 source = { git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&tag=v0.1.12#d67d1fc8d17f6698baa2ba857685ea796db95201" }
 dependencies = [
     { name = "mlopt-core" },
-]
-
-[[package]]
-name = "mlopt-torch"
-version = "0.1.0.dev0"
-source = { editable = "packages/mlopt-torch" }
-dependencies = [
-    { name = "mlopt-core" },
-    { name = "mlopt-dtypes" },
-    { name = "mlopt-orchestrator" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "torch" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.12" },
-    { name = "mlopt-dtypes", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-dtypes&tag=v0.1.12" },
-    { name = "mlopt-orchestrator", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&tag=v0.1.12" },
-    { name = "numpy", specifier = ">=1.24" },
-    { name = "torch", specifier = ">=2.0" },
 ]
 
 [[package]]

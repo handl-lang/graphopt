@@ -17,12 +17,12 @@ either).  These tests pin the closed gap:
 import sys
 from types import ModuleType, SimpleNamespace
 
-import mlopt_torch.torch_bridge as tb
+import kit_torch.torch_bridge as tb
 import pytest
 import torch
 import torch.nn as nn
 from mlopt_core.attrs import ATTR_SCHEMA
-from mlopt_torch.torch_bridge import (
+from kit_torch.torch_bridge import (
     _ATEN_TO_IR,
     _IR_TO_TORCH,
     _deform_conv2d_torch,
@@ -47,7 +47,7 @@ def test_deform_conv2d_is_a_registered_bound_op():
 
 def test_deform_conv2d_binding_is_in_supported_ops():
     """The sink reports the op it can now lower (the gap's symptom)."""
-    from mlopt_torch.adapters import TorchSink
+    from kit_torch.adapters import TorchSink
 
     assert "deform_conv2d" in TorchSink().supported_ops
 
@@ -96,7 +96,7 @@ def test_deform_conv2d_torch_fills_absent_mask_and_bias(monkeypatch):
     # ``torch_bindings``' module globals — patching the ``torch_bridge``
     # shim's re-export would not reach it.
     monkeypatch.setattr(
-        "mlopt_torch.torch_bindings._torchvision_deform_conv2d",
+        "kit_torch.torch_bindings._torchvision_deform_conv2d",
         lambda: _kernel,
     )
     x = torch.randn(2, 6, 8, 8)
@@ -142,7 +142,7 @@ def test_deform_conv2d_torch_passes_given_mask_and_bias(monkeypatch):
     # ``torch_bindings``' module globals — patching the ``torch_bridge``
     # shim's re-export would not reach it.
     monkeypatch.setattr(
-        "mlopt_torch.torch_bindings._torchvision_deform_conv2d",
+        "kit_torch.torch_bindings._torchvision_deform_conv2d",
         lambda: _kernel,
     )
     x = torch.randn(2, 6, 8, 8)
@@ -167,7 +167,7 @@ def test_deform_conv2d_round_trip(masked):
     pytest.importorskip("torchvision")
     from torchvision.ops import DeformConv2d
 
-    from mlopt_torch.adapters import TorchSink
+    from kit_torch.adapters import TorchSink
 
     torch.manual_seed(0)
 

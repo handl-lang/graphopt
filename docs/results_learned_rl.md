@@ -16,7 +16,7 @@ The question: the controlled baseline/ablation runs
 (`docs/results_learned_baseline.md`, `docs/results_learned_ablations.md`)
 measured *linear* policies trained by the players' built-in REINFORCE
 plus a supervised `RuleValueNet`. The repo also ships two dedicated
-neural-RL training loops — `mlopt_torch.rl.train_reinforce`
+neural-RL training loops — `kit_torch.rl.train_reinforce`
 (`PolicyNet`, the SearchEnv REINFORCE net) and the contraction-domain
 `train_rl` curriculum / `contraction_az.train_search` (expert-iteration
 PUCT). This run puts all of them under the same held-out protocol.
@@ -235,7 +235,7 @@ search in the loop did not beat more rollouts on this box.
 --only open` re-run after the `train_reinforce` fix.
 
 The collapse diagnosed above was a *recipe* bug, so the recipe was
-fixed: `mlopt_torch.rl.train_reinforce` now carries a cross-episode
+fixed: `kit_torch.rl.train_reinforce` now carries a cross-episode
 **`EmaBaseline`** (a 0.2-EMA of episode totals; per-step advantage
 `clip(G_t − ema, ±40)` — the `LinearPolicy` machinery from
 `kit_discovery.players`) instead of per-episode standardization.

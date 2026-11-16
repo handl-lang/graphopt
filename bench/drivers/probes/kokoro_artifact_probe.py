@@ -80,8 +80,8 @@ def _timeit(fn, warm=3, reps=10):
 
 def reuse(iters: int = 3, Ws=(128, 144, 160, 176)) -> None:
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
-    from mlopt_torch.runners import RegionFusionRunner
+    from kit_torch.backend import TorchBackend
+    from kit_torch.runners import RegionFusionRunner
 
     m = kokoro.load("fp32", disable_complex=False)
     m.eval()
@@ -223,8 +223,8 @@ def reuse(iters: int = 3, Ws=(128, 144, 160, 176)) -> None:
 
 def persist(W: int = 128, iters: int = 3) -> None:
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
-    from mlopt_torch.runners import RegionFusionRunner
+    from kit_torch.backend import TorchBackend
+    from kit_torch.runners import RegionFusionRunner
 
     m = kokoro.load("fp32", disable_complex=False)
     m.eval()
@@ -342,8 +342,8 @@ def dyn(iters: int = 3, Ws=(128, 144, 160)) -> None:
     then lowers + regionfuses at other Ws.
     """
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
-    from mlopt_torch.runners import RegionFusionRunner
+    from kit_torch.backend import TorchBackend
+    from kit_torch.runners import RegionFusionRunner
 
     m = kokoro.load("fp32", disable_complex=False)
     m.eval()

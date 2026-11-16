@@ -12,7 +12,7 @@ SEMANTICS ──▶ SEARCH ──▶ EVALUATION ──▶ EXECUTION
 
 The `mlopt_core.*` modules named below ship in the
 [`eqsat`](https://github.com/handl-lang/eqsat) substrate repo, pinned
-here as a git dep; `mlopt_torch`, `kit_discovery`, `scripts/`, and
+here as a git dep; `kit_torch`, `kit_discovery`, `scripts/`, and
 `bench/` are this repo's.
 
 ## The pieces
@@ -30,7 +30,7 @@ here as a git dep; `mlopt_torch`, `kit_discovery`, `scripts/`, and
 - **The frontier** (`mlopt_core.pareto`) — keep the landscape, don't
   scalarize early: `pareto_frontier` keeps non-dominated candidates,
   `best` is the scalar view over them.
-- **Policies** (`mlopt_core.policies`, `mlopt_torch.learned_policy`) —
+- **Policies** (`mlopt_core.policies`, `kit_torch.learned_policy`) —
   a `Policy` only *orders* the legal moves, so it can never change
   what is certified. The learned arm scores `(program features ⊕
   structural rule vector)` — a rule the model has never seen is scored

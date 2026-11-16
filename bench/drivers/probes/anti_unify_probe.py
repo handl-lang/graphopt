@@ -76,7 +76,7 @@ def _export(workload: str, args: argparse.Namespace) -> tuple:
         _DeepEquilibrium,
         _DeltaRuleBlock,
     )
-    from mlopt_torch.adapters import TorchSource
+    from kit_torch.adapters import TorchSource
 
     torch.manual_seed(0)
     if workload == "delta":

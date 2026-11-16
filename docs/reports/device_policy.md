@@ -26,7 +26,7 @@ that remains an open verification item, not a claimed one.
 
 ## What landed
 
-### `mlopt_torch/device.py` (new)
+### `kit_torch/device.py` (new)
 
 - **`DevicePolicy`** — `inspect(module, inputs) -> DeviceReport`
   censuses every tensor device across `parameters()`/`buffers()`/
@@ -65,10 +65,10 @@ that remains an open verification item, not a claimed one.
 - **`cuda_device_indices(*groups)`** — sorted distinct CUDA device
   indices; the meter's per-device sync set.
 
-Names are re-exported lazily through `mlopt_torch.__init__`'s
+Names are re-exported lazily through `kit_torch.__init__`'s
 `_DELEGATED` table.
 
-### `mlopt_torch/meter.py`
+### `kit_torch/meter.py`
 
 `TorchMeter.time` now syncs **per device**: `cuda_device_indices`
 collects the devices the inputs occupy and each gets its own
@@ -101,8 +101,8 @@ device` still reports the first tensor's device (informational).
 - **Refusal**: `apply` runs `DevicePolicy.check_module` before every
   early-out — DDP/FSDP/TP wrappers and collective-binding modules
   raise `UnsupportedDistributedError` on CPU *and* CUDA inputs.
-- `mlopt-cuda` now declares `mlopt-torch` (the import-linter layer
-  contract already placed `mlopt_cuda` above `mlopt_torch`; the dep
+- `mlopt-cuda` now declares `kit-torch` (the import-linter layer
+  contract already placed `mlopt_cuda` above `kit_torch`; the dep
   was previously undeclared).
 
 ## Tests

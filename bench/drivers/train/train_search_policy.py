@@ -24,7 +24,7 @@ from mlopt_core.game import Action, GameState
 from mlopt_core.laws import all_rules
 from mlopt_core.trajectories import rule_samples
 from kit_discovery import families
-from mlopt_torch.learned_policy import LearnedPolicy, train_rule_value
+from kit_torch.learned_policy import LearnedPolicy, train_rule_value
 
 
 def _parse_families(spec: str) -> list[str]:

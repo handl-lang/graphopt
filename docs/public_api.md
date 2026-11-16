@@ -46,7 +46,7 @@ phase 4.
 | Provenance registry | `mlopt_core.laws.provenance` | `MACHINE_SHIPPED`, `MACHINE_STORED`, `MACHINE_LAWS`, `AUTO_ADMITTED` (the store's auto-admission tier names), `law_provenance(rule) -> "machine" \| "human"` |
 | The pipeline | `mlopt_orchestrator` (→ `pipeline`) | `Optimizer`, **`search(model, x, *, source, capabilities=None, criteria=None, cost_fn=None, rules=None, engine=None, policy=None, …) -> SearchResult`**, `lower`, `SearchResult`, `LowerResult`, `Backend`, `discover_alternatives`, `DEFAULT_RULES`, `OptimizationResourceError`, strategies `Monolithic`/`Compositional`/`Autotuned`, runners `IdentityRunner`/`ChainedRunner`/`runner_candidate`, criteria family (`Criterion`, `Criteria`, `Blend`, `criteria_cost`, `peak_bytes_cost`, `LatencyCriterion`, `MemoryCriterion`, `FlopsCriterion`, `DepthCriterion`, `CompiledCriterion`, `PredictedCriterion`), `delivered_cost_for`, `structural_key` |
 | `engine=` | `search`/`Optimizer` kwarg | An `Engine`-port value — instance, class, or zero-arg factory.  Engines are **never auto-detected**; `stats["engine"]` records which ran (`"python"` reference default, `"native"` for `mlopt_native.NativeEngine`).  The port covers the *search* only — certificates and the non-local passes are Python-engine capabilities |
-| Backend registry | `mlopt_core.backends` | `BackendRegistration`, `BackendRegistry`, `register_backend`, `get_backend`, `backend_names`, `find_backends_by_ops`, `DEFAULT_REGISTRY`, `BackendPortsMissing` — backends advertise `source`/`targets`/`composer`/`meter` as data; `mlopt_torch.register()` and `kit_onnx.register()` are the explicit seating seams (import registers nothing) |
+| Backend registry | `mlopt_core.backends` | `BackendRegistration`, `BackendRegistry`, `register_backend`, `get_backend`, `backend_names`, `find_backends_by_ops`, `DEFAULT_REGISTRY`, `BackendPortsMissing` — backends advertise `source`/`targets`/`composer`/`meter` as data; `kit_torch.register()` and `kit_onnx.register()` are the explicit seating seams (import registers nothing) |
 
 ## Game contracts (→ `gamekit`)
 
@@ -77,7 +77,7 @@ paths are re-exporting shims (see `TestGamekitCompatShims` in
 The Phase-A freeze (production-readiness audit): the *narrow*
 user-facing set a downstream consumer binds — optimize → export →
 load, plus the `runner=` constructors — is frozen.  Everything else
-in `mlopt_torch` (`IRModule`, the executor table, `adapters`,
+in `kit_torch` (`IRModule`, the executor table, `adapters`,
 `autotune.TORCH_BUILDERS`, `calibrate`, `contraction_policy`, the
 model zoo) stays **public, unfrozen**: reachable, not promised.
 Freezing internals would calcify the machinery the discovery loop is
@@ -86,10 +86,10 @@ still changing; freezing this set pins the artifact boundary the
 
 | Contract | Canonical location | Frozen surface |
 |---|---|---|
-| Backend assembly | `mlopt_torch` (lazy) / `mlopt_torch.backend` | **`TorchBackend(*, ops=None, source=None, sink=None, composer=None, meter=None) -> Backend`** — the port-value factory every example calls |
-| Artifact export | `mlopt_torch.export` | **`export_optimized(model, optimized_model, path, *, fmt="module", example_input=None, example_kwargs=None, dynamic_shapes=None, verify=True, stats=None) -> dict`**, `save_optimized` (call-site alias), **`load_optimized(path)`**, `save_optimized_weights(optimized_module, path)`, `ExportError`, `ARTIFACT_SCHEMA` (`"mlopt-artifact/1"`) |
+| Backend assembly | `kit_torch` (lazy) / `kit_torch.backend` | **`TorchBackend(*, ops=None, source=None, sink=None, composer=None, meter=None) -> Backend`** — the port-value factory every example calls |
+| Artifact export | `kit_torch.export` | **`export_optimized(model, optimized_model, path, *, fmt="module", example_input=None, example_kwargs=None, dynamic_shapes=None, verify=True, stats=None) -> dict`**, `save_optimized` (call-site alias), **`load_optimized(path)`**, `save_optimized_weights(optimized_module, path)`, `ExportError`, `ARTIFACT_SCHEMA` (`"mlopt-artifact/1"`) |
 | Artifact kinds | manifest fields | `artifact_kind`: `"runnable"` (`pt2`/`torchscript` — the artifact IS the optimized computation) vs `"weights"` (`safetensors`/`state_dict` — parameters only, optimized-layout `state_dict` names, never runnable standalone).  `weights_only`/`runnable_standalone` stay as the boolean twins; `load_optimized` refuses an unrecognised `artifact_schema` |
-| Delivery runners | `mlopt_torch.runners`, `kit_cuda`, `mlopt_orchestrator` | `TorchCompileRunner(**compile_kwargs)`, `CudaGraphRunner(*, multi_device=False, alias_inputs=None, mutable_inputs=None)`, `IdentityRunner()`, `ChainedRunner(runners)` — the `runner=` values; the `Runner` *protocol* (`apply(module, example_input, stats)`) is the substrate contract above.  `alias_inputs` is the opt-in alias-aware capture spec (`docs/reports/alias_aware_capture.md`); `mutable_inputs` is the matching opt-in write-back spec — positions the recorded graph may mutate in place without version-counter demotion (the in-graph K/V-cache update, `docs/reports/kv_static_cache_probe.md`) |
+| Delivery runners | `kit_torch.runners`, `kit_cuda`, `mlopt_orchestrator` | `TorchCompileRunner(**compile_kwargs)`, `CudaGraphRunner(*, multi_device=False, alias_inputs=None, mutable_inputs=None)`, `IdentityRunner()`, `ChainedRunner(runners)` — the `runner=` values; the `Runner` *protocol* (`apply(module, example_input, stats)`) is the substrate contract above.  `alias_inputs` is the opt-in alias-aware capture spec (`docs/reports/alias_aware_capture.md`); `mutable_inputs` is the matching opt-in write-back spec — positions the recorded graph may mutate in place without version-counter demotion (the in-graph K/V-cache update, `docs/reports/kv_static_cache_probe.md`) |
 | Pipeline entry | `mlopt_orchestrator.Optimizer` | `Optimizer.optimize(model, x, *, strategy=None, **kw) -> LowerResult` — unpacks `(module, stats)`; `**kw` forwards the `search`/`lower` knobs (`rules`, `runner`, `criteria`, `engine`, …) and is part of the contract |
 
 `Optimizer`, the strategies, and `search`/`lower` were already frozen

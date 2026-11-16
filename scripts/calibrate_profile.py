@@ -6,7 +6,7 @@ on your machine" entry point: it writes a loadable
 ``TargetProfile`` JSON combining
 
 * the roofline/executor constants
-  :func:`mlopt_torch.calibrate.calibrate` micro-benchmarks — peak
+  :func:`kit_torch.calibrate.calibrate` micro-benchmarks — peak
   FLOPS, memory bandwidth, kernel-launch and IR-dispatch overhead,
   batched-scan leaf-eval overhead, compiled-graph call overhead,
   and the per-op-class measured kernel table (``op_kernel_ns``);
@@ -33,7 +33,7 @@ then, in the model's process::
 
     from mlopt_core.profile import TargetProfile
     from mlopt_orchestrator import Optimizer, delivered_cost_for
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     profile = TargetProfile.load("calibrated_profile.json")
     opt = Optimizer(backend=TorchBackend())
@@ -61,15 +61,15 @@ from pathlib import Path
 from typing import Any
 
 import torch
+from kit_torch.calibrate import calibrate
 from mlopt_core.profile import save_profile
-from mlopt_torch.calibrate import calibrate
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import executor_cost_probe as ecp
+from kit_torch.backend import TorchBackend
 from law_wallclock import _cases
 from mlopt_orchestrator import Optimizer
-from mlopt_torch.backend import TorchBackend
 
 
 def _patch_probe_timing(warmup: int | None, iters: int | None) -> None:
@@ -262,7 +262,7 @@ def main(argv: list[str] | None = None) -> int:
         "    from mlopt_core.profile import TargetProfile\n"
         "    from mlopt_orchestrator import (\n"
         "        Optimizer, delivered_cost_for)\n"
-        "    from mlopt_torch.backend import TorchBackend\n"
+        "    from kit_torch.backend import TorchBackend\n"
         f"    profile = TargetProfile.load({str(out)!r})\n"
         "    opt = Optimizer(backend=TorchBackend())\n"
         "    res = opt.search(model, x, "

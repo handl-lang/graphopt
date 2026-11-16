@@ -574,8 +574,8 @@ def gate_egraph_visibility() -> dict[str, Any]:
     mentions ``batch_norm`` (a fold needs the node to be matchable).
     """
     from mlopt_core.egraph import Rewrite
-    from mlopt_torch.adapters import TorchSource
-    from mlopt_torch.models import ResNetBlock
+    from kit_torch.adapters import TorchSource
+    from kit_torch.models import ResNetBlock
 
     mod = ResNetBlock(8)
     mod.eval()

@@ -56,7 +56,7 @@ python`:
   time*, `verify` delegates to `report.verify_module`.
 - `report.py` — `HostTensorVerifyReport` (`max_abs`/`max_rel`/
   `passed`, the same metric as `mlopt_onnx.report` /
-  `mlopt_torch.report`).
+  `kit_torch.report`).
 
 Workspace wiring: root `pyproject.toml` gained the dependency, the
 `workspace = true` source, the ty `extra-paths` entry, and

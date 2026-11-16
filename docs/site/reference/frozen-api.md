@@ -84,7 +84,7 @@ paths are re-exporting shims (see `TestGamekitCompatShims` in
 The Phase-A freeze (production-readiness audit): the *narrow*
 user-facing set a downstream consumer binds — optimize → export →
 load, plus the `runner=` constructors — is frozen.  Everything else
-in `mlopt_torch` (`IRModule`, the executor table, `adapters`,
+in `kit_torch` (`IRModule`, the executor table, `adapters`,
 `autotune.TORCH_BUILDERS`, `calibrate`, `contraction_policy`, the
 model zoo) stays **public, unfrozen**: reachable, not promised.
 Freezing internals would calcify the machinery the discovery loop is
@@ -93,10 +93,10 @@ still changing; freezing this set pins the artifact boundary the
 
 | Contract | Canonical location | Frozen surface |
 |---|---|---|
-| Backend assembly | `mlopt_torch` (lazy) / `mlopt_torch.backend` | **`TorchBackend(*, ops=None, source=None, sink=None, composer=None, meter=None) -> Backend`** — the port-value factory every example calls |
-| Artifact export | `mlopt_torch.export` | **`export_optimized(model, optimized_model, path, *, fmt="module", example_input=None, example_kwargs=None, dynamic_shapes=None, verify=True, stats=None) -> dict`**, `save_optimized` (call-site alias), **`load_optimized(path)`**, `save_optimized_weights(optimized_module, path)`, `ExportError`, `ARTIFACT_SCHEMA` (`"mlopt-artifact/1"`) |
+| Backend assembly | `kit_torch` (lazy) / `kit_torch.backend` | **`TorchBackend(*, ops=None, source=None, sink=None, composer=None, meter=None) -> Backend`** — the port-value factory every example calls |
+| Artifact export | `kit_torch.export` | **`export_optimized(model, optimized_model, path, *, fmt="module", example_input=None, example_kwargs=None, dynamic_shapes=None, verify=True, stats=None) -> dict`**, `save_optimized` (call-site alias), **`load_optimized(path)`**, `save_optimized_weights(optimized_module, path)`, `ExportError`, `ARTIFACT_SCHEMA` (`"mlopt-artifact/1"`) |
 | Artifact kinds | manifest fields | `artifact_kind`: `"runnable"` (`pt2`/`torchscript` — the artifact IS the optimized computation) vs `"weights"` (`safetensors`/`state_dict` — parameters only, optimized-layout `state_dict` names, never runnable standalone).  `weights_only`/`runnable_standalone` stay as the boolean twins; `load_optimized` refuses an unrecognised `artifact_schema` |
-| Delivery runners | `mlopt_torch.runners`, `kit_cuda`, `mlopt_orchestrator` | `TorchCompileRunner(**compile_kwargs)`, `CudaGraphRunner()`, `IdentityRunner()`, `ChainedRunner(runners)` — the `runner=` values; the `Runner` *protocol* (`apply(module, example_input, stats)`) is the substrate contract above |
+| Delivery runners | `kit_torch.runners`, `kit_cuda`, `mlopt_orchestrator` | `TorchCompileRunner(**compile_kwargs)`, `CudaGraphRunner()`, `IdentityRunner()`, `ChainedRunner(runners)` — the `runner=` values; the `Runner` *protocol* (`apply(module, example_input, stats)`) is the substrate contract above |
 | Pipeline entry | `mlopt_orchestrator.Optimizer` | `Optimizer.optimize(model, x, *, strategy=None, **kw) -> LowerResult` — unpacks `(module, stats)`; `**kw` forwards the `search`/`lower` knobs (`rules`, `runner`, `criteria`, `engine`, …) and is part of the contract |
 
 `Optimizer`, the strategies, and `search`/`lower` were already frozen

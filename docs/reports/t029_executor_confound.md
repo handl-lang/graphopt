@@ -32,7 +32,7 @@ Executor routing lives in `mlopt_orchestrator.optimize._lower_extracted`
 the extracted term goes to the first carrier `ExecutorSpec` in
 `TorchSink.executors` whose `accepts` probe holds, else `sink.lower`
 (the generic `IRModule`). The `scan` spec
-(`graphopt/packages/mlopt-torch/src/mlopt_torch/adapters.py:212`)
+(`graphopt/packages/kit-torch/src/kit_torch/adapters.py:212`)
 accepts via `mlopt_carriers.scan_lower.is_scan_apply_term`
 (`packages/mlopt-carriers/src/mlopt_carriers/scan_lower.py:200`), which
 requires an `apply`/`applyd` root whose map argument is a **pure**

@@ -33,9 +33,9 @@ env/
 *.ckpt
 checkpoints/
 checkpoints/
-# ...except weights that are deliberately shipped with a package
-# (mlopt_torch.contraction_policy's bundled curriculum player).
-!packages/mlopt-torch/src/mlopt_torch/artifacts/*.pt
+# (Shipped ``*.pt`` artifacts now live in the kit repos — e.g.
+# kit-torch's ``kit_torch/artifacts/`` — each repo's own .gitignore
+# whitelists them.)
 
 # IDEs
 .vscode/

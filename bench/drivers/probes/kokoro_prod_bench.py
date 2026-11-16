@@ -110,7 +110,7 @@ def arm(which: str, iters: int = 3) -> None:
     print(f"{tag} EAGER wrap {e_ms:.2f} ms", flush=True)
 
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     optz = Optimizer(backend=TorchBackend())
     res = None
@@ -265,7 +265,7 @@ def arm(which: str, iters: int = 3) -> None:
     # the bench uses the documented 2e-3 override and reports the
     # ledger either way.
     try:
-        from mlopt_torch.runners import RegionFusionRunner
+        from kit_torch.runners import RegionFusionRunner
 
         t0 = time.time()
         low_f = optz.lower(

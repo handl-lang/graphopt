@@ -112,7 +112,7 @@ The composite's guard is the `_compose_guards` premise transport
 accepted region enough: the pay probe's minted instances land on
 sites where the composed rewrite computes different values. Verify is
 `max_rel < 1e-4` in fp64 through `TorchSink`
-(`mlopt_torch/report.py:143-165`); reshape/mul/pow are exact ops, so
+(`kit_torch/report.py:143-165`); reshape/mul/pow are exact ops, so
 a *correct* rewrite verifies at ~1e-15 — a 1e-4 failure is a real
 numerical divergence, not a lowering artifact. The identical
 `verify_fail=4` across independent runs (v3-era md, `deep`, `full`)

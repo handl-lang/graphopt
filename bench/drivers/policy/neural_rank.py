@@ -66,7 +66,7 @@ from mlopt_core.trajectories import rule_vector
 from kit_discovery import open_game as og
 from kit_discovery import play
 from kit_discovery import proposal as lp
-from mlopt_torch.learned_policy import (
+from kit_torch.learned_policy import (
     RuleValueNet,
     input_vector,
     train_rule_value,

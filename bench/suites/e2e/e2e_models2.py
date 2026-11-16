@@ -60,7 +60,7 @@ mlopt variants excluded rather than re-timing eager; throughput =
 units/s (embeddings, images, or tokens) per variant.
 
 Usage:
-    PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
+    PYTHONPATH="packages/mlopt-core/src:packages/kit-torch/src:\
 packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \
         /tmp/kit-cuda-venv/bin/python bench/suites/e2e/e2e_models2.py \
         --device cuda
@@ -84,8 +84,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from mlopt_orchestrator import Compositional, Optimizer
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.report import verify_equiv
+from kit_torch.backend import TorchBackend
+from kit_torch.report import verify_equiv
 
 from bench.benchkit import (
     Case,

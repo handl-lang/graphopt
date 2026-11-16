@@ -83,8 +83,8 @@ from kit_carriers.xcarrier import (
 from mlopt_core.cost import _shape_of, flops_cost
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import IR, Op
-from mlopt_torch.regime import default_rules
-from mlopt_torch.torch_bridge import (
+from kit_torch.regime import default_rules
+from kit_torch.torch_bridge import (
     _IR_TO_TORCH,
     export_to_ir,
     ir_to_torch_module,

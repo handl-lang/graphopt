@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "mlopt-core",
-    "mlopt-torch",
+    "kit-torch",
     "kit-carriers",
     "mlopt-orchestrator",
     "kit-cuda",
@@ -131,54 +131,27 @@ exclude = [
 # docs/reports/git_url_distribution.md).  Bump the tag on releases.
 mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", tag = "v0.1.12" }
 mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", tag = "v0.1.12" }
-gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.12" }
+gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.14" }
 benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", tag = "v0.1.14" }
 # discoverykit (plan 0034 phase 1): the domain-free mining core
 # extracted from the discovery engine (mlopt-discovery, now
 # handl-lang/kit-discovery in P3 Step D-1d) — pinned git dep below.
-# Stays v0.1.20 like kit-discovery@v0.1.2 expects: v0.1.21+ renamed
-# its lazy torch bind mlopt_torch -> kit_torch, which does not exist
-# in this repo until P3 Step D-1e lands.
-discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.20" }
-mlopt-torch = { workspace = true }
+discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.23" }
+# kit-torch (P3 Step D-1e): the PyTorch adapters/backend, split to
+# handl-lang/kit-torch — pinned git dep at the v0.1.4 tag.
+kit-torch = { git = "https://github.com/handl-lang/kit-torch.git", tag = "v0.1.4" }
 # kit-carriers (P3 Step D-1b): the semantic carriers, split to
-# handl-lang/kit-carriers — pinned git dep at the v0.1.1 tag.
-# NOTE: stays v0.1.3 — v0.1.4+ renamed its torch dep mlopt-torch ->
-# kit-torch, but this repo still ships the mlopt-torch workspace
-# member until P3 Step D-1e lands.  Its eqsat-v0.1.10 sources are
-# overridden to v0.1.12 below.
-kit-carriers = { git = "https://github.com/handl-lang/kit-carriers.git", tag = "v0.1.3" }
+# handl-lang/kit-carriers — pinned git dep at the v0.1.5 tag.
+kit-carriers = { git = "https://github.com/handl-lang/kit-carriers.git", tag = "v0.1.5" }
 # kit-cuda (P3 Step D-1c): the CUDA-graph delivery runner, split to
-# handl-lang/kit-cuda — pinned git dep at the v0.1.0 tag.
-# Same mlopt-torch-era hold as kit-carriers: v0.1.4+ deps kit-torch.
-kit-cuda = { git = "https://github.com/handl-lang/kit-cuda.git", tag = "v0.1.3" }
-kit-discovery = { git = "https://github.com/handl-lang/kit-discovery.git", tag = "v0.1.2" }
-kit-onnx = { git = "https://github.com/handl-lang/kit-onnx.git", tag = "v0.1.3" }
+# handl-lang/kit-cuda — pinned git dep at the v0.1.5 tag.
+kit-cuda = { git = "https://github.com/handl-lang/kit-cuda.git", tag = "v0.1.5" }
+kit-discovery = { git = "https://github.com/handl-lang/kit-discovery.git", tag = "v0.1.3" }
+kit-onnx = { git = "https://github.com/handl-lang/kit-onnx.git", tag = "v0.1.4" }
 # kit-host-tensor (P3 Step D-1f): the host-tensor backend, split to
-# handl-lang/kit-host-tensor — pinned git dep at the v0.1.2 tag.
+# handl-lang/kit-host-tensor — pinned git dep at the v0.1.4 tag.
 kit-host-tensor = { git = "https://github.com/handl-lang/kit-host-tensor.git", tag = "v0.1.4" }
 mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-dtypes", tag = "v0.1.12" }
-
-# Step E tail dry-run: kit-discovery@v0.1.2 is the newest tag and the
-# mlopt-torch-era kit-carriers/kit-cuda v0.1.3 + discoverykit v0.1.20
-# tags still carry their own [tool.uv.sources] pinning eqsat v0.1.10 /
-# gamekit v0.1.12 — uv propagates those transitively and fails with
-# "conflicting URLs" against the bumps above.  These overrides force
-# the bumped URLs for local resolution (same mechanism the
-# kit-discovery stepe worktree uses).  They stay needed until EVERY
-# consumed tag carries eqsat-v0.1.12 sources — i.e. until kit-discovery
-# is repinned+tagged AND the mlopt-torch-era holdouts
-# (kit-carriers/kit-cuda/discoverykit) either get repinned mlopt_torch
-# tags or D-1e removes packages/mlopt-torch and the kit-torch-era tags
-# (kit-carriers v0.1.5, kit-cuda v0.1.5, discoverykit v0.1.21+) can be
-# adopted.
-[tool.uv]
-override-dependencies = [
-    "mlopt-core @ git+https://github.com/handl-lang/eqsat.git@v0.1.12#subdirectory=packages/mlopt-core",
-    "mlopt-orchestrator @ git+https://github.com/handl-lang/eqsat.git@v0.1.12#subdirectory=packages/mlopt-orchestrator",
-    "mlopt-dtypes @ git+https://github.com/handl-lang/eqsat.git@v0.1.12#subdirectory=packages/mlopt-dtypes",
-    "gamekit @ git+https://github.com/handl-lang/gamekit.git@v0.1.12#subdirectory=packages/gamekit",
-]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -189,9 +162,9 @@ markers = [
 ]
 
 # --- dead-code + architecture linting (dev tooling) ----------------
-# vulture: flag unreachable/unused code at high confidence.  The suite
-# is pinned at 100% coverage, so a genuine dead branch is a real
-# finding, not noise.  Run `.venv/bin/vulture` (uses these paths) or
+# vulture: flag unreachable/unused code at high confidence.  A genuine
+# dead branch is a real finding, not noise (the 100% coverage wall
+# left with kit_torch in P3 Step D-1e — floors live in the kit repos).  Run `.venv/bin/vulture` (uses these paths) or
 # `.venv/bin/vulture packages tests --min-confidence 80`; a
 # non-zero exit (3) means dead code.  If a public member is kept only
 # for the compatibility aliases, add its name to `ignore_names` here
@@ -199,6 +172,11 @@ markers = [
 [tool.vulture]
 min_confidence = 80
 paths = ["packages", "tests"]
+# Unused params on test-double signatures (the interface requires the
+# name; the double ignores it).  They were previously masked because
+# packages/mlopt-torch used the same names — that package split to
+# handl-lang/kit-torch in P3 Step D-1e.
+ignore_names = ["cap", "dev", "max_iterations"]
 
 # import-linter: the hexagonal-boundary ratchet, pruned to the
 # intra-repo contracts (plan 0032 phase 4): "core is torch-free" and
@@ -210,12 +188,12 @@ paths = ["packages", "tests"]
 # followed in D-1b/D-1c — their layering contracts live there.)
 [tool.importlinter]
 root_packages = [
-    "mlopt_torch",
+    "kit_torch",
     "mlopt_dtypes",
 ]
 include_external_packages = true
 
-# `mlopt_torch` and `kit_carriers` (the carriers, split to
+# `kit_torch` and `kit_carriers` (the carriers, split to
 # handl-lang/kit-carriers in P3 Step D-1b) are one layer: the carrier
 # package is a torch-backend extension (its law modules carry
 # `TORCH_BINDINGS`, and the torch sink builds its executor table from
@@ -224,7 +202,7 @@ include_external_packages = true
 # layering contract itself lives in kit-carriers now, and the
 # torch→carriers edge here stays undeclared + lazy.  `kit_cuda`
 # (the CUDA-graph runner, split to handl-lang/kit-cuda in P3 Step
-# D-1c) sits above `mlopt_torch` — its layering contract lives there.
+# D-1c) sits above `kit_torch` — its layering contract lives there.
 # `kit_discovery` (the discovery engine, split to
 # handl-lang/kit-discovery in P3 Step D-1d) reads everything and
 # nothing may depend back on it — it is an external git dep now, so
@@ -235,14 +213,14 @@ name = "dependency layers"
 type = "layers"
 layers = [
     # kit_cuda (the CUDA-graph runner, split to handl-lang/kit-cuda
-    # in P3 Step D-1c) sat above mlopt_torch here while
+    # in P3 Step D-1c) sat above kit_torch here while
     # mlopt_discovery still imported it — post-D-1d nothing in the
     # scanned root packages reaches it, so grimp cannot resolve the
     # layer and import-linter hard-fails.  The enforceable half of
-    # the ordering ("mlopt_torch must not reach up into kit_cuda")
+    # the ordering ("kit_torch must not reach up into kit_cuda")
     # moved to the forbidden contract below; kit-cuda's own repo
     # pins the other direction.
-    "mlopt_torch",
+    "kit_torch",
     # The dtype registry is a leaf every backend reads — it sits below
     # the whole stack and nothing may depend back on it.
     "mlopt_dtypes",
@@ -259,7 +237,7 @@ layers = [
 name = "domain packages never reach the game layer"
 type = "forbidden"
 source_modules = [
-    "mlopt_torch",
+    "kit_torch",
     "mlopt_dtypes",
 ]
 forbidden_modules = [
@@ -267,7 +245,7 @@ forbidden_modules = [
     "benchkit",
     "discoverykit",
     "kit_discovery",
-    # kit_cuda sits above mlopt_torch — the tensor packages must not
+    # kit_cuda sits above kit_torch — the tensor packages must not
     # reach up into the CUDA-graph runner (P3 Step D-1c/D-1d).
     "kit_cuda",
 ]
@@ -301,10 +279,11 @@ ignore = [
 [tool.ty.environment]
 python-version = "3.13"
 extra-paths = [
-    "packages/mlopt-torch/src",
-    # mlopt-core/-orchestrator (eqsat), gamekit and kit_host_tensor
-    # (P3 Step D-1f) resolve through the installed git deps — no src
-    # path needed.
+    # mlopt-core/-orchestrator (eqsat), kit_torch (P3 Step D-1e),
+    # gamekit and kit_host_tensor (P3 Step D-1f) resolve through the
+    # installed git deps — no src path needed.  packages/ holds no
+    # Python package anymore (every domain package has split to its
+    # own repo), so ty's include set is empty by construction.
 ]
 
 [tool.ty.src]
@@ -315,19 +294,12 @@ exclude = []
 # Errors are fatal, warnings are not.
 error-on-warning = false
 
-[tool.coverage.run]
-# mlopt_onnx (the ONNX backend) climbed to the 100 wall in this repo
-# (see project/retros/onnx-package.md), then split to
-# handl-lang/kit-onnx in P3 Step D-1 — its coverage floor lives there
-# now.  kit_carriers split to handl-lang/kit-carriers in P3 Step D-1b,
-# kit_cuda to handl-lang/kit-cuda in P3 Step D-1c and kit_discovery
-# (the discovery engine, P3 Step D-1d) to handl-lang/kit-discovery and
-# kit_host_tensor (the host-tensor backend, P3 Step D-1f) to
-# handl-lang/kit-host-tensor the same way — their floors live in the
-# kit repos now.
-source = ["mlopt_torch"]
-branch = true
-omit = ["*/tests/*"]
+# No [tool.coverage.*] tables: every shipped Python package has split
+# to its own repo and each carries its own measured floor there
+# (kit-onnx D-1, kit-carriers D-1b, kit-cuda D-1c, kit-discovery
+# D-1d, kit-host-tensor D-1f, kit-torch D-1e).  This repo keeps the
+# cross-stack suite that exercises them through the git deps; the
+# domain wall (=100 on kit_torch) left with the package.
 
 # --- mutation testing (mutmut) -------------------------------------
 # Detects weak tests: a mutant that survives means the suite asserts
@@ -335,22 +307,11 @@ omit = ["*/tests/*"]
 # flat-layout sandbox mutmut needs (its keys are path-derived, but this
 # monorepo's per-package ``src/`` layout imports under a different dotted
 # name):
-#   MUTMUT_ONLY=mlopt_torch/region_fuse.py MUTMUT_TESTS='tests/test_region_fuse.py' \
+#   MUTMUT_ONLY=kit_torch/region_fuse.py MUTMUT_TESTS='tests/test_region_fuse.py' \
 #       scripts/mutmut.sh run
 #   scripts/mutmut.sh results
 # There is intentionally no ``[tool.mutmut]`` table here: the wrapper
 # writes one into the sandbox, and a direct in-repo run would mis-key
 # every mutant.  Surviving mutants are weak-assertion findings, not
-# coverage gaps (the suite is pinned at 100%).
+# coverage gaps.
 
-[tool.coverage.report]
-fail_under = 100       # ratcheted upward each refactor phase; target 100
-show_missing = true
-exclude_also = [
-    "if __name__ == ['\"]__main__['\"]:",
-    "if TYPE_CHECKING:",
-    "def __repr__",
-    "raise NotImplementedError",
-    "@overload",
-    "return NotImplemented",
-]

@@ -588,7 +588,7 @@ export class Course {
           note: "the trajectory data a policy learns from",
         },
         {
-          path: "packages/mlopt-torch/src/mlopt_torch/learned_policy.py",
+          path: "packages/kit-torch/src/kit_torch/learned_policy.py",
           note: "the shipped learned policy",
         },
         {
@@ -737,7 +737,7 @@ export class Course {
         "name the artifact a delivered term ships as, and explain what each needs to run standalone.",
       repo: [
         {
-          path: "packages/mlopt-torch/src/mlopt_torch/export.py",
+          path: "packages/kit-torch/src/kit_torch/export.py",
           note: "`export_optimized` / `load_optimized` — the artifact formats",
         },
         {
@@ -1152,7 +1152,7 @@ export class Course {
           note: "the ONNX sink that landed with zero core edits (handl-lang/kit-onnx since P3 D-1)",
         },
         {
-          path: "packages/mlopt-torch/src/mlopt_torch/backend.py",
+          path: "packages/kit-torch/src/kit_torch/backend.py",
           note: "the torch Backend bundle",
         },
         {
@@ -1472,7 +1472,7 @@ export class Course {
         "explain delivery as an execution dimension — eager, carrier, fused, graph, or minted kernel — and why the same term runs at different speeds.",
       repo: [
         {
-          path: "packages/mlopt-torch/src/mlopt_torch/executors/",
+          path: "packages/kit-torch/src/kit_torch/executors/",
           note: "the executor tiers a term can run through",
         },
         {
@@ -1526,7 +1526,7 @@ export class Course {
         "explain that a cost model is a ranking that can be wrong, and that measured feedback (calibration) is the fix.",
       repo: [
         {
-          path: "packages/mlopt-torch/src/mlopt_torch/calibrate.py",
+          path: "packages/kit-torch/src/kit_torch/calibrate.py",
           note: "the measured corrections fed back into the model",
         },
         {

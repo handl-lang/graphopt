@@ -508,7 +508,7 @@ def run_contraction(
       verdict boundary: a crash mid-board costs only the in-flight
       instance.
     """
-    from mlopt_torch.contraction_policy import (
+    from kit_torch.contraction_policy import (
         cost_of_order,
         greedy,
         random_bond_network,

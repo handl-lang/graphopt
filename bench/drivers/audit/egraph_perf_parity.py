@@ -209,7 +209,7 @@ def _python_run(term, rules):
 def _lift(workload) -> tuple[object | None, str | None]:
     """Lift a zoo workload to its IR root term."""
     import torch
-    from mlopt_torch.adapters import TorchSource
+    from kit_torch.adapters import TorchSource
 
     model, feed = workload.build()
     model = model.to(torch.float64)

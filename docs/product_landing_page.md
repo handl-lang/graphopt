@@ -122,7 +122,7 @@ cd docs/tutorials/course && vp install && vp -C apps/learn dev  # the 28-level c
 
 ```python
 from mlopt_orchestrator import Optimizer
-from mlopt_torch import TorchBackend
+from kit_torch import TorchBackend
 
 opt, stats = Optimizer(backend=TorchBackend()).optimize(model, x)
 out = opt(x)      # verified-equal to model(x)

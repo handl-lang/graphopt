@@ -480,7 +480,7 @@ def _zoo_export(case: dict) -> tuple:
     (arena) or a dropped context entry (referee ctx).
     """
     import torch
-    from mlopt_torch.torch_bridge import export_to_ir
+    from kit_torch.torch_bridge import export_to_ir
 
     key = (case["zoo"], case.get("wseed", 0))
     if key not in _EXPORT_CACHE:
@@ -587,7 +587,7 @@ def _zoo_referee_ctx(env: dict, referees: Any) -> Any:
     real ``TorchSink`` — the context the grammar arm's docstring
     notes it lacks.
     """
-    from mlopt_torch.adapters import TorchSink
+    from kit_torch.adapters import TorchSink
 
     return referees.RefereeCtx(
         real_terms=tuple(
@@ -957,7 +957,7 @@ def _real_referee_ctx(env: dict, referees: Any) -> Any:
     ``TorchSink`` the zoo arm verifies through.
     """
     import kit_carriers  # noqa: F401 — carrier op bindings
-    from mlopt_torch.adapters import TorchSink
+    from kit_torch.adapters import TorchSink
 
     intake = _intake_cases()
     roots = [rec[0].root for rec in env.values() if rec is not None]
@@ -1393,7 +1393,7 @@ def _prim_binding(
     The graphopt hook body of :func:`prim_mint.make_denotation`:
     the ambient ``_IR_TO_TORCH`` table is this domain's op semantics.
     """
-    import mlopt_torch.torch_bridge as tb
+    import kit_torch.torch_bridge as tb
 
     return _pm.make_denotation(
         spec, leaf_mvars, attr_mvars, tb._IR_TO_TORCH
@@ -1546,7 +1546,7 @@ def _prim_pool(
     promotion.
     """
     import kit_carriers  # noqa: F401 — carrier op bindings
-    import mlopt_torch.torch_bridge as tb
+    import kit_torch.torch_bridge as tb
     from kit_discovery import shipped_primitives as _sp
     from kit_discovery.oracle import eval_instance
 

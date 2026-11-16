@@ -27,7 +27,7 @@ floor is ~6–8e-2 max|diff| on decoder arms (measured per arm below).
 second reference lowering is what OOM'd the shared card.
 
 `RegionFusionRunner` is the shipped runner
-(`mlopt_torch.runners`, commit 2f7c6b9).  The bench passes
+(`kit_torch.runners`, commit 2f7c6b9).  The bench passes
 `output_rtol=2e-3` — the documented override: the stock `1e-4`
 whole-module gate declines the decoder arms (fused-vs-unfused
 max_rel ≈ 7e-4–1.4e-3, `kokoro_region_fuse.md` §4/§5).  The per-kernel

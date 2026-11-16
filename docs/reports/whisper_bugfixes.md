@@ -43,7 +43,7 @@ Call sites unified on the helper:
 - `laws/factored.py` (low-rank offers) uses pure tensor ops
   (matmul/cumsum/`float(sum)`), no numpy — bf16-safe on CUDA.
 - `composer.py`'s `torch.equal` calls — torch.equal supports bf16.
-- safetensors export (`mlopt_torch/export.py::_tensor_bytes`) views
+- safetensors export (`kit_torch/export.py::_tensor_bytes`) views
   the tensor as `uint8` — dtype-agnostic, and `_TORCH_TO_ST` already
   maps `bfloat16`/`float16`.
 - Verify path (`report.verify_module` / `verify_equiv`) computes
@@ -55,7 +55,7 @@ Call sites unified on the helper:
 
 ## BUG 2 — `_align_to` non-float leaves (fixed in graphopt)
 
-`IRModule._align_to` (`packages/mlopt-torch/src/mlopt_torch/torch_bridge.py`)
+`IRModule._align_to` (`packages/kit-torch/src/kit_torch/torch_bridge.py`)
 moved only `is_floating_point()` baked tensors to the inputs'
 device/dtype.  Lifted integer tensors — the positional-embedding
 `arange` feeding `nn.Embedding`, token-id buffers — stayed CPU, and

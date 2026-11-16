@@ -9,9 +9,9 @@ difficulty class of the rest?
 
 ## Method
 
-Lifted **9 real modules** through `mlopt_torch.adapters.TorchSource
+Lifted **9 real modules** through `kit_torch.adapters.TorchSource
 ().to_ir` on CPU fp32 (mlopt repo venv — the only one with
-`transformers`; `mlopt-torch`/`mlopt-core` there are graphopt
+`transformers`; `kit-torch`/`mlopt-core` there are graphopt
 `v0.1.1`, identical to this repo's HEAD on those packages):
 
 | module | recipe | nodes (unique Op) |

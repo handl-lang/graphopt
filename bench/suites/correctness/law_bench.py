@@ -81,8 +81,8 @@ from mlopt_core.laws import (
     SIMPLIFICATION_RULES,
 )
 from mlopt_orchestrator.optimize import _lower_extracted
-from mlopt_torch.adapters import TorchSink
-from mlopt_torch.torch_bridge import (
+from kit_torch.adapters import TorchSink
+from kit_torch.torch_bridge import (
     IRModule,  # noqa: F401 — docstring ref
 )
 

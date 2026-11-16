@@ -56,7 +56,7 @@ from mlopt_core.ir import IR
 from kit_discovery.play import _time_module
 from kit_discovery.zoo import _ChunkedRetention
 from mlopt_orchestrator.optimize import _lower_extracted
-from mlopt_torch.adapters import TorchSink
+from kit_torch.adapters import TorchSink
 
 from bench.drivers.probes import om_decayed_kway_deliver_probe as P
 

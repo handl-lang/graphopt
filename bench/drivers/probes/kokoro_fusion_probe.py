@@ -139,7 +139,7 @@ def _compiled_region(root, members):
     cleanly — one inductor kernel for the whole elementwise DAG.
     """
     from mlopt_core.ir import Const, Op
-    from mlopt_torch.torch_bridge import _IR_TO_TORCH as bindings
+    from kit_torch.torch_bridge import _IR_TO_TORCH as bindings
 
     member_ids = {id(m) for m in members}
     # topo order over members (post-order DFS from root)
@@ -326,8 +326,8 @@ def main() -> None:
     )
 
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
-    from mlopt_torch.torch_bridge import _IR_TO_TORCH
+    from kit_torch.backend import TorchBackend
+    from kit_torch.torch_bridge import _IR_TO_TORCH
 
     optz = Optimizer(backend=TorchBackend())
     t0 = time.time()

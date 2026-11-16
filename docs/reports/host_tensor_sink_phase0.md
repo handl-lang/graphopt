@@ -201,7 +201,7 @@ PyO3, no cdylib. What exists is exactly the right seam for one:
 
 Recommendation: **PyO3 shim over `tensor_op_registry()`** (host-tensor
 side, small), consumed by a `kit-host-tensor` adapter package or a
-`mlopt_torch`-adjacent module — keeping `mlopt-core` torch-free per
+`kit_torch`-adjacent module — keeping `mlopt-core` torch-free per
 the hexagon (the binding lives adapter-side, like `TorchSink`).
 
 ## 3. `mlopt_core.ports.Sink` contract — what `HostTensorSink` must implement
@@ -243,7 +243,7 @@ there, not via import-time mutation).
    Value` over `tensor_op_registry()`; plus `ops() -> Vec<String>`.
    Alternative if PyO3 is unwelcome: C ABI over the same registry.
 2. **Adapter (graphopt side, e.g. `packages/mlopt-host/` or inside
-   `mlopt-torch` as `HostTensorSink`):**
+   `kit-torch` as `HostTensorSink`):**
    - `HOST_BINDINGS: dict[str, Binding]` — one entry per liftable op:
      encode IR args+attrs → positional JSON args (the bulk of Phase-1
      work is this attr→arg table; `aten_port_list.txt` pins the

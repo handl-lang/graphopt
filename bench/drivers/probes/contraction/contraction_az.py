@@ -56,7 +56,7 @@ from typing import Any
 
 import numpy as np
 import torch
-from mlopt_torch.contraction_policy import STATE_DIM
+from kit_torch.contraction_policy import STATE_DIM
 from torch import nn
 from torch.nn import functional as F
 

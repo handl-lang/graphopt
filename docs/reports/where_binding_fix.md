@@ -25,7 +25,7 @@ no schema entry and was not in `_SCALAR_OPERAND_OPS`, so
 (`lambda c, x, y, *a, **kw: torch.where(c, x, y)`) requires three
 positionals → `TypeError`.
 
-## The fix — `packages/mlopt-torch/src/mlopt_torch/torch_bridge.py`
+## The fix — `packages/kit-torch/src/kit_torch/torch_bridge.py`
 
 Two-sided, matching the file's existing conventions:
 
@@ -139,11 +139,11 @@ padding_idx) asserting `torch.allclose`/`equal` vs the eager module.
   it at ~30% — the box is shared and memory-contended; the targeted
   slice above plus the HEAD A/B checks are the verification of
   record.
-- `ruff check`/`ruff format --check` on `packages/mlopt-torch`: clean
+- `ruff check`/`ruff format --check` on `packages/kit-torch`: clean
   (the two ruff findings in the test file are pre-existing at HEAD;
   `tests/` is outside the lint gate's `packages scripts examples`
   scope).
-- `ty check packages/mlopt-torch`: clean.
+- `ty check packages/kit-torch`: clean.
 
 ## Remaining notes for the owner / follow-ups
 

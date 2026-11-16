@@ -70,7 +70,7 @@ from collections import Counter
 from pathlib import Path
 
 import kit_carriers  # noqa: F401 — registers the CARRIERS preset
-import mlopt_torch  # noqa: F401 — torch bindings for export
+import kit_torch  # noqa: F401 — torch bindings for export
 import torch
 import torch.nn as nn
 from mlopt_core.egraph import EGraph
@@ -89,7 +89,7 @@ from kit_discovery.model_corpus import (
 )
 from kit_discovery.zoo import zoo as zoo_registry
 from mlopt_orchestrator.optimize import default_rules
-from mlopt_torch.adapters import TorchSource
+from kit_torch.adapters import TorchSource
 
 REPO = Path(__file__).resolve().parents[3]
 DEFAULT_OUT = REPO / "docs" / "reports" / "law_transfer.json"

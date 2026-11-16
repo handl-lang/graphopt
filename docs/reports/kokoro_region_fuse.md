@@ -48,9 +48,9 @@ Reasons:
   replaces the entire module.  A region fuser is orthogonal to
   carrier routing: it composes UNDER any routed executor (it is a
   term→term rewrite + one binding).
-* Keeping it in `mlopt_torch` (the eval/lowering package) respects
+* Keeping it in `kit_torch` (the eval/lowering package) respects
   the hexagonal boundary: torch.compile is a torch concern;
-  `mlopt_carriers` imports `mlopt_torch`, never the reverse, and
+  `mlopt_carriers` imports `kit_torch`, never the reverse, and
   `mlopt_discovery`/`genkernel` stay out of the shipped path (the
   census vocabulary `ELEMENTWISE` is re-spelled locally — 28 op
   names, see §5).
@@ -146,7 +146,7 @@ negligible (12 sites/29 ops; 0 sites).
 The measured path is a bench driver, not a package change.
 Landing it in shipped code has three real costs:
 
-* **Coverage wall** — `fail_under=100` on `mlopt_torch`/
+* **Coverage wall** — `fail_under=100` on `kit_torch`/
   `mlopt_carriers` (`pyproject.toml` `source`).  A `region_fuse`
   module + tests is a real work item, not a drive-by.
 * **Verify policy** — the stock `lower(verify=True)` gate at
@@ -169,13 +169,13 @@ Landing it in shipped code has three real costs:
 
 Suggested landing shape (when scheduled):
 
-* `mlopt_torch/region_fuse.py` — the census/eligibility/rewrite/
+* `kit_torch/region_fuse.py` — the census/eligibility/rewrite/
   registry machinery, torch-only, `ELEMENTWISE` re-spelled locally
   (28 names; do NOT import `mlopt_discovery` — wrong direction of
   the hexagonal boundary).
 * Entry point: an opt-in flag on `ir_to_torch_module`/`IRModule`
   (e.g. `region_fuse=True`) or a `RegionFusionRunner` in
-  `mlopt_torch.runners` wrapping the lowered module's term before
+  `kit_torch.runners` wrapping the lowered module's term before
   `IRModule` construction — the rewrite needs the TERM, so a
   post-module runner cannot reach it; the clean seam is inside
   `IRModule.__init__` between `_fold_weight_chains` and

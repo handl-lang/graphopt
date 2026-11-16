@@ -118,7 +118,7 @@ signature cache + pairwise cross-block + graft), certificate path
 | `opmeta` classified/arity/fold/ir_only | ~135/80/160/6 | KEEP — designated data home; `_FOLD_AT_LOWERING` mirrors torch lowerer across repo boundary w/ only comment — add boundary validation |
 | `typing._infer_op_shape` match | ~150 spellings | MIGRATE gradually — biggest remaining "op table as code"; `register_shape_rule` seam exists |
 | `basic._OP_FLOPS` | ~55+overrides | KEEP but fix silent default — unlisted ops fall to `1*n_out` (softmax/clamp/glu unpriced!) |
-| `roofline` measured-op frozensets | ~8 | CROSS-REPO literal dup of mlopt_torch.calibrate classes — move to opmeta tags |
+| `roofline` measured-op frozensets | ~8 | CROSS-REPO literal dup of kit_torch.calibrate classes — move to opmeta tags |
 | `params` foldable/fusion sets | ~120 | DERIVE from opmeta — drift visible (#8) |
 | `fusion` transparent/solver/scan sets | ~40 | Audit vs RELAYOUT/VIEWISH/COST_VIEW tags |
 | `lawdata` tables | small | KEEP — curated law vocabulary |

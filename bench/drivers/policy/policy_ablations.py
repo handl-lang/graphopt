@@ -68,7 +68,7 @@ from gamekit import engine
 from kit_discovery import families, play
 from kit_discovery import open_game as og
 from kit_discovery import proposal as lp
-from mlopt_torch.learned_policy import input_vector, train_rule_value
+from kit_torch.learned_policy import input_vector, train_rule_value
 
 #: Defaults — the baseline protocol.
 SEED = 0

@@ -57,7 +57,7 @@ the delivered module and records `stats["device_checked"]` /
 
 ## 2. Sharded/distributed policy — refusal surface DONE
 
-`mlopt_torch/device_placement.py` (new module; `device.py`
+`kit_torch/device_placement.py` (new module; `device.py`
 untouched):
 
 - **`is_dtensor` / `is_sharded_param`** — DTensor detection by

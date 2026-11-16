@@ -467,7 +467,7 @@ fool both.  *Laws as first-class values*: minting constructs a
 `Value` in the same calculus the engine executes — a data row, not
 generated code — so admission is a runtime decision, not a build
 step.  *Language-agnostic exits*: the `Sink` port lowers one extracted
-graph to torch (`mlopt_torch.TorchSink`) or ONNX
+graph to torch (`kit_torch.TorchSink`) or ONNX
 (`kit_onnx.OnnxSink`), and a separate bench driver
 (`bench/drivers/kit/term_hnl.py`) renders the same term as handl
 `.hnl` — so a certified result is not

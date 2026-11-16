@@ -55,7 +55,7 @@ module, same input (50 iters):
   eager 137 µs, delivered 104 µs (fewer launches, as expected) — yet
   delivered wall is ~300–400 µs *higher*.  The difference is the
   `IRModule` plan-tape interpreter (`torch_bridge._EvalPlan.run_xs`,
-  `packages/mlopt-torch/src/mlopt_torch/torch_bridge.py:2287-2358`):
+  `packages/kit-torch/src/kit_torch/torch_bridge.py:2287-2358`):
   per call it allocates the slot vector, re-reads every param through
   `param_map.get`, **re-mints every `Const` leaf to a fresh CPU
   tensor** (`const_fills`/`_mint_const`, `:2390`), resolves each op

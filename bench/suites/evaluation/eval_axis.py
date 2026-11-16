@@ -87,8 +87,8 @@ from mlopt_orchestrator.criteria import (
     criteria_cost,
     peak_bytes_cost,
 )
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.models import DeepParallel, ParallelLinear
+from kit_torch.backend import TorchBackend
+from kit_torch.models import DeepParallel, ParallelLinear
 
 from bench.benchkit import (
     Case,

@@ -80,7 +80,7 @@ from kit_discovery import open_self as oself
 from kit_discovery import proposal as lp
 from kit_discovery.meta_arena import Action
 from gamekit.players import PARTS, DomainSpec, _dot
-from mlopt_torch.learned_policy import input_vector, train_rule_value
+from kit_torch.learned_policy import input_vector, train_rule_value
 
 #: Defaults — identical protocol to ``stop_policy.py``.
 SEED = 0

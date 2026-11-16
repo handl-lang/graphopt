@@ -55,7 +55,7 @@ def export_ir():
     """Export the decoder step; return (ir, leaves, root_eid-ready eg)."""
     from mlopt_core.egraph import EGraph
     from mlopt_orchestrator.optimize import default_rules
-    from mlopt_torch.adapters import TorchSource
+    from kit_torch.adapters import TorchSource
 
     model = load_cpu()
     x = torch.randn(1, N_MELS, N_FRAMES)

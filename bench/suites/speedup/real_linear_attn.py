@@ -114,9 +114,9 @@ from mlopt_orchestrator.optimize import (
     OptimizationResourceError,
     _lower_extracted,
 )
-from mlopt_torch.adapters import TorchSink
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.torch_bridge import export_to_ir
+from kit_torch.adapters import TorchSink
+from kit_torch.backend import TorchBackend
+from kit_torch.torch_bridge import export_to_ir
 
 from bench.benchkit import (
     Case,

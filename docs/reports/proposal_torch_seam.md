@@ -7,7 +7,7 @@
 ## The blocker
 
 `mlopt_discovery.proposal` bound `import torch` and
-`from mlopt_torch.learned_policy import LearnedPolicy, train_rule_value`
+`from kit_torch.learned_policy import LearnedPolicy, train_rule_value`
 at **module level**, so every downstream consumer
 (`enumerate`/`forms`/`grammar`/`shape_proposal`/`pipeline`/`open_*`/
 `prim_mint`/play-arms — ~15 modules, plus `kernelopt`'s
@@ -58,9 +58,9 @@ mlopt_discovery.proposal` still works.
   torch entirely.
 - `rank_pool(..., scorer=None)` — pre-existing injection, now
   actually reachable without torch: an injected `candidate -> float`
-  callable skips the `mlopt_torch.learned_policy` import entirely.
+  callable skips the `kit_torch.learned_policy` import entirely.
 - `_eval_backend()` / `_numeric_true` / `_allclose` /
-  `_train_scorer` / `_learned_scores` — torch/`mlopt_torch` imports
+  `_train_scorer` / `_learned_scores` — torch/`kit_torch` imports
   moved **lazy inside the function** (the `genkernel.py`
   convention), so the module surface is import-clean; calling them
   without torch raises `ImportError` honestly at call time.
@@ -73,7 +73,7 @@ The pattern repeated cleanly, so both were made import-clean too:
   torch` inside `_env_for`, `_as_tensor`, `_bcast_to`, `_feats_id`,
   `_feats_w`, `_features`, `verify_view_candidate` (the only
   torch-touching functions).  `_eval` already delegated to
-  `lp._eval_backend` (lazy `mlopt_torch`).
+  `lp._eval_backend` (lazy `kit_torch`).
 - `vocab.py`: module-level `import torch`,
   `from mlopt_discovery.census import _iter_subterms`, and
   `from mlopt_discovery.impact import _bench_cases, model_cases`
@@ -85,7 +85,7 @@ The pattern repeated cleanly, so both were made import-clean too:
 ## Import-freedom proof
 
 Subprocess test with `sys.modules['torch'] = None` +
-`sys.modules['mlopt_torch'] = None` (import-system-level block, not
+`sys.modules['kit_torch'] = None` (import-system-level block, not
 a meta-path finder — verified to actually raise):
 
 ```
@@ -102,7 +102,7 @@ Pinned by `test_proposal_modules_import_without_torch` in
 
 **Still torch-bound at import (expected, downstream):**
 `shape_proposal`/`pipeline`/`enumerate`/`impact`/`census` — they
-import `mlopt_torch.adapters`/`torch` directly or via `impact`.
+import `kit_torch.adapters`/`torch` directly or via `impact`.
 Making them torch-free is the *next* seam, not this pass.
 
 ## Test results

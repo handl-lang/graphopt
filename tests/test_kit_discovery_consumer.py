@@ -9,7 +9,7 @@ checkout, which does not exist inside the kit-discovery repo itself:
 * the real bench + intake + model corpus (``census.run_census``,
   ``vocab.derive_vocabulary``, ``evidence.default_gauntlet_corpus``,
   ``arena.make_arena``);
-* the ``mlopt_torch`` export lowering whose op spelling is
+* the ``kit_torch`` export lowering whose op spelling is
   torch-version sensitive (the slice-write ``fill_`` threader —
   torch 2.14 spells ``broadcast_to``, torch 2.15 does not).
 
@@ -34,8 +34,8 @@ from kit_discovery import proposal as pp
 from kit_discovery import vocab as vc
 from kit_discovery import verifier as vf
 from kit_discovery.census import CorpusTerm, op_tuple_census
-from mlopt_torch.adapters import TorchSink
-from mlopt_torch.torch_bridge import export_to_ir, ir_to_torch_module
+from kit_torch.adapters import TorchSink
+from kit_torch.torch_bridge import export_to_ir, ir_to_torch_module
 
 _BY_NAME = {r.name: r for r in ALL_RULES}
 
@@ -375,7 +375,7 @@ def test_generator_pools_derived_vocab():
 
 
 # ---------------------------------------------------------------------------
-#  intake — the mlopt_torch export spelling (torch-version sensitive)
+#  intake — the kit_torch export spelling (torch-version sensitive)
 # ---------------------------------------------------------------------------
 
 

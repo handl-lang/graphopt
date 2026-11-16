@@ -418,7 +418,7 @@ def _oracle(claim: Any, ctx: RefereeCtx, evd: ClaimEvidence) -> Any:
 
 #: Note prefix marking a verify failure as *infrastructure*, not
 #: evidence: the module cannot execute through the sink at all
-#: (``mlopt_torch.torch_bindings.FunctorchReplayError`` — inlined
+#: (``kit_torch.torch_bindings.FunctorchReplayError`` — inlined
 #: ``torch.vmap``/functorch plumbing has no eager replay).  The pay
 #: leg still refuses on it (``vfail`` counts it) but names the count
 #: separately so a ``verify_fail`` row is never mistaken for a
@@ -429,7 +429,7 @@ _UNVERIFIABLE = "unverifiable: "
 def _is_unverifiable(exc: BaseException) -> bool:
     """Return True when *exc* is a sink-cannot-execute-module error."""
     try:
-        from mlopt_torch.torch_bindings import FunctorchReplayError
+        from kit_torch.torch_bindings import FunctorchReplayError
     except Exception:
         return False
     return isinstance(exc, FunctorchReplayError)

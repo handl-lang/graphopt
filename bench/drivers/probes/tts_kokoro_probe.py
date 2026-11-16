@@ -533,7 +533,7 @@ def synth() -> None:
 def opt(which: str, iters: int = 3) -> None:
     from kit_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     packed = which.endswith("-p")
     if packed:

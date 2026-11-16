@@ -62,7 +62,7 @@ class ConvBN(nn.Module):
 
 def real_seed() -> tuple[Any, dict[str, Any]]:
     """``batch_norm(conv2d(x, W, b), γ, β, μ, σ²)`` + source_tensors."""
-    from mlopt_torch.adapters import TorchSource
+    from kit_torch.adapters import TorchSource
 
     mod = ConvBN().eval()
     with torch.no_grad():

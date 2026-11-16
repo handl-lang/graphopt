@@ -60,7 +60,7 @@ def _clean_seated_ops():
     binding-coverage contracts audit globally; the fake ``synop_r2seat*``
     names must not leak past the test that minted them.
     """
-    import mlopt_torch.torch_bridge as _tb
+    import kit_torch.torch_bridge as _tb
     from mlopt_core import ir as _ir
 
     reg_before = set(_ir._OP_REGISTRY)
@@ -79,7 +79,7 @@ class TestSeatPrimDenotations:
 
     def test_unbound_synop_rhs_is_rhs_err(self):
         """Baseline — the r2 failure mode before seating."""
-        import mlopt_torch.torch_bridge as tb
+        import kit_torch.torch_bridge as tb
 
         name = "synop_r2seat02"
         tb._IR_TO_TORCH.pop(name, None)
@@ -91,7 +91,7 @@ class TestSeatPrimDenotations:
 
     def test_seated_denotation_evaluates(self):
         """After seating, the same pair measures ``equal`` — not rerr."""
-        import mlopt_torch.torch_bridge as tb
+        import kit_torch.torch_bridge as tb
 
         name = "synop_r2seat03"
         tb._IR_TO_TORCH.pop(name, None)

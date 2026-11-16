@@ -65,7 +65,7 @@ A cell whose optimized form fails the gate is reported, not timed.
 Usage:
     .venv/bin/python bench/suites/speedup/decode_scan_bench.py --device cpu --quick
     .venv/bin/python bench/suites/speedup/decode_scan_bench.py --device cpu
-    PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
+    PYTHONPATH="packages/mlopt-core/src:packages/kit-torch/src:\
 packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \
         /tmp/kit-cuda-venv/bin/python bench/suites/speedup/decode_scan_bench.py \
         --device cuda
@@ -91,9 +91,9 @@ import torch.nn as nn
 from mlopt_core.ir import IR
 from mlopt_orchestrator import Optimizer
 from mlopt_orchestrator.optimize import _lower_extracted
-from mlopt_torch.adapters import TorchSink
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.torch_bridge import export_to_ir
+from kit_torch.adapters import TorchSink
+from kit_torch.backend import TorchBackend
+from kit_torch.torch_bridge import export_to_ir
 
 from bench.benchkit import (
     Case,

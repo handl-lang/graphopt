@@ -111,7 +111,7 @@ float = "main"
 kind = "python-git"
 packages = [
     "mlopt-core",
-    "mlopt-torch",
+    "kit-torch",
     "kit-discovery",
     "mlopt-orchestrator",
     "kit-onnx",

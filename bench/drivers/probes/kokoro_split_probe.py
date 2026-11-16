@@ -432,7 +432,7 @@ def check() -> None:
 def _deliver(which: str, inp, wrap, iters: int, fuse: bool):
     """search -> lower -> (optional RegionFusionRunner lower)."""
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     optz = Optimizer(backend=TorchBackend())
     import os
@@ -517,7 +517,7 @@ def _deliver(which: str, inp, wrap, iters: int, fuse: bool):
             mod = low.module
     if fuse:
         try:
-            from mlopt_torch.runners import RegionFusionRunner
+            from kit_torch.runners import RegionFusionRunner
 
             _restore_creators()
             t0 = time.time()

@@ -89,8 +89,8 @@ from kit_discovery.enumerate import (
     enumerate_candidates,
 )
 from kit_discovery.meta_arena import Action
-from mlopt_torch.adapters import TorchSink
-from mlopt_torch.learned_policy import input_vector, train_rule_value
+from kit_torch.adapters import TorchSink
+from kit_torch.learned_policy import input_vector, train_rule_value
 
 #: Defaults — the baseline protocol.
 SEED = 0

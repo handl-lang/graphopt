@@ -199,7 +199,7 @@ def test_torchsource_conv_bn_evaluates_through_the_kit(
     ``aten.batch_norm``'s full attr tail (``training=False, momentum,
     eps, cudnn_enabled``) — not a hand-spelled term.
     """
-    from mlopt_torch.adapters import TorchSource
+    from kit_torch.adapters import TorchSource
 
     torch.manual_seed(0)
     mod = _ConvBN().eval().double()
@@ -219,7 +219,7 @@ def test_emit_renders_the_canonical_call(kit: kh.KitRunner) -> None:
     ``eps=1e-05`` must land as ``0.00001``: the handl lexer does not
     read scientific notation (``1e-05`` lexes as ``1`` ``e`` ``-05``).
     """
-    from mlopt_torch.adapters import TorchSource
+    from kit_torch.adapters import TorchSource
 
     mod = _ConvBN().eval().double()
     x = torch.zeros(1, 4, 8, 8, dtype=torch.float64)

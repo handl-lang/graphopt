@@ -120,7 +120,7 @@ from kit_discovery import open_game as og
 from kit_discovery import proposal as lp
 from kit_discovery.meta_arena import Action
 from gamekit.players import PARTS, DomainSpec, PlayHist, _dot
-from mlopt_torch.learned_policy import input_vector, train_rule_value
+from kit_torch.learned_policy import input_vector, train_rule_value
 
 #: Defaults — the shipped bake protocol under memoized verdicts.
 SEED = 0

@@ -75,7 +75,7 @@ from kit_discovery import meta_player as mp
 from kit_discovery import open_game as og
 from kit_discovery import proposal as lp
 from kit_discovery.meta_arena import Action
-from mlopt_torch.learned_policy import input_vector, train_rule_value
+from kit_torch.learned_policy import input_vector, train_rule_value
 
 #: Defaults — the shipped priors' measurement protocol.
 SEED = 0

@@ -94,11 +94,11 @@ from mlopt_orchestrator.optimize import (
     OptimizationResourceError,
     discover_alternatives,
 )
-from mlopt_torch.adapters import TorchSink, TorchSource
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.calibrate import calibrate
-from mlopt_torch.models import AttentionBlock, SwiGLU
-from mlopt_torch.torch_bridge import ir_to_torch_module
+from kit_torch.adapters import TorchSink, TorchSource
+from kit_torch.backend import TorchBackend
+from kit_torch.calibrate import calibrate
+from kit_torch.models import AttentionBlock, SwiGLU
+from kit_torch.torch_bridge import ir_to_torch_module
 
 from bench.benchkit import (
     Case,

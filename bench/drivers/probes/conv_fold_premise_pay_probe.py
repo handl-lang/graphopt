@@ -66,7 +66,7 @@ class ConvBN(nn.Module):
 
 def real_seed() -> tuple[Any, Any, dict[str, Any], Any]:
     """``(root, ir, source_tensors, input)`` for an eval-mode ConvBN."""
-    from mlopt_torch.adapters import TorchSource
+    from kit_torch.adapters import TorchSource
 
     mod = ConvBN().eval().double()
     with torch.no_grad():

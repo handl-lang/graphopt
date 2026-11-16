@@ -18,7 +18,7 @@
 #
 # Scope a fast loop with the env vars (globs/paths relative to the
 # sandbox, where the package root is top-level):
-#   MUTMUT_ONLY='mlopt_torch/region_fuse.py' \
+#   MUTMUT_ONLY='kit_torch/region_fuse.py' \
 #   MUTMUT_TESTS='tests/test_region_fuse.py' \
 #     scripts/mutmut.sh run
 #
@@ -33,7 +33,7 @@ sandbox="$root/.mutmut-sandbox"
 mkdir -p "$sandbox"
 
 for spec in \
-    mlopt-torch:mlopt_torch
+    kit-torch:kit_torch
 do
     dir=${spec%%:*}
     mod=${spec##*:}
@@ -48,7 +48,7 @@ sel=$(printf '%s' "$tests" | sed 's/ /", "/g')
 
 {
     echo '[tool.mutmut]'
-    echo 'source_paths = ["mlopt_torch"]'
+    echo 'source_paths = ["kit_torch"]'
     echo 'pytest_add_cli_args = ["-p", "no:cacheprovider", "-q"]'
     echo "pytest_add_cli_args_test_selection = [\"$sel\"]"
     [ -n "$only" ] && echo "only_mutate = [\"$only\"]"

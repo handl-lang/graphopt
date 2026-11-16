@@ -98,7 +98,7 @@ bitwise).
 ## Honest ceiling / caveats
 
 * **Probe-local wrap.**  `_DecodeStepWrapStatic` + the two cache
-  layers live in the bench driver, not `mlopt_torch` — they are
+  layers live in the bench driver, not `kit_torch` — they are
   whisper/HF-`Cache`-protocol-specific.  The *shipped* surface is
   just `mutable_inputs` on `CudaGraphRunner` (additive kwarg,
   signature pin updated, `docs/public_api.md` row updated).
@@ -131,6 +131,6 @@ bitwise).
 * `docs/public_api.md` — runner row updated.
 * `docs/reports/kv_static_cache_probe.md` — this report.
 
-No `mlopt-torch`, `mlopt-core`/eqsat, discovery, or gamekit changes.
+No `kit-torch`, `mlopt-core`/eqsat, discovery, or gamekit changes.
 `ruff check`/`ruff format`/`ty check` clean on touched package files;
 `pytest tests/test_runners.py -m "not slow"` 47/47.

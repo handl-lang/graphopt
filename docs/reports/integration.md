@@ -172,7 +172,7 @@ copies that the isolated benchmark never saw. Report:
 
 # P2 (the sieve lives in kernelopt; that repo's venv carries a stale gamekit)
 cd ../kernelopt && PYTHONPATH=src:../graphopt/packages/mlopt-core/src:\
-../graphopt/packages/mlopt-discovery/src:../graphopt/packages/mlopt-torch/src \
+../graphopt/packages/mlopt-discovery/src:../graphopt/packages/kit-torch/src \
   ../graphopt/.venv/bin/python -m bench.drivers.screen.novelty_sieve \
   --names kern_fuse_silu,kern_fuse_softmax,kern_fuse_layernorm --no-measure \
   --json ../graphopt/docs/reports/referee_proof.json --out ../graphopt/docs/reports/referee_proof.md

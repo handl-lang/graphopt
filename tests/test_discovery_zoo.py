@@ -22,7 +22,7 @@ import pytest
 import torch
 from kit_discovery import intake as li
 from kit_discovery import zoo as zoo_mod
-from mlopt_torch.adapters import TorchSink
+from kit_torch.adapters import TorchSink
 
 _ZOO = zoo_mod.zoo()
 

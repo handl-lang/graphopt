@@ -349,7 +349,7 @@ def test_pay_names_sink_unverifiable_cases(monkeypatch):
     realcorpus_mint_r3 F1: the whisper decoder's exported IR carries
     inlined ``torch.vmap``/functorch predispatch ``opaque`` leaves;
     replaying them eagerly raises
-    ``mlopt_torch.torch_bindings.FunctorchReplayError``.  That is an
+    ``kit_torch.torch_bindings.FunctorchReplayError``.  That is an
     infrastructure verdict — the module cannot execute through this
     sink at all — distinct from a lowered-terms-differ
     disagreement.  The pay leg must still count it as a verify

@@ -45,7 +45,7 @@ from mlopt_core.laws.tensor import (
     SPLIT_SCALAR_RULES,
 )
 from kit_discovery.zoo import _ChunkedRetention
-from mlopt_torch.adapters import TorchSource
+from kit_torch.adapters import TorchSource
 
 #: The naturality bridges the fold's last hops need (plan 0023: the
 #: "fused still wins" reading used the limited set; these are

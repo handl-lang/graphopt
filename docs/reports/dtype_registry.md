@@ -11,9 +11,9 @@ IR name ↔ NumPy ↔ ONNX ↔ onnxruntime, `hardware.dtype` names, and the
 `mlopt_core` is the natural home — torch-free, stdlib-only — but it
 ships from `handl-lang/eqsat` as a **pinned git+tag dep**
 (`v0.1.0`); a new module there is a release, not a commit.  And the
-registry must be importable by *both* `mlopt_torch` and
+registry must be importable by *both* `kit_torch` and
 `mlopt_onnx`: the import-linter `dependency layers` contract puts
-`mlopt_onnx` at the bottom and `mlopt_torch` above it, so onnx cannot
+`mlopt_onnx` at the bottom and `kit_torch` above it, so onnx cannot
 import torch (and must not gain an onnxruntime-free sibling's torch
 dependency).  `packages/mlopt-dtypes` is pure stdlib, zero deps, and
 sits as the lowest layer — every backend may read it, nothing may
@@ -53,10 +53,10 @@ gate it.
 
 | file | before | after |
 |---|---|---|
-| `packages/mlopt-torch/src/mlopt_torch/export.py` | literal `_TORCH_TO_ST`/`_ST_TO_TORCH` (12 entries) | derived from `DTYPES` (`torch`+`st` columns) |
+| `packages/kit-torch/src/kit_torch/export.py` | literal `_TORCH_TO_ST`/`_ST_TO_TORCH` (12 entries) | derived from `DTYPES` (`torch`+`st` columns) |
 | `packages/mlopt-onnx/src/mlopt_onnx/arrays.py` | literal `DTYPE_NAMES`, `_NUMPY_TO_ONNX`, `ONNX_TYPE_NAMES`, `_ORT_TO_NUMPY` | all four derived from `DTYPES`; public names (`DTYPE_NAMES`, `WORKING_DTYPES`, `ONNX_TYPE_NAMES`, `numpy_to_onnx_type`, `ort_type_to_numpy`) unchanged |
-| `packages/mlopt-torch/src/mlopt_torch/torch_bridge.py` | five inline `str(dtype).split(".")[-1]` sites + `getattr(torch, …)` in `_creator_dtype` | `canonical_name()` at all five sites; `_creator_dtype` consults the registry then falls back to `getattr` (identical resolution) |
-| `packages/mlopt-torch/src/mlopt_torch/report.py` | `_dtype_rtol_floor` used `torch.finfo(dtype).eps` directly | registry `eps` first, `finfo` fallback for unregistered spellings — values identical (`eps` literals were taken from `finfo`) |
+| `packages/kit-torch/src/kit_torch/torch_bridge.py` | five inline `str(dtype).split(".")[-1]` sites + `getattr(torch, …)` in `_creator_dtype` | `canonical_name()` at all five sites; `_creator_dtype` consults the registry then falls back to `getattr` (identical resolution) |
+| `packages/kit-torch/src/kit_torch/report.py` | `_dtype_rtol_floor` used `torch.finfo(dtype).eps` directly | registry `eps` first, `finfo` fallback for unregistered spellings — values identical (`eps` literals were taken from `finfo`) |
 
 ## Deliberately not migrated
 
@@ -69,12 +69,12 @@ gate it.
 - **`mlopt_onnx/opmap.py::_CASTS`** — maps ATen *cast-op aliases*
   (`"float"`, `"double"`, `"long"`, …) to IR names; that is a
   spelling-alias table, not a dtype-property table, and stays local.
-- **`mlopt_torch/torch_bridge.py`'s `"float"` binding** (line ~2276)
+- **`kit_torch/torch_bridge.py`'s `"float"` binding** (line ~2276)
   resolves `kw["dtype"]` via raw `getattr(torch, str(...))` without
   the `.`-split — recorded names are already canonical, and adding
   canonicalization would *widen* accepted spellings (drift); left as
   is.
-- **`mlopt_torch/calibrate.py`** records `str(dtype).replace("torch.","")`
+- **`kit_torch/calibrate.py`** records `str(dtype).replace("torch.","")`
   as provenance metadata — a reporting string, not a lookup table.
 
 ## Tests
@@ -112,4 +112,4 @@ rtol-floor values (`8*eps` for bf16, `0.0` for fp32/int).
 - Root `pyproject.toml`: `mlopt-dtypes` added to project deps +
   `[tool.uv.sources]` (`workspace = true`) + import-linter
   `root_packages` and the bottom `layers` entry.
-- `mlopt-torch` / `mlopt-onnx` `pyproject.toml`: `"mlopt-dtypes"` dep.
+- `kit-torch` / `mlopt-onnx` `pyproject.toml`: `"mlopt-dtypes"` dep.

@@ -40,7 +40,7 @@ the only `Value`-typed payload slot on `Term::Op`. This is a
 | Corpus | Nodes | Result |
 |---|---|---|
 | Lifted torch module (conv2d→relu→mean→unsqueeze→expand→transpose→reshape→add→gelu→linear→layer_norm→linear→sdpa→pack, 2 outputs) | 35 (21 ops, 15 op names) | `dec(enc(root)) == root` **exactly**; 0 bad nodes; attrs `dim/dim0/dim1/eps/padding/shape/stride/cudnn_enabled` all survive |
-| Every op in `opmeta.REGISTRY` minted once with best-effort canonical attrs (`_ATTR_PROBES` in the script, ~60 ops carry attrs incl. tuple/list/int/float/bool/None values) | 231 shipped (+1 declared op registers when `mlopt_torch` imports — 232 in the `all` run) | **all mint + round-trip equal**; 0 attr-encode failures |
+| Every op in `opmeta.REGISTRY` minted once with best-effort canonical attrs (`_ATTR_PROBES` in the script, ~60 ops carry attrs incl. tuple/list/int/float/bool/None values) | 231 shipped (+1 declared op registers when `kit_torch` imports — 232 in the `all` run) | **all mint + round-trip equal**; 0 attr-encode failures |
 
 What does *not* survive / needs a convention — the honest gap list:
 

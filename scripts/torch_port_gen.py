@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate ``mlopt_torch/aten_classify.py`` from ATen schemas.
+"""Generate ``kit_torch/aten_classify.py`` from ATen schemas.
 
 The torch bridge's export boundary classifies every ``aten::*`` op it
 meets into an IR op name plus a positional-arg disposition: tensor
@@ -54,7 +54,8 @@ Derivation rules (what schemas CAN express):
 * Positions are ranks among **non-kwonly** args — kwonly args arrive
   through ``node.kwargs``, not ``node.args``.
 
-Outputs: ``packages/mlopt-torch/src/mlopt_torch/aten_classify.py`` —
+Outputs: ``kit-torch/src/kit_torch/aten_classify.py`` in the
+sibling handl-lang/kit-torch checkout (P3 Step D-1e) —
 ``ATEN_TO_IR`` (qualified + bare names → IR op), ``ATTR_SCHEMA``
 (IR op → {position: attr name}), ``SCALAR_OPERAND_OPS`` (frozenset of
 IR ops), and ``CLASSIFY`` (per-overload provenance for audit/--emit-spec).
@@ -77,12 +78,13 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 HOST_TOOLS = REPO_ROOT.parent / "host-tensor" / "tools"
 DEFAULT_SCHEMAS = HOST_TOOLS / "aten_schemas.json"
 DEFAULT_LIST = HOST_TOOLS / "aten_port_list.txt"
+# The generated tables ship in handl-lang/kit-torch (P3 Step D-1e) —
+# resolve against the sibling ``kit-torch`` checkout.
 DEFAULT_OUT = (
-    REPO_ROOT
-    / "packages"
-    / "mlopt-torch"
+    REPO_ROOT.parent
+    / "kit-torch"
     / "src"
-    / "mlopt_torch"
+    / "kit_torch"
     / "aten_classify.py"
 )
 

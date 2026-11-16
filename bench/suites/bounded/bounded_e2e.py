@@ -61,8 +61,8 @@ from mlopt_orchestrator import (
     Optimizer,
     optimize_morphisms,
 )
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.report import verify_equiv
+from kit_torch.backend import TorchBackend
+from kit_torch.report import verify_equiv
 
 from bench.benchkit import (
     Case,

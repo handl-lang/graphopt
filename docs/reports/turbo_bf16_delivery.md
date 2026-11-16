@@ -42,7 +42,7 @@ delivery paths?
   rtol=, atol=, task=TaskMetric, task_tol=)`; the verdict and the
   measured `max_abs`/`max_rel` are always recorded in
   `LowerResult.verified`/`stats` — never silent.  Precedent:
-  `mlopt_torch/region_fuse.py` ships caller `screen_rtol`/`output_rtol`
+  `kit_torch/region_fuse.py` ships caller `screen_rtol`/`output_rtol`
   with the measured fused-vs-unfused `max_rel` ledgered in
   `stats["region_fuse"]`.
 

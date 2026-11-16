@@ -18,7 +18,7 @@ the remaining three:
   tables (``_BINARY_OPS`` / ``_ATTR_OPS`` / ``_FIXED_OPS`` plus the
   ``concat`` special case).  Same forward guard, driven through the
   real ``spec_to_hnl`` renderer.
-* ``mlopt_torch.torch_bindings`` — the IR→torch lowering table, the
+* ``kit_torch.torch_bindings`` — the IR→torch lowering table, the
   torch sink's sibling of ``HOST_BINDINGS``.  Two guards: every op in
   ``_LOCAL_ATTR_SCHEMA_OVERRIDES`` (declared "the host-tensor port
   surface's scalar tails") either has a ``tensor.*`` port in the
@@ -382,7 +382,7 @@ class TestTorchBindingsSurface:
         ``tensor.*`` op in the artifact, bar the pinned torch-only
         exceptions.
         """
-        from mlopt_torch.torch_bindings import (
+        from kit_torch.torch_bindings import (
             _LOCAL_ATTR_SCHEMA_OVERRIDES,
         )
 
@@ -410,7 +410,7 @@ class TestTorchBindingsSurface:
         ``_CORE_TORCH_BINDINGS``.
         """
         from kit_host_tensor.bindings import HOST_BINDINGS
-        from mlopt_torch.torch_bindings import _IR_TO_TORCH
+        from kit_torch.torch_bindings import _IR_TO_TORCH
 
         missing = sorted(
             op for op in HOST_BINDINGS if op not in _IR_TO_TORCH

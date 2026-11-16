@@ -89,11 +89,11 @@ MiniGPT (compositional):
 **Capability reporting.** `mlopt_core.ports.Capabilities` exists but is
 search-facing only — `supported_ops`/`ops` bound what the *search* may
 select; it says nothing about shapes, dtypes, devices, or autograd.
-`mlopt_torch.report` is the verify/stats surface (owned elsewhere this
+`kit_torch.report` is the verify/stats surface (owned elsewhere this
 phase). No serving-capability surface was added: the honest capability
 report *is* this matrix plus the probe. If a `ServingCapabilities`
 report is wanted later, the natural home is a sibling of
-`DevicePolicy` in `mlopt_torch` — declared per artifact format, not
+`DevicePolicy` in `kit_torch` — declared per artifact format, not
 per module instance.
 
 ## 3. Autograd — measured boundary

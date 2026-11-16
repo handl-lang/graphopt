@@ -27,7 +27,7 @@ Features are **not** a "profile": a profile
 (`mlopt_core.profile.TargetProfile`) is a *measured target*; features
 describe a *program*.
 
-## Calibration — `mlopt_torch.calibrate`, `scripts/calibrate_profile.py`
+## Calibration — `kit_torch.calibrate`, `scripts/calibrate_profile.py`
 
 The roofline/executor cost models price programs with *measured*
 constants: `calibrate()` micro-benchmarks the machine it runs on
@@ -48,7 +48,7 @@ rank by this machine's numbers, not the built-in constants:
 ```python
 from mlopt_core.profile import TargetProfile
 from mlopt_orchestrator import Optimizer, delivered_cost_for
-from mlopt_torch.backend import TorchBackend
+from kit_torch.backend import TorchBackend
 
 profile = TargetProfile.load("calibrated_profile.json")
 opt = Optimizer(backend=TorchBackend())
@@ -113,7 +113,7 @@ A thin formalization over the e-graph: state (`GameState`), action
 evaluator (`Evaluator`).  The **referee is not here** — legality is
 the laws and the certificate.
 
-## Policies — `mlopt_core.policies`, `mlopt_torch.learned_policy`
+## Policies — `mlopt_core.policies`, `kit_torch.learned_policy`
 
 A `Policy` only *orders* the legal moves, so it can never change what
 is certified.  `RandomPolicy` / `ExistingPolicy` / `GreedyPolicy` /
@@ -127,7 +127,7 @@ has never seen is still scored by its shape, not a vocabulary index
 (no retraining to add runtime rules).
 
 ```python
-from mlopt_torch.learned_policy import LearnedPolicy, train_rule_value
+from kit_torch.learned_policy import LearnedPolicy, train_rule_value
 
 model = train_rule_value(samples, epochs=3000)     # GPU when available
 policy = LearnedPolicy(model, {r.name: r for r in rules})
@@ -178,7 +178,7 @@ from mlopt_core.perf_model import AnalyticalPerformanceModel
 from mlopt_core.policies import GreedyPolicy
 from mlopt_orchestrator import PredictedCriterion
 from mlopt_orchestrator.optimize import search
-from mlopt_torch.adapters import TorchSource
+from kit_torch.adapters import TorchSource
 
 res = search(
     model, x,

@@ -30,7 +30,7 @@ from mlopt_core.ir import (
     Var,
     op_repr,
 )
-from mlopt_torch.torch_bridge import export_to_ir
+from kit_torch.torch_bridge import export_to_ir
 
 from tests.egglog_oracle import (
     EgglogEngine,

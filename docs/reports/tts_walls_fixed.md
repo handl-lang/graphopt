@@ -1,7 +1,7 @@
 # Kokoro TTS probe — walls C (device kwargs) + decoder-nc (unary mul) fixed
 
 Follow-up to `tts_kokoro_r1.md`.  Both defects lived in
-`packages/mlopt-torch/src/mlopt_torch/torch_bridge.py` (the export
+`packages/kit-torch/src/kit_torch/torch_bridge.py` (the export
 boundary + the lowering bindings).  All changes are in that file plus
 tests; no probe-local workarounds were needed to verify the fixes.
 

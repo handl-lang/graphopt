@@ -41,8 +41,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from mlopt_core.cost import param_bytes_cost_for
 from mlopt_orchestrator import Optimizer
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.composer import param_report
+from kit_torch.backend import TorchBackend
+from kit_torch.composer import param_report
 
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

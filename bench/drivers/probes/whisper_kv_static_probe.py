@@ -286,13 +286,13 @@ def main() -> None:
     L = int(sys.argv[3]) if len(sys.argv) > 3 else max(40, ntok)
 
     import kit_carriers  # noqa: F401
-    import mlopt_torch  # noqa: F401
+    import kit_torch  # noqa: F401
     from kit_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import (
         Optimizer,
         VerifyDeclinedError,
     )
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     HARVEST = min(8, ntok - 2)
     m = probe.load()

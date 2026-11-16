@@ -126,7 +126,7 @@ Failures cluster into three groups, none touching shim mechanics:
   `test_learned_propose.py::test_default_seed_bank_is_machine_shipped`
   (MACHINE_SHIPPED/provenance drift), plus the `coherence`/`lemma_cert`
   verdict-note failures which depend on the same law/cost surface.
-- **`weight_norm` vocabdir drift** (`67d6da8`, mlopt-torch
+- **`weight_norm` vocabdir drift** (`67d6da8`, kit-torch
   `_weight_norm` bind): `test_vocabdir.py` (4),
   `test_overnight.py` prim-vocab pins (2), `test_prim_mint.py` (1) —
   `check_vocab` reports `ops.yaml:ops:weight_norm` stale; the committed
@@ -143,7 +143,7 @@ differences are import-path rewrites (`mlopt_discovery.X` →
 contract).  Moved code is verbatim; the sys.modules shim preserves
 object identity, so behaviour is identical by construction.  The
 failing assertions are cost/vocab/lowering semantics owned by eqsat,
-mlopt-torch and mlopt-cuda — repos this task must not touch.
+kit-torch and mlopt-cuda — repos this task must not touch.
 
 **Action for the parent agent:** these 22 failures need owners —
 likely the agent that landed the eqsat relocks (`b3ac192`/`762f85e`)

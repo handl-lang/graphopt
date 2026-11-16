@@ -15,16 +15,16 @@ import pytest
 def test_modules_import():
     import mlopt_core
     import mlopt_orchestrator
-    import mlopt_torch
+    import kit_torch
     from mlopt_core.egraph import EGraph
     from mlopt_core.ir import IR
     from mlopt_orchestrator import Optimizer
 
 
 
-    from mlopt_torch.torch_bridge import IRModule
+    from kit_torch.torch_bridge import IRModule
 
-    assert mlopt_core and mlopt_orchestrator and mlopt_torch
+    assert mlopt_core and mlopt_orchestrator and kit_torch
     assert EGraph and IR and IRModule
     assert Optimizer
 

@@ -8,7 +8,7 @@ regime once (REINFORCE with the greedy-completion critic, ``--iterations
 1800``) on the einsum-valid ``random_bond_network`` family and writes
 the lineage artifact:
 
-    packages/mlopt-torch/src/mlopt_torch/artifacts/
+    kit-torch/src/kit_torch/artifacts/ (sibling checkout)
         contraction_policy_curriculum.pt
 
 **This is no longer the bundled default** —
@@ -18,7 +18,7 @@ policy (``bench/drivers/probes/contraction/contraction_distill.py --arms oe-all 
 this player stays >= 1.0x; the default artifact is
 ``contraction_policy_distilled.pt`` and this file remains bundled as an
 alternate.  The player machinery itself lives in the package
-(``mlopt_torch.contraction_policy``); the trainer stays in tools
+(``kit_torch.contraction_policy``); the trainer stays in tools
 (``contraction_policy.train_rl``) because training is an experiment
 concern — only the weights ship.
 
@@ -45,7 +45,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from mlopt_torch.contraction_policy import (
+from kit_torch.contraction_policy import (
     greedy,
     load_contraction_policy,
     random_bond_network,
@@ -64,13 +64,15 @@ from bench.drivers.probes.contraction import contraction_scale as cs
 
 __all__ = ["main"]
 
-#: The shipped-artifact destination inside the package.
+#: The shipped-artifact destination — the package split to
+#: handl-lang/kit-torch in P3 Step D-1e, so the path resolves against
+#: the sibling ``kit-torch`` checkout (``../kit-torch`` next to this
+#: repo, the standard handl-lang layout).
 _DEFAULT_OUT = (
-    Path(__file__).resolve().parents[1]
-    / "packages"
-    / "mlopt-torch"
+    Path(__file__).resolve().parents[2]
+    / "kit-torch"
     / "src"
-    / "mlopt_torch"
+    / "kit_torch"
     / "artifacts"
     / "contraction_policy_curriculum.pt"
 )

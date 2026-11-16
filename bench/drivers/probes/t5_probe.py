@@ -30,7 +30,7 @@ import time
 import torch
 import torch.nn as nn
 from mlopt_orchestrator.optimize import Optimizer
-from mlopt_torch.backend import TorchBackend
+from kit_torch.backend import TorchBackend
 from transformers import T5ForConditionalGeneration
 
 MODEL_ID = "google-t5/t5-small"

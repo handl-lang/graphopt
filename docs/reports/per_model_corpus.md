@@ -6,7 +6,7 @@ Tests: `tests/test_discovery_model_corpus.py` (11 tests).
 ## The gap
 
 The discovery measurement corpus is fixed: the bench law cases
-(`impact._bench_cases`), the `mlopt_torch.models` registry
+(`impact._bench_cases`), the `kit_torch.models` registry
 (`impact.model_cases`, ~40 exports), the intake side-file
 (`intake.load_cases` → `intake_corpus.json` in the cache dir) and the
 held-out `zoo` registry (73 `Workload` thunks).  `opt.optimize(model, x)`
@@ -27,7 +27,7 @@ op-patterns got no coverage of its own shapes.
   distribution (typed tuples, attr dicts, leaf slots, shape pools)
   off `TermCase`s.
 * **Intake of a real model** — `TorchSource().to_ir(model, feed)`
-  (`mlopt_torch.torch_bridge.export_to_ir`) lifts an `nn.Module` to
+  (`kit_torch.torch_bridge.export_to_ir`) lifts an `nn.Module` to
   `IR` + source tensors; `impact.model_cases` wraps the result as a
   `TermCase`.  `intake._ingest_one` does the same plus verify,
   writing `intake_corpus.json` + `intake_tensors.pt` — the

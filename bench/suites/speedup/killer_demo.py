@@ -25,7 +25,7 @@ Usage:
     python -m bench run killer_demo --device cuda
 
     # CUDA dev venv (see bench/README.md for the recipe):
-    PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
+    PYTHONPATH="packages/mlopt-core/src:packages/kit-torch/src:\
 packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \
         <cuda-venv>/bin/python -m bench run killer_demo --device cuda
 """
@@ -46,9 +46,9 @@ import torch
 import torch.nn as nn
 from mlopt_orchestrator import Optimizer
 from mlopt_orchestrator.optimize import Autotuned
-from mlopt_torch.autotune import TORCH_BUILDERS
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.models import (
+from kit_torch.autotune import TORCH_BUILDERS
+from kit_torch.backend import TorchBackend
+from kit_torch.models import (
     LinearRecurrence,
     MatrixChain,
     ResidualMLP,

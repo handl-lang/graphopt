@@ -22,7 +22,7 @@ from mlopt_core.laws import ALL_RULES
 from mlopt_core.laws.base import R
 from kit_discovery import impact as im
 from kit_discovery.impact import TermCase
-from mlopt_torch.adapters import TorchSink
+from kit_torch.adapters import TorchSink
 
 
 def _v(name: str, *shape: int) -> Var:

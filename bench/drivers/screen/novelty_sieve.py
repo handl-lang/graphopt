@@ -443,7 +443,7 @@ def case_contexts(cases: list | None = None) -> list[_CaseCtx]:
     contexts — the case is skipped for relevance, never silently
     dropped: it simply can never match.
     """
-    from mlopt_torch.adapters import TorchSource
+    from kit_torch.adapters import TorchSource
 
     from bench.discovery import runner as dr
     from bench.discovery.cases import load_cases
@@ -510,7 +510,7 @@ def _measure_case(candidate: Any, ctx: _CaseCtx) -> BeatRow:
     """
     from mlopt_core.egraph import verify_certificate
     from mlopt_orchestrator.optimize import search
-    from mlopt_torch.adapters import TorchSink, TorchSource
+    from kit_torch.adapters import TorchSink, TorchSource
 
     from bench.discovery import runner as dr
     from bench.discovery.refs import REFS

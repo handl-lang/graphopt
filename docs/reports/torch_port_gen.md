@@ -1,7 +1,7 @@
 # `torch_port_gen` — schema-derived ATen classification for the torch bridge
 
 `scripts/torch_port_gen.py` generates
-`packages/mlopt-torch/src/mlopt_torch/aten_classify.py`, the
+`packages/kit-torch/src/kit_torch/aten_classify.py`, the
 schema-derived base layer under the torch bridge's hand-maintained
 classification tables.  It is the mlopt-side answer to the audit finding
 in `docs/reports/arch_audit_graphopt_packages.md` (`torch_bridge.py`'s

@@ -56,7 +56,7 @@ from mlopt_core.laws.tensor import (
 )
 from kit_discovery.play import _time_module
 from kit_discovery.zoo import _ChunkedRetention
-from mlopt_torch.adapters import TorchSink, TorchSource
+from kit_torch.adapters import TorchSink, TorchSource
 
 #: The naturality bridges the fold's last hops need (plan 0023) —
 #: load-bearing for the carrier preference.

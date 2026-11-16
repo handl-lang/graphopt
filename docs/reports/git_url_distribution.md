@@ -27,10 +27,10 @@
 |---|---|---|---|---|
 | graphopt | `mlopt-core`, `mlopt-orchestrator` | `handl-lang/eqsat` | `packages/mlopt-core`, `packages/mlopt-orchestrator` | `branch = "main"` |
 | graphopt | `gamekit`, `benchkit` | `handl-lang/gamekit` | `packages/gamekit`, `packages/benchkit` | `branch = "main"` |
-| graphopt | `mlopt-torch`, `mlopt-carriers`, `mlopt-cuda`, `mlopt-discovery`, `mlopt-onnx` | workspace members (`packages/*`) | — | `{ workspace = true }` |
+| graphopt | `kit-torch`, `mlopt-carriers`, `mlopt-cuda`, `mlopt-discovery`, `mlopt-onnx` | workspace members (`packages/*`) | — | `{ workspace = true }` |
 | gamekit | `mlopt-core` (benchkit only) | `handl-lang/eqsat` | `packages/mlopt-core` | `branch = "main"` |
 | kernelopt | `mlopt-core`, `mlopt-orchestrator` | `handl-lang/eqsat` | same | `branch = "main"` |
-| kernelopt | `mlopt-torch`, `mlopt-carriers`, `mlopt-discovery` | `handl-lang/graphopt` | `packages/*` | `branch = "main"` |
+| kernelopt | `kit-torch`, `mlopt-carriers`, `mlopt-discovery` | `handl-lang/graphopt` | `packages/*` | `branch = "main"` |
 | kernelopt | `gamekit`, `benchkit` | `handl-lang/gamekit` | same | `branch = "main"` |
 | kernelopt | `lib-kernel-ir` | sibling checkout | — | `path = "../lib-kernel-ir"` |
 | kit-kernel-ir | `lib-kernel-ir`, `lib-triton-qgemv` | sibling checkouts | — | `path = "../…"` |
@@ -161,7 +161,7 @@ selectors once the org tags releases there too.
 - **`host-tensor` / `lib-tensor`** have uncommitted changes and no
   Python packaging — out of scope for the uv chain.
 - **Wheel installs are not self-contained** (documented in
-  `docs/reports/phase_a_packaging.md`): a `mlopt-torch` wheel still
+  `docs/reports/phase_a_packaging.md`): a `kit-torch` wheel still
   needs `mlopt-core`/`gamekit` from their repos — git-URL deps are the
   install path, wheels are artifacts.
 - **Tags are immutable by convention** — never move `v0.1.0`; cut

@@ -87,10 +87,10 @@ import torch
 import torch.nn as nn
 from kit_discovery.play import _time_module
 from mlopt_orchestrator import Compositional, Optimizer
-from mlopt_torch.adapters import TorchSource
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.composer import TorchComposer
-from mlopt_torch.report import verify_equiv
+from kit_torch.adapters import TorchSource
+from kit_torch.backend import TorchBackend
+from kit_torch.composer import TorchComposer
+from kit_torch.report import verify_equiv
 
 try:
     from transformers import AutoModelForImageSegmentation

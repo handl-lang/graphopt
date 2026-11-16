@@ -1,7 +1,7 @@
 # torch_bridge.py split — implementation report
 
 Arch-audit item (`docs/reports/arch_audit_graphopt_packages.md` §2/§6.5):
-the ~4.5k-line `mlopt_torch.torch_bridge` god-module is now three
+the ~4.5k-line `kit_torch.torch_bridge` god-module is now three
 cohesive modules plus a thin re-export shim.  **No commit** — working
 tree only.
 
@@ -23,7 +23,7 @@ Dependency direction is acyclic: `torch_export → torch_bindings`;
 ## Import compatibility
 
 - Every one of the **117** module-level names the old file bound
-  (verified by AST diff) resolves on `mlopt_torch.torch_bridge` —
+  (verified by AST diff) resolves on `kit_torch.torch_bridge` —
   explicit re-exports plus a `__getattr__` fallback that scans the
   three submodule `__dict__`s (covers third-party names like `attr_of`,
   `torch`, `FOLD_OPS` that callers also import from the bridge, e.g.
@@ -48,7 +48,7 @@ Two patch sites exist in the suite; both keep working:
    `torch_bridge._om_elem`/`._om_compose` **at call time** — a patch on
    the shim is seen; unpatched it is the same function object.
 2. `tests/test_torch_bridge_edges.py` —
-   `monkeypatch.setattr("mlopt_torch.torch_bridge._resolve_opaque_callable", …)`
+   `monkeypatch.setattr("kit_torch.torch_bridge._resolve_opaque_callable", …)`
    then calls `_opaque_torch`.  `_opaque_torch` (bindings) and
    `_opaque_qual` (export) both call `_resolve_opaque(qual)`, which
    late-binds `torch_bridge._resolve_opaque_callable` — patches reach
@@ -62,7 +62,7 @@ through both `_opaque_torch` and `_opaque_qual`.
 
 The audit suggested `mlopt_carriers.om`.  Rejected: `mlopt-carriers`
 already imports `IRModule`/`_om_elem`/`_om_compose` **from**
-`mlopt_torch.torch_bridge` — moving them to carriers would create a
+`kit_torch.torch_bridge` — moving them to carriers would create a
 package-level import cycle (torch → carriers → torch).  They now live
 in `torch_bindings` beside the other carrier-binding helpers; the shim
 keeps them patchable as above.
@@ -112,7 +112,7 @@ pre-existing: `build/lib/` stale artifacts, `backend.py`/`export.py`/
 
 ## Notes for the parent agent
 
-- `packages/mlopt-torch/build/lib/mlopt_torch/torch_bridge.py` is a
+- `packages/kit-torch/build/lib/kit_torch/torch_bridge.py` is a
   **stale build artifact** (old monolith) still scanned by
   `radon_ratchet.py` (`TARGETS=["packages"]` rglobs `build/`).  It
   predates this change and fails the ratchet independent of the split;

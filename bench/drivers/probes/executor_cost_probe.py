@@ -82,7 +82,7 @@ from mlopt_orchestrator.optimize import (
     _route_spec,
     default_rules,
 )
-from mlopt_torch.backend import TorchBackend
+from kit_torch.backend import TorchBackend
 
 # Reuse the wall-clock methodology verbatim: same cases, same timing.
 from bench.drivers.probes.law_wallclock import (

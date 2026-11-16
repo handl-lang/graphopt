@@ -340,7 +340,7 @@ def kernelopt_arm(ir, param_values, *, decompose=False, ref=None):
 
 def main() -> None:
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     only = set(sys.argv[1:])
     cases = _cases()

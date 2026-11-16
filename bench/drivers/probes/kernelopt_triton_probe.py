@@ -299,7 +299,7 @@ def measure(name, mod, args, ir, param_values, kt):
 
 def main() -> None:
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     kt = _load_triton_baseline()
     only = set(sys.argv[1:])

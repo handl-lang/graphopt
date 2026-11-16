@@ -75,7 +75,7 @@ needed (out of scope; packages are read-only here).
 
 | option | result |
 |---|---|
-| `pickle` the `IRModule` | **FAILS** — `PicklingError: Can't pickle <lambda> … mlopt_torch.torch_bindings` (lambda bindings in the lowered module; same for the regionfused module) |
+| `pickle` the `IRModule` | **FAILS** — `PicklingError: Can't pickle <lambda> … kit_torch.torch_bindings` (lambda bindings in the lowered module; same for the regionfused module) |
 | `torch.export.export(mod, inp)` | **WORKS** for both plain and regionfused `IRModule` — exported program is **bitwise** vs eager (`max|diff| = 0.0`, seeded) — but the dynamo trace costs **~133 s** |
 | `torch.export.save` → `.pt2` | writes a **428 MB** artifact per W; `torch.export.load` round-trips and runs (roundtrip diff 6.8e-2 = the model's own unseeded RNG floor — bitwise not separately gated, but export was 0.0 vs eager) |
 | `.pt2` across W | **FAILS** — static guard `xs_0.size()[2] == 128`; still per-W |

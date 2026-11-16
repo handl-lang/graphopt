@@ -1,7 +1,7 @@
 """The shared dtype registry (``mlopt_dtypes``) and its consumers.
 
 ``docs/reports/arch_audit_graphopt_packages.md`` §3 found the dtype
-tables duplicated across ``mlopt_torch.export`` (torch.dtype ↔
+tables duplicated across ``kit_torch.export`` (torch.dtype ↔
 safetensors tag), ``kit_onnx.arrays`` (IR name ↔ NumPy ↔ ONNX ↔
 onnxruntime) and the name-resolution idiom in ``torch_bridge`` /
 ``kit_carriers.trace``.  ``mlopt_dtypes`` is the single table; these
@@ -69,12 +69,12 @@ def test_eps_and_itemsize_match_torch_finfo():
 
 
 # ---------------------------------------------------------------------------
-#  consumer: mlopt_torch.export safetensors tables
+#  consumer: kit_torch.export safetensors tables
 # ---------------------------------------------------------------------------
 
 
 def test_safetensors_tables_derive_from_registry():
-    from mlopt_torch.export import _ST_TO_TORCH, _TORCH_TO_ST
+    from kit_torch.export import _ST_TO_TORCH, _TORCH_TO_ST
 
     expected = {
         "bool": "BOOL",
@@ -100,7 +100,7 @@ def test_safetensors_tables_derive_from_registry():
 
 def test_safetensors_container_roundtrip_per_dtype(tmp_path):
     """Every registered safetensors tag survives write→read."""
-    from mlopt_torch.export import (
+    from kit_torch.export import (
         _read_safetensors,
         _write_safetensors,
     )
@@ -172,7 +172,7 @@ def test_onnx_dtype_names_derive_from_registry():
 
 
 def test_creator_dtype_resolves_registered_and_foreign_names():
-    from mlopt_torch.torch_bridge import _creator_dtype
+    from kit_torch.torch_bridge import _creator_dtype
 
     assert _creator_dtype({"dtype": "float64"}) is torch.float64
     assert _creator_dtype({"dtype": "torch.bfloat16"}) is torch.bfloat16
@@ -184,7 +184,7 @@ def test_creator_dtype_resolves_registered_and_foreign_names():
 
 def test_verify_rtol_floor_unchanged():
     """The dtype-resolution floor still keys off machine epsilon."""
-    from mlopt_torch.report import _dtype_rtol_floor
+    from kit_torch.report import _dtype_rtol_floor
 
     bf16 = torch.zeros(1, dtype=torch.bfloat16)
     f32 = torch.zeros(1, dtype=torch.float32)

@@ -721,7 +721,7 @@ def _handler_stage(need: Need, args: argparse.Namespace) -> dict:
     or ``refused-*`` (a measured grammar gap).  ``probe`` records the
     per-spelling verdicts — minted bodies and measured refusals alike.
     """
-    import mlopt_torch.torch_bridge as tb
+    import kit_torch.torch_bridge as tb
 
     ambient = need.atom in tb._IR_TO_TORCH
     row: dict[str, Any] = {
@@ -777,7 +777,7 @@ def _bind_minted(need: Need, handler_row: dict) -> Any:
     the oracle, the site-outcome probe and the sink all see the atom —
     "the sink's executor table is the semantics" (ADR 0007).
     """
-    import mlopt_torch.torch_bridge as tb
+    import kit_torch.torch_bridge as tb
 
     body = handler_row["body"]
     spec = next(
@@ -1003,7 +1003,7 @@ def _fire_stage(
     from mlopt_core.cost import backend_cost, dag_cost
     from mlopt_core.cost.executor import executor_cost_for
     from mlopt_core.egraph import EGraph
-    from mlopt_torch.adapters import TorchSink
+    from kit_torch.adapters import TorchSink
 
     cost_fn = backend_cost(
         executor_cost_for(lowering="generic"), TorchSink().supported_ops

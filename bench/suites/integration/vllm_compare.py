@@ -256,7 +256,7 @@ def write_hf_dir(hf_dir: Path, sd_hf: dict, cfg: dict) -> dict:
     except ImportError:
         # mlopt's own stdlib safetensors writer — no extra dep needed
         # in the bare .venv to emit a file vllm/transformers read.
-        from mlopt_torch.export import _write_safetensors
+        from kit_torch.export import _write_safetensors
 
         _write_safetensors(
             sd_hf, hf_dir / "model.safetensors", json.dumps({})
@@ -351,8 +351,8 @@ def greedy_decode(
 def optimize_once(model, idx, device):
     """Compositional optimize + verify against eager on ``idx``."""
     from mlopt_orchestrator import Compositional, Optimizer
-    from mlopt_torch.backend import TorchBackend
-    from mlopt_torch.report import verify_equiv
+    from kit_torch.backend import TorchBackend
+    from kit_torch.report import verify_equiv
 
     with torch.no_grad():
         ref = model(idx)

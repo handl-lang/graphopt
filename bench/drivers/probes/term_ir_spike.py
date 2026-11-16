@@ -198,7 +198,7 @@ def lift_tiny_transformer() -> IR:
     import torch.nn as nn
     import torch.nn.functional as F
 
-    from mlopt_torch.torch_bridge import export_to_ir
+    from kit_torch.torch_bridge import export_to_ir
 
     class Block(nn.Module):
         def __init__(self, dim: int = 32) -> None:

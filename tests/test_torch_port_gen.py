@@ -1,7 +1,7 @@
 """Drift gate for ``scripts/torch_port_gen.py``.
 
 The generator derives the torch bridge's ATen classification tables
-(``mlopt_torch.aten_classify``) from host-tensor's schema dump +
+(``kit_torch.aten_classify``) from host-tensor's schema dump +
 curated port list.  ``--check`` is the regression pin: it regenerates
 in memory and byte-diffs against the checked-in artifact, so a schema
 dump refresh or a port-list edit that nobody re-ran the generator for
@@ -20,9 +20,9 @@ GEN = ROOT / "scripts" / "torch_port_gen.py"
 GENERATED = (
     ROOT
     / "packages"
-    / "mlopt-torch"
+    / "kit-torch"
     / "src"
-    / "mlopt_torch"
+    / "kit_torch"
     / "aten_classify.py"
 )
 SCHEMAS = ROOT.parent / "host-tensor" / "tools" / "aten_schemas.json"
@@ -91,8 +91,8 @@ def test_emit_spec_classification_pins():
 def test_generated_module_imports_and_merges():
     """The checked-in module is importable and the bridge's merged
     tables keep the hand overrides authoritative."""
-    import mlopt_torch.aten_classify as ac
-    from mlopt_torch import torch_bridge as tb
+    import kit_torch.aten_classify as ac
+    from kit_torch import torch_bridge as tb
 
     assert ac.SCHEMAS_TORCH
     assert ac.PORTED_OPS > 0

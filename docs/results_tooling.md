@@ -42,7 +42,7 @@ Two reconciliation notes:
   the learned policy at 1.54–1.78× of `opt_einsum`'s randomised
   greedy at n=40; the RL curriculum regime narrowed the gap to
   ~1.04×, and the oe-all **distilled** player that now ships as
-  `mlopt_torch.load_contraction_policy()`'s default *beats* the
+  `kit_torch.load_contraction_policy()`'s default *beats* the
   teacher at equal wall-clock (the figure in the table above).  The
   curriculum-RL weights remain bundled as an alternate artifact.
 - **The `bounded_e2e` baseline's headline is vs eager** (best

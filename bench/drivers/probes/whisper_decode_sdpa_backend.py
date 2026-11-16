@@ -150,13 +150,13 @@ def main() -> None:
     L = int(sys.argv[3]) if len(sys.argv) > 3 else max(40, ntok)
 
     import kit_carriers  # noqa: F401
-    import mlopt_torch  # noqa: F401
+    import kit_torch  # noqa: F401
     from mlopt_orchestrator.optimize import (
         Optimizer,
         VerifyDeclinedError,
     )
-    from mlopt_torch.backend import TorchBackend
-    from mlopt_torch.torch_bridge import _IR_TO_TORCH
+    from kit_torch.backend import TorchBackend
+    from kit_torch.torch_bridge import _IR_TO_TORCH
 
     HARVEST = min(8, ntok - 2)
     m = probe.load()

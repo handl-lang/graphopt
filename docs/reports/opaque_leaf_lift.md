@@ -1,7 +1,7 @@
 # Opaque-leaf lifting — total lift over the torch op surface
 
 **Status:** implemented (adapter-side; `mlopt_core` untouched).
-**Scope:** `packages/mlopt-torch` (`torch_bridge.py`), tests in
+**Scope:** `packages/kit-torch` (`torch_bridge.py`), tests in
 `tests/test_torch_bridge_edges.py`, `tests/test_torch_integration.py`,
 `tests/test_e2e_pipeline.py`.
 
@@ -18,8 +18,8 @@ delivery still works.
 
 ## The path (as traced)
 
-- `TorchSource.to_ir` (`mlopt_torch/adapters.py`) delegates to
-  `export_to_ir` (`mlopt_torch/torch_bridge.py`).
+- `TorchSource.to_ir` (`kit_torch/adapters.py`) delegates to
+  `export_to_ir` (`kit_torch/torch_bridge.py`).
 - `export_to_ir` runs `torch.export.export(model, args)` and walks the
   exported FX `call_function` graph.  Each node's target is canonicalised
   by `_aten_name`, mapped through `_ATEN_TO_IR`, and minted as an `Op`
@@ -188,7 +188,7 @@ Commands run (memory-capped via `scripts/pytest-capped.sh`):
   lines/branches inside the new opaque code** (remaining misses are
   pre-existing regions covered by other suite files).
 - `.venv/bin/ruff check` + `ruff format --check` on
-  `packages/mlopt-torch/.../torch_bridge.py` — clean (test files carry
+  `packages/kit-torch/.../torch_bridge.py` — clean (test files carry
   pre-existing lint/format drift outside the gate's `packages/` scope;
   new test code matches the surrounding style).
 - `.venv/bin/ty check` — clean (0 errors).

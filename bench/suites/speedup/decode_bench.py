@@ -51,8 +51,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from mlopt_orchestrator import Compositional, Optimizer
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.report import CompositionalReport, verify_equiv
+from kit_torch.backend import TorchBackend
+from kit_torch.report import CompositionalReport, verify_equiv
 from torch.utils.benchmark import Timer
 
 from bench.common.llama2c import load_llama2c

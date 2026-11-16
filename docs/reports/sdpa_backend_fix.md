@@ -9,7 +9,7 @@ the fix in the binding itself.
 
 ## Policy chosen
 
-`packages/mlopt-torch/src/mlopt_torch/torch_bridge.py`:
+`packages/kit-torch/src/kit_torch/torch_bridge.py`:
 
 * `_sdpa_math_backend(q, k)` returns `SDPBackend.MATH` **only** for the
   measured pathological regime:

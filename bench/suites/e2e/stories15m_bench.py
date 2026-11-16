@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from mlopt_orchestrator import Compositional, Optimizer
-from mlopt_torch.backend import TorchBackend
+from kit_torch.backend import TorchBackend
 from torch.utils.benchmark import Timer
 
 from bench.common.llama2c import load_llama2c

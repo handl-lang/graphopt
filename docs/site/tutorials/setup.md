@@ -15,7 +15,7 @@ uv sync --group bench      # creates .venv/ — dev env + the bench CLI deps
 ```
 
 There is no `mlopt` facade package: import the domain packages
-directly (`mlopt_core`, `mlopt_torch`, `mlopt_orchestrator`,
+directly (`mlopt_core`, `kit_torch`, `mlopt_orchestrator`,
 `kit_discovery`, `gamekit`, …). `.venv/bin/python` is the
 interpreter every command in this track uses. `uv sync` pulls the
 substrate and game-kernel packages in as pinned git deps on the
@@ -48,7 +48,7 @@ For this repo the supported install is exactly what step 1 does:
 clone and `uv sync`, which resolves the `eqsat`/`gamekit` substrate
 pins as git deps on their `packages/` subdirectories.
 `uv build` *does* produce a per-package wheel locally (verified for
-`mlopt-torch` — setuptools backend, pure-Python, bundles the
+`kit-torch` — setuptools backend, pure-Python, bundles the
 `artifacts/*.pt` policy weights), but a wheel install still needs
 `mlopt-core`/`mlopt-orchestrator`/`gamekit` from their own repos —
 there is no self-contained install yet. Treat "pip install mlopt"
@@ -73,7 +73,7 @@ saturate, extract, lower, verify — on CPU with no GPU required.
 | the engine | `mlopt_core` | [`eqsat`](https://github.com/handl-lang/eqsat) | the torch-free IR, e-graph, law bank, cost models |
 | the pipeline | `mlopt_orchestrator` | `eqsat` | `Optimizer`, `search`, `lower` — backend-neutral |
 | the game layer | `gamekit` | [`gamekit`](https://github.com/handl-lang/gamekit) | `Board` protocol, players, scoring, calibration |
-| torch adapters | `mlopt_torch` | graphopt | `TorchSource`/`TorchSink`/`TorchBackend`, runners |
+| torch adapters | `kit_torch` | graphopt | `TorchSource`/`TorchSink`/`TorchBackend`, runners |
 | discovery | `kit_discovery` | graphopt | census → propose → verify → measure → rank → emit |
 | benchmarks | `bench` | graphopt | harnessed suites + the discovery scorecard — the harness itself is `benchkit` in [`gamekit`](https://github.com/handl-lang/gamekit) (`bench/benchkit` is the compat alias) |
 

@@ -40,13 +40,13 @@ from mlopt_orchestrator.runners import ChainedRunner
 
 
 from kit_cuda import CudaGraphRunner
-from mlopt_torch.runners import TorchCompileRunner
+from kit_torch.runners import TorchCompileRunner
 
-from mlopt_torch.adapters import TorchSink, TorchSource
-from mlopt_torch.backend import TorchBackend
+from kit_torch.adapters import TorchSink, TorchSource
+from kit_torch.backend import TorchBackend
 
-from tests.test_pluggable_sink import NumpySink
-from mlopt_torch.autotune import TORCH_BUILDERS
+from tests.numpy_sink import NumpySink
+from kit_torch.autotune import TORCH_BUILDERS
 
 
 class _MLP(nn.Module):
@@ -209,7 +209,7 @@ def test_search_without_capabilities_is_backend_agnostic():
 def test_specialize_causal_opt_out():
     """specialize_causal=False skips the fold even when the sdpa +
     causal-mask shape is present."""
-    from mlopt_torch.models import EagerAttention
+    from kit_torch.models import EagerAttention
 
     torch.manual_seed(0)
     m = EagerAttention(dim=64, n_heads=2, block_size=16).eval()
@@ -393,7 +393,7 @@ def test_numpy_sink_flows_through_search_and_lower():
     """NumpySink is the forcing evidence the seam is real: the search
     prices against its supported_ops and lower delivers a numpy
     runnable — verified in the sink's own runtime."""
-    from tests.test_pluggable_sink import _model
+    from tests.numpy_sink import _model
 
     model = _model()
     x = torch.randn(2, 8)

@@ -115,7 +115,7 @@ def term_walk(root):
 
 
 def census(model: str) -> None:
-    from mlopt_torch.torch_bridge import export_to_ir
+    from kit_torch.torch_bridge import export_to_ir
 
     enc = load_encoder(model)
     feats = prod.make_features(model).to(next(enc.parameters()).dtype)
@@ -162,10 +162,10 @@ def _verify_vs_hf(ref, feats, delivered, tag: str) -> None:
 
 def opt(model: str, iters: int, exclude: str = "") -> None:
     import kit_carriers  # noqa: F401
-    import mlopt_torch  # noqa: F401
+    import kit_torch  # noqa: F401
     from kit_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     enc = load_encoder(model)
     wrap = EncWrap(enc)
@@ -327,10 +327,10 @@ def diag(model: str, iters: int, exclude: str = "") -> None:
     delivered-vs-HF gap is export fidelity or extraction/lowering.
     """
     import kit_carriers  # noqa: F401
-    import mlopt_torch  # noqa: F401
+    import kit_torch  # noqa: F401
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
-    from mlopt_torch.adapters import TorchSink
+    from kit_torch.backend import TorchBackend
+    from kit_torch.adapters import TorchSink
 
     enc = load_encoder(model)
     wrap = EncWrap(enc)
@@ -415,9 +415,9 @@ def termtest(model: str, mode: str, dtype: str = "") -> None:
     """
     import pickle
     import kit_carriers  # noqa: F401  (seats carrier bindings)
-    import mlopt_torch  # noqa: F401
-    from mlopt_torch.torch_eval import ir_to_torch_module
-    from mlopt_torch.adapters import TorchSink
+    import kit_torch  # noqa: F401
+    from kit_torch.torch_eval import ir_to_torch_module
+    from kit_torch.adapters import TorchSink
     from mlopt_core.ir import IR
 
     _OPS = TorchSink()._ops
@@ -428,7 +428,7 @@ def termtest(model: str, mode: str, dtype: str = "") -> None:
     params = torch.load(f"/tmp/enc_params_{model}.pt", weights_only=False)
 
     if mode == "mathsdpa":
-        import mlopt_torch.torch_bindings as tb
+        import kit_torch.torch_bindings as tb
         from torch.nn.attention import SDPBackend, sdpa_kernel
         import torch.nn.functional as F
 
@@ -511,13 +511,13 @@ def e2e(model: str, iters: int, ntok: int) -> None:
     encoder module (not HF eager), everything else identical.
     """
     import kit_carriers  # noqa: F401
-    import mlopt_torch  # noqa: F401
+    import kit_torch  # noqa: F401
     from kit_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import (
         Optimizer,
         VerifyDeclinedError,
     )
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     if model != "turbo":
         print("e2e mode is turbo-focused; run opt for others", flush=True)

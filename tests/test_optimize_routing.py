@@ -11,19 +11,19 @@ import pytest
 import torch
 from mlopt_core.cost import flops_cost
 from mlopt_core.ir import IR, Op, Param, TensorType, Var
-from mlopt_torch.torch_bridge import ir_to_torch_module
+from kit_torch.torch_bridge import ir_to_torch_module
 from mlopt_orchestrator.optimize import _lower_extracted
 
 
 from mlopt_orchestrator.runners import ChainedRunner
 
 from kit_cuda import CudaGraphRunner
-from mlopt_torch.runners import TorchCompileRunner
+from kit_torch.runners import TorchCompileRunner
 
-from mlopt_torch.adapters import TorchSink
+from kit_torch.adapters import TorchSink
 from mlopt_orchestrator import Optimizer
 
-from mlopt_torch.backend import TorchBackend
+from kit_torch.backend import TorchBackend
 
 
 def _T(shape):
@@ -204,7 +204,7 @@ def test_delivered_cost_priced_by_executor():
 
 def test_carrier_upgrade_swaps_to_batched_member():
     """A cheaper batched applyd member replaces the additive winner."""
-    from mlopt_torch.models import LinearRecurrence
+    from kit_torch.models import LinearRecurrence
 
 
     torch.manual_seed(0)
@@ -226,7 +226,7 @@ def test_optimize_model_delivered_module_captures_cuda_graph():
     scan-shaped model takes the CUDA-graph path — capture replays the
     identical computation, a changed input flows through the static
     buffers, and ``drop_cuda_graph`` restores the eager path."""
-    from mlopt_torch.models import LinearRecurrence
+    from kit_torch.models import LinearRecurrence
 
 
     torch.manual_seed(0)
@@ -256,12 +256,12 @@ def test_lift_scan_to_applyd_offers_carrier_member():
     """The nonlocal lift seeds applyd members on recurrence classes
     without saturating the carrier laws."""
     from mlopt_core.egraph import EGraph
-    from mlopt_torch.models import LinearRecurrence
+    from kit_torch.models import LinearRecurrence
     from kit_carriers.scan_lower import (
         is_scan_apply_term,
         to_batched_scan_module,
     )
-    from mlopt_torch.torch_bridge import export_to_ir
+    from kit_torch.torch_bridge import export_to_ir
     from kit_carriers.trace_lift import lift_scan_to_applyd
 
     torch.manual_seed(0)
@@ -303,8 +303,8 @@ def test_lift_scan_to_applyd_skips_existing_carrier():
     """A second pass offers nothing — classes already carrying an
     apply form are skipped."""
     from mlopt_core.egraph import EGraph
-    from mlopt_torch.models import LinearRecurrence
-    from mlopt_torch.torch_bridge import export_to_ir
+    from kit_torch.models import LinearRecurrence
+    from kit_torch.torch_bridge import export_to_ir
     from kit_carriers.trace_lift import lift_scan_to_applyd
 
     torch.manual_seed(0)
@@ -390,7 +390,7 @@ def test_batched_module_exposes_param_map():
 def test_cuda_graph_runner_noop_on_cpu():
     """runner=CudaGraphRunner() on a CPU input: stats records False,
     module is unchanged — the runner is a no-op off-CUDA."""
-    from mlopt_torch.models import LinearRecurrence
+    from kit_torch.models import LinearRecurrence
 
     torch.manual_seed(0)
     m = LinearRecurrence(4, 8).eval().double()
@@ -406,7 +406,7 @@ def test_cuda_graph_runner_noop_on_cpu():
 def test_cuda_graph_skipped_when_compiled():
     """[TorchCompileRunner, CudaGraphRunner]: the compiled module wins —
     capture is not attempted on it (no capture attr)."""
-    from mlopt_torch.models import LinearRecurrence
+    from kit_torch.models import LinearRecurrence
 
     torch.manual_seed(0)
     m = LinearRecurrence(4, 8).eval().double()
@@ -421,7 +421,7 @@ def test_cuda_graph_skipped_when_compiled():
 def test_cuda_graph_tuple_input_noop_on_cpu():
     """Tuple/list example inputs don't crash the cuda_graph path —
     non-tensor first elements degrade quietly to cuda_graph=False."""
-    from mlopt_torch.models import LinearRecurrence
+    from kit_torch.models import LinearRecurrence
 
     torch.manual_seed(0)
     m = LinearRecurrence(4, 8).eval().double()
@@ -570,7 +570,7 @@ def test_search_profile_marker_reaches_carrier_upgrade(monkeypatch):
     import mlopt_orchestrator.pricing as pricing_mod
     from mlopt_core.cost import executor_cost_for
     from mlopt_core.profile import shape_bucket
-    from mlopt_torch.models import LinearRecurrence
+    from kit_torch.models import LinearRecurrence
 
 
 
@@ -705,7 +705,7 @@ def test_delivered_cost_for_search_keeps_generic_pick():
     the bucket left underived re-inverts to the carrier member."""
     from mlopt_core.profile import shape_bucket
     from mlopt_orchestrator import delivered_cost_for
-    from mlopt_torch.models import LinearRecurrence
+    from kit_torch.models import LinearRecurrence
 
     torch.manual_seed(0)
     m = LinearRecurrence(4, 8).eval().double()

@@ -3,12 +3,12 @@
 Plan 0016 stage 7's last mile.  The ``Policy`` seam is already consumed
 by ``Optimizer.optimize`` / ``EGraph.run``, but the engine hands the
 policy a ``GameState`` with no features, so the base ``LearnedPolicy``
-cannot run there.  :class:`mlopt_torch.graph_policy.GraphFeaturePolicy`
+cannot run there.  :class:`kit_torch.graph_policy.GraphFeaturePolicy`
 closes that gap.  This tool:
 
 1. builds supervised trajectories from **real models** (the
-   ``mlopt_torch.models`` zoo) via
-   :func:`mlopt_torch.model_trajectories.model_rule_samples`;
+   ``kit_torch.models`` zoo) via
+   :func:`kit_torch.model_trajectories.model_rule_samples`;
 2. trains a ``RuleValueNet`` on them (supervised — the retro's dense
    signal, see ``project/retros/stage7-multifamily-results.md``);
 3. runs the **real pipeline** (``mlopt_orchestrator.optimize.search``)
@@ -35,11 +35,11 @@ from mlopt_core.egraph.terms import verify_certificate
 from mlopt_core.laws import all_rules
 from mlopt_core.policies import RandomPolicy
 from mlopt_orchestrator.optimize import search
-from mlopt_torch.adapters import TorchSource
-from mlopt_torch.graph_policy import GraphFeaturePolicy
-from mlopt_torch.learned_policy import train_rule_value
-from mlopt_torch.model_trajectories import model_rule_samples
-from mlopt_torch.models import (
+from kit_torch.adapters import TorchSource
+from kit_torch.graph_policy import GraphFeaturePolicy
+from kit_torch.learned_policy import train_rule_value
+from kit_torch.model_trajectories import model_rule_samples
+from kit_torch.models import (
     AttentionBlock,
     DeepParallel,
     GQAAttention,

@@ -328,10 +328,10 @@ def arm_eager(ntok: int) -> None:
 
 def arm_loop(iters: int, ntok: int, L: int, cpuparams: bool) -> None:
     import kit_carriers  # noqa: F401 — DECODE_RULES / ATN_SDPA_LAWS
-    import mlopt_torch  # noqa: F401 — torch bindings
+    import kit_torch  # noqa: F401 — torch bindings
     from kit_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     HARVEST = min(8, ntok - 2)
     m = load()

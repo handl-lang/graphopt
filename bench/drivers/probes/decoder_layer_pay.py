@@ -52,12 +52,12 @@ def count_ops(term, op):
 def main() -> None:
     iters = int(sys.argv[1]) if len(sys.argv) > 1 else 3
     import kit_carriers  # noqa: F401 — registers carriers + new laws
-    import mlopt_torch  # noqa: F401
+    import kit_torch  # noqa: F401
     from mlopt_orchestrator.optimize import (
         Optimizer,
         VerifyDeclinedError,
     )
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
     from transformers import WhisperForConditionalGeneration
 
     model = WhisperForConditionalGeneration.from_pretrained(

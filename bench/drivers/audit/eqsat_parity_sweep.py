@@ -113,7 +113,7 @@ def _run_arm(
         lower,
         search,
     )
-    from mlopt_torch.adapters import TorchSink, TorchSource
+    from kit_torch.adapters import TorchSink, TorchSource
 
     row: dict[str, Any] = {
         "engine": getattr(engine, "engine_name", None)

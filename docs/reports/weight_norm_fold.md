@@ -31,13 +31,13 @@ which already owns exactly this fold for `FOLD_OPS` members.
 
 | piece | file |
 |---|---|
-| op declaration (`register_op_meta`) | `packages/mlopt-torch/src/mlopt_torch/torch_bindings.py:57` |
+| op declaration (`register_op_meta`) | `packages/kit-torch/src/kit_torch/torch_bindings.py:57` |
 | `_weight_norm → weight_norm` alias | `torch_bindings.py:169` (`_ATEN_TO_IR_OVERRIDES`) |
 | `dim` positional-attr schema `{2: "dim"}` | `torch_bindings.py:259` (`_LOCAL_ATTR_SCHEMA_OVERRIDES`) |
 | `_weight_norm_torch` binding | `torch_bindings.py:1010` |
 | `"weight_norm"` in `_CORE_TORCH_BINDINGS` | `torch_bindings.py:1943` |
 | shape rule (output = `v`'s shape) | `torch_bindings.py:2128` |
-| `_EXTRA_FOLD_OPS = {"weight_norm"}` | `packages/mlopt-torch/src/mlopt_torch/torch_eval.py:39` |
+| `_EXTRA_FOLD_OPS = {"weight_norm"}` | `packages/kit-torch/src/kit_torch/torch_eval.py:39` |
 | fold dispatch (`FOLD_OPS or _EXTRA_FOLD_OPS`) | `torch_eval.py:723` |
 
 ## Semantics — exactness argument

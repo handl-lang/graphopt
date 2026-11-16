@@ -10,7 +10,7 @@
 #
 # This workflow runs all of them anyway, so CI cannot silently skip a
 # gate.  Every step is a hard failure.  The gate list mirrors
-# `.pre-commit-config.yaml` plus the coverage floor.
+# `.pre-commit-config.yaml`.
 #
 # Gate-by-gate rationale:
 #   * uv sync --group dev — the dev dependency group (ruff, ty, vulture,
@@ -37,10 +37,10 @@
 #     no function may exceed its pinned baseline, new ones stay <= C.
 #   * typeguard runtime contracts — runtime enforcement of annotations
 #     over the torch-free core (curated green subset).
-#   * coverage run + coverage report -m — the full suite under the
-#     pinned 100% coverage floor ([tool.coverage.report] fail_under),
-#     applied to the shipped packages (mlopt_torch — the remaining
-#     in-repo floor; the kit-* floors live in their own repos).
+#   * test suite (full) — the whole cross-stack suite once, no
+#     coverage stage: every shipped package split to its own repo and
+#     carries its measured floor there (kit-torch was the last,
+#     P3 Step D-1e).
 #
 # NOTE: `coverage` is invoked as `.venv/bin/coverage` because CI does
 # not activate the virtualenv between steps (uv sync only creates it).
@@ -98,12 +98,5 @@ jobs:
       - name: typeguard runtime contracts
         run: sh scripts/runtime_types.sh
 
-      - name: coverage run (full suite)
-        run: >-
-          .venv/bin/coverage run
-          --source=mlopt_torch
-          -m pytest tests/ -q
-
-      - name: coverage report (fail_under=100, shipped packages)
-        run: >-
-          .venv/bin/coverage report -m
+      - name: test suite (full)
+        run: .venv/bin/python -m pytest tests/ -q

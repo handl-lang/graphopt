@@ -39,7 +39,7 @@ from kit_onnx import (
     UnsupportedOnnxOpError,
 )
 from mlopt_orchestrator.optimize import Optimizer
-from mlopt_torch.torch_bridge import export_to_ir
+from kit_torch.torch_bridge import export_to_ir
 from onnx import TensorProto, helper, numpy_helper
 
 DT = np.float32

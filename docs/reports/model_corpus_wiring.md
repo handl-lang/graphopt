@@ -49,7 +49,7 @@ recorded-report and whole-model-compositional cases).
 ```python
 from mlopt_discovery import model_corpus as mc
 from mlopt_orchestrator import Optimizer
-from mlopt_torch.backend import TorchBackend
+from kit_torch.backend import TorchBackend
 
 opt = Optimizer(backend=TorchBackend())
 mod, stats = opt.optimize(

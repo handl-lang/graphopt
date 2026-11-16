@@ -69,8 +69,8 @@ from kit_discovery.impact import (
     _relax,
 )
 from mlopt_orchestrator import DEFAULT_RULES
-from mlopt_torch.adapters import TorchSink
-from mlopt_torch.torch_bridge import export_to_ir
+from kit_torch.adapters import TorchSink
+from kit_torch.torch_bridge import export_to_ir
 
 #: Per-node FLOPs at/above this are the cost model's "cannot price"
 #: mark — excluded from the weights, counted honestly as unpriced.

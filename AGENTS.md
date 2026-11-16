@@ -5,9 +5,13 @@ The GitHub repo is `handl-lang/graphopt` (renamed from
 name below are unchanged).
 
 Categorical optimization of neural-network computation graphs
-(Python 3.13, torch + numpy). Monorepo layout: the domain packages
-live under `packages/` (`mlopt-core` — the torch-free engine;
-`mlopt-torch` — PyTorch adapters; the carrier
+(Python 3.13, torch + numpy).  Every shipped Python package has now
+split to its own repo — `packages/` keeps only the Rust/maturin
+crates (`mlopt-kit`, `mlopt-experiments`, `mlopt-handl-peer`).  The
+PyTorch adapters/backend `kit-torch` — **split to
+`handl-lang/kit-torch` in P3 Step D-1e** (was
+`packages/mlopt-torch`; pin `kit-torch` git dep, import
+`kit_torch`; package-bound tests travelled with it); the carrier
 laws/executors — `kit-carriers`, **split to
 `handl-lang/kit-carriers` in P3 Step D-1b** (was
 `packages/mlopt-carriers`; pin `kit-carriers` git dep, import
@@ -16,7 +20,7 @@ laws/executors — `kit-carriers`, **split to
 `handl-lang/kit-cuda` in P3 Step D-1c** (was
 `packages/mlopt-cuda`; pin `kit-cuda` git dep, import
 `kit_cuda`; package-bound tests travelled with it);
-`mlopt-orchestrator` — the backend-neutral pipeline;
+`mlopt-orchestrator` — the backend-neutral pipeline (eqsat);
 the ONNX backend `kit-onnx` — ADR 0006: `OnnxSink` lowers IR to
 a checked ONNX artifact, `OnnxSource` lifts ONNX graphs back to IR;
 both verified through onnxruntime — **split to
@@ -58,7 +62,7 @@ The optional
 the uv workspace and built with maturin — is opt-in via `engine=`.
 The `mlopt` façade is gone (plan 0008): `import mlopt` fails and
 every name lives at its real package path — `mlopt_core.egraph`,
-`mlopt_torch.adapters`, `mlopt_orchestrator.optimize`,
+`kit_torch.adapters`, `mlopt_orchestrator.optimize`,
 `kit_cuda.CudaGraphRunner`, … Tests in
 `tests/`. The dev virtualenv is `.venv/` (uv-managed).
 
@@ -70,16 +74,17 @@ git+ssh deps on `packages/` subdirs (see `[tool.uv.sources]`); the
 package/import names are unchanged.  The substrate-only test files
 travelled with them — domain-bound test functions carved out live in
 `tests/test_substrate_domain_edges.py`.  Coverage floors now apply
-per-repo: this repo's wall is the domain packages
-(`fail_under=100` on `mlopt_torch`;
+per-repo — and with `kit-torch` (P3 Step D-1e) the last shipped
+package left, so **this repo carries no coverage floor anymore**:
 `mlopt_onnx` split to handl-lang/kit-onnx in P3 Step D-1,
 `kit_carriers` to handl-lang/kit-carriers in P3 Step D-1b,
-`kit_cuda` to handl-lang/kit-cuda in P3 Step D-1c and
-`kit_discovery` to handl-lang/kit-discovery in P3 Step D-1d —
-their floors live there); this repo still measures the installed
-`kit_discovery` through the cross-stack suite under a re-baselined
-ratchet stage in `scripts/gates.sh`/`ci.yml`).  The substrate and
-game floors were re-measured in their own repos (56% / 98%).
+`kit_cuda` to handl-lang/kit-cuda in P3 Step D-1c,
+`kit_discovery` to handl-lang/kit-discovery in P3 Step D-1d,
+`kit_host_tensor` to handl-lang/kit-host-tensor in P3 Step D-1f and
+`kit_torch` to handl-lang/kit-torch in P3 Step D-1e — every floor
+lives in its own repo now.  This repo keeps the cross-stack suite
+(`tests/` + `bench/`) that exercises the kit deps through the git
+pins.
 
 **The research/measurement surface is `bench/`** — the dissolved
 `lab/` lives there now, beside the harnessed benchmark package
@@ -238,9 +243,10 @@ Run these before finishing any change; all must pass.
 
 **One command instead of the list:** `scripts/gates.sh` runs the static
 gates cheap-first, then the suite.  It has two lanes:
-`MLOPT_GATES_LANE=dev` (default) runs `-m "not slow"` with no coverage —
-the day-to-day gate; `=full` runs **everything once under coverage** and
-enforces both floors (CI/release).  It defaults to a **serial** suite
+`MLOPT_GATES_LANE=dev` (default) runs `-m "not slow"` —
+the day-to-day gate; `=full` runs **everything once** (CI/release).
+No coverage stage: the floors moved to the kit repos with the packages
+(P3 Step D-1e was the last).  It defaults to a **serial** suite
 (`MLOPT_GATES_NP=1`): the full-suite `-n 2` arm was measured
 (2026-10-15) and **neither arm finished inside a 30-min box**, so the
 parallel arm is not a safe default on this 11 GB host — see the
@@ -288,10 +294,10 @@ runs everything.
 - `requires_cuda` — hardware gate, unchanged.
 
 ```sh
-# smoke (~5 s): fast core sanity — 81 tests (the substrate smoke files
-# moved to eqsat with the split; these are the domain-side pins)
-.venv/bin/python -m pytest tests/test_law_order.py \
-    tests/test_law_provenance.py tests/test_decode_geom.py -q
+# smoke (~5 s): fast core sanity — the domain-side pins that remain
+# in this repo (the law/substrate smoke files moved to the kit repos)
+.venv/bin/python -m pytest tests/test_cost_edge_cases.py \
+    tests/test_meta_edges.py tests/test_dtype_registry.py -q
 
 # core lane: unit/integration only — no external engines, no soaks
 .venv/bin/python -m pytest -m "not e2e and not slow"     # 6,139 tests
@@ -299,12 +305,12 @@ runs everything.
 # dev lane: everything except the minutes-scale
 .venv/bin/python -m pytest -m "not slow"                 # 6,836 tests
 
-# gate: everything, once, under coverage
+# gate: everything, once
 scripts/gates.sh
 ```
 
 ```sh
-# The shipped source: packages/ + scripts/ + examples/.
+# The shipped source: scripts/ + examples/ (packages/ holds no Python).
 .venv/bin/ty check            # typecheck — 0 errors required (warnings OK)
 .venv/bin/ruff check packages scripts examples   # lint
 .venv/bin/ruff format --check packages scripts examples   # formatting
@@ -314,14 +320,13 @@ scripts/gates.sh
 .venv/bin/semgrep --config .semgrep.yml packages   # dataflow (offline)
 .venv/bin/python scripts/radon_ratchet.py   # complexity ratchet
 
-# The suite, once, under coverage (both floors below).
-uv run pytest                 # 6,867 tests; does NOT finish in 30 min on
+# The suite, once.
+uv run pytest                 # does NOT finish in 30 min on
                               # either serial or `-n 2` (see the table
                               # below).  Iterate with `-m "not slow"`.
                               # Single-process: see the warning below.
-coverage run -m pytest tests/ -q   # source list: the four shipped packages + kit_discovery
-coverage report -m --omit="*/kit_discovery/*"   # the shipped packages: fail_under=100
-coverage report -m --include="*/kit_discovery/*" --fail-under=NN   # cross-stack ratchet — measured NN%; tighten, never lower
+# (No coverage gate: every shipped package — kit_torch last — carries
+# its measured floor in its own repo now.)
 ```
 
 **Scope the ruff commands to the shipped source, as above.**  The bare
@@ -411,7 +416,7 @@ Manual-stage gates (not run on every commit — network/slower):
 .venv/bin/pip-audit                                          # dependency CVEs (network)
 .venv/bin/semgrep --config p/python --config p/security-audit packages  # registry rules (network)
 sh scripts/runtime_types.sh                                    # typeguard runtime contracts
-MUTMUT_ONLY=mlopt_torch/region_fuse.py MUTMUT_TESTS='tests/test_region_fuse.py' scripts/mutmut.sh run  # mutation testing
+MUTMUT_ONLY=kit_torch/region_fuse.py MUTMUT_TESTS='tests/test_region_fuse.py' scripts/mutmut.sh run  # mutation testing
 ```
 
 Pre-commit (`pre-commit install`) runs ruff check/format, **ty**,
@@ -449,11 +454,12 @@ configured in `pyproject.toml`):
 
 - **vulture** (`[tool.vulture]`, `min_confidence = 80`) flags
   unreachable / unused code across `packages` / `tests`.
-  The suite is pinned at 100% coverage, so a genuine dead branch is a
-  real finding, not noise.  Run `.venv/bin/vulture` (uses the
+  A genuine dead branch is a real finding, not noise (the 100%
+  coverage wall left with `kit_torch` in P3 Step D-1e — floors live
+  in the kit repos).  Run `.venv/bin/vulture` (uses the
   configured `paths`); a non-zero exit (3) means dead code.
 - **import-linter** (`[tool.importlinter]`) pins the hexagonal boundary:
-  a `forbidden` contract makes `mlopt_core` importing `mlopt_torch` /
+  a `forbidden` contract makes `mlopt_core` importing `kit_torch` /
   `kit_carriers` / `mlopt_orchestrator` — or the `torch`
   / `numpy` external packages — a hard error.  Run
   `.venv/bin/lint-imports`.  Core is a *sink* for adapter-pushed state
@@ -513,7 +519,7 @@ error.  The gate applies to shipped code only — `tests/**` and
 
 `typeguard` (dev dep) enforces annotations at runtime.
 `scripts/runtime_types.sh` instruments only the domain packages —
-`--typeguard-packages=mlopt_torch,kit_carriers` (the substrate's own
+`--typeguard-packages=kit_torch,kit_carriers` (the substrate's own
 instrumentation moved to `eqsat` with it; `kit_carriers` is the
 installed kit-carriers git dep) — and runs the curated
 21-file list (the carrier-bound files moved to kit-carriers with the
@@ -542,7 +548,8 @@ name, so the wrapper symlinks each package at the sandbox top level
 (path == import name) plus `tests/` and `uv.lock`, and writes
 the matching `[tool.mutmut]`.  Scope a fast loop with `MUTMUT_ONLY` /
 `MUTMUT_TESTS`; a surviving mutant is a weak-assertion finding (the
-suite is pinned at 100% coverage, so it is not a coverage gap).  The
+the coverage floor left with the package (P3 Step D-1e), so it is
+not a coverage gap here).  The
 editable-finder drop in `tests/conftest.py` exists solely so the
 sandbox's mutated copies win over uv's editable install.
 
@@ -589,7 +596,7 @@ port is `Binding` (`TorchBinding` is an alias of the same object).
 `mlopt_orchestrator.Optimizer` takes the ports as a
 `mlopt_core.pipeline.Backend` value (torch:
 `Optimizer(backend=TorchBackend())`, the
-`mlopt_torch.backend.TorchBackend` bundle of
+`kit_torch.backend.TorchBackend` bundle of
 `TorchSource`/`TorchSink`/`TorchComposer`/`TorchMeter`) or explicitly
 (`source=`/`sink=`/…); `discover_alternatives` takes `source=`.
 There is no default backend.
@@ -608,26 +615,24 @@ package registers a `CarrierMachinery` value — all thunks, so
 registration loads no tensor library — when it is imported.  Without a
 registration the passes degrade to their carrier-free defaults.  The
 remaining package graph is pinned by the import-linter `dependency
-layers` contract: `kit_cuda` above `mlopt_torch` above
+forbidden/layers contracts: `kit_cuda` above `kit_torch` above
 `mlopt_orchestrator`, above `mlopt_native`, above `mlopt_core` (the
 carriers' own layering contract lives in the kit-carriers repo; the
-`mlopt_torch` → `kit_carriers` edge here stays lazy and undeclared —
+`kit_torch` → `kit_carriers` edge here stays lazy and undeclared —
 the declared direction is carriers → torch; `kit_cuda` sits above
-`mlopt_torch` — its layering contract lives in the kit-cuda repo).
-`mlopt_torch` does not depend on `kit_cuda`; import `CudaGraphRunner`
+`kit_torch` — its layering contract lives in the kit-cuda repo).
+`kit_torch` does not depend on `kit_cuda`; import `CudaGraphRunner`
 from `kit_cuda`.
 
 ## Conventions
 
 - Line length 72 (ruff). E501/B008/SIM108 intentionally ignored — see
   `[tool.ruff.lint]` for rationale.
-- Coverage floor: `fail_under = 100` in `[tool.coverage.report]` —
-  the suite is pinned at 100% for the shipped packages
-  (`mlopt_torch`; `mlopt_onnx` climbed to
-  the wall here, then split to handl-lang/kit-onnx in P3 Step D-1 —
-  see `project/retros/onnx-package.md`; `kit_carriers` split to
-  handl-lang/kit-carriers in P3 Step D-1b and `kit_cuda` to
-  handl-lang/kit-cuda in P3 Step D-1c the same way); new branches
+- Coverage: no in-repo floor anymore — the last shipped package
+  (`kit_torch`, P3 Step D-1e) carried the `fail_under = 100` wall out
+  with it; every kit repo measures its own.  `mlopt_onnx` climbed to
+  the wall here earlier and split to handl-lang/kit-onnx in P3 Step
+  D-1 (see `project/retros/onnx-package.md`); new branches
   need tests (or a justified `pragma: no cover`).
   `kit_discovery` split to handl-lang/kit-discovery in P3 Step D-1d
   — its package-bound suite and floor moved with it; this repo keeps
@@ -722,7 +727,7 @@ extraction (pipeline cost model) → `_lower_extracted` → `sink.verify` →
 timed before/after.  Table shows fired / rhs-member / picked / verified /
 cost & ms before→after; non-firing laws report honestly.  Add a builder
 in `LAW_CASES` keyed by rule name for new laws.  Gates: `uv run pytest`,
-`.venv/bin/ty`, `.venv/bin/ruff check` (packages), coverage stays 100.
+`.venv/bin/ty`, `.venv/bin/ruff check` (packages).
 
 Benchmarks are a package, not scripts: `python -m bench list` shows the
 catalog; `python -m bench run <suite>` emits JSON + Markdown + HTML +

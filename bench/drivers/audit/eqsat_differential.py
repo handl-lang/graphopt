@@ -781,7 +781,7 @@ def _eval(t: Any, env: dict[str, np.ndarray]) -> Any:
         return np.clip(a[0], 0.0, 6.0)
     if op == "linear":
         # F.linear(x[..., in], W[out, in]) = x @ Wᵀ — the weight's
-        # last two axes swap (mlopt_torch.torch_bindings); an optional
+        # last two axes swap (kit_torch.torch_bindings); an optional
         # third arg is the bias, broadcast-added like torch.
         out = a[0] @ np.swapaxes(a[1], -1, -2)
         if len(a) > 2:

@@ -5,7 +5,7 @@ CPU-only; no version bumps, no commits, no publishes — `0.1.0dev` stays.*
 
 ## What landed
 
-### 1. Artifact contract — `packages/mlopt-torch/src/mlopt_torch/export.py`
+### 1. Artifact contract — `packages/kit-torch/src/kit_torch/export.py`
 
 Every manifest now carries three contract fields alongside the
 existing `format`/`torch_version`/`runnable_standalone`/`weights_only`:
@@ -16,7 +16,7 @@ existing `format`/`torch_version`/`runnable_standalone`/`weights_only`:
   `ExportError`; manifests *predating* the field (no key) are read as
   schema-1, which is honest — they only ever named the four `format`
   values.
-- **`mlopt_version`** — the exporting `mlopt-torch` distribution
+- **`mlopt_version`** — the exporting `kit-torch` distribution
   version via `importlib.metadata` (`"unknown"` when the dist isn't
   installed, e.g. a bare source tree).
 - **`artifact_kind`** — `"runnable"` (`pt2`/`torchscript`: the artifact
@@ -37,7 +37,7 @@ not a drop-in `load_state_dict` for the original architecture).
 graphopt)"** section; `tests/test_public_api.py` pins it.  Decision:
 **freeze** `TorchBackend(...)`, `export_optimized`/`save_optimized`/
 `load_optimized`/`save_optimized_weights`/`ExportError`/`ARTIFACT_SCHEMA`
-(`mlopt_torch.export`), the runner constructors (`TorchCompileRunner`,
+(`kit_torch.export`), the runner constructors (`TorchCompileRunner`,
 `CudaGraphRunner`, `IdentityRunner`, `ChainedRunner`), and
 `Optimizer.optimize(model, x, *, strategy=None, **kw)`.
 
@@ -51,8 +51,8 @@ would calcify internals without protecting any consumer contract.
 
 Mechanics:
 
-- `_PUBLIC_SURFACE` extended with `mlopt_torch`,
-  `mlopt_torch.backend`, `mlopt_torch.export`, `mlopt_torch.runners`,
+- `_PUBLIC_SURFACE` extended with `kit_torch`,
+  `kit_torch.backend`, `kit_torch.export`, `kit_torch.runners`,
   `mlopt_cuda` rows.
 - New `TestFrozenSurface` — the mechanical pin (module imports, name
   resolves, `__all__` seats) that the phase-4 split left covering only
@@ -81,8 +81,8 @@ Mechanics:
 
 ### 4. Wheel-build smoke — feasible, verified
 
-`uv build --wheel` in `packages/mlopt-torch` **succeeds**
-(`mlopt_torch-0.1.0.dev0-py3-none-any.whl`, setuptools backend,
+`uv build --wheel` in `packages/kit-torch` **succeeds**
+(`kit_torch-0.1.0.dev0-py3-none-any.whl`, setuptools backend,
 bundles `artifacts/*.pt`).  Honest gap, now documented: a wheel
 install still needs `mlopt-core`/`mlopt-orchestrator`/`gamekit` from
 their own repos — there is no self-contained install, and no wheel CI

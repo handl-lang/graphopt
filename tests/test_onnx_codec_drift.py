@@ -82,8 +82,8 @@ def _ir_op_oracle() -> frozenset[str]:
     """
     from kit_host_tensor.bindings import HOST_BINDINGS
     from mlopt_core.opmeta import REGISTRY
-    from mlopt_torch.aten_classify import ATEN_TO_IR
-    from mlopt_torch.torch_bindings import _IR_TO_TORCH
+    from kit_torch.aten_classify import ATEN_TO_IR
+    from kit_torch.torch_bindings import _IR_TO_TORCH
 
     return (
         frozenset(REGISTRY)

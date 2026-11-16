@@ -2,7 +2,7 @@
 
 Fixes for the silent-wrong findings in
 `docs/reports/arch_audit_graphopt_packages.md` §1, all in
-`packages/mlopt-torch/src/mlopt_torch/torch_bridge.py`.  Regression
+`packages/kit-torch/src/kit_torch/torch_bridge.py`.  Regression
 tests: `tests/test_torch_bridge_audit_fixes.py` (22 tests);
 pre-existing decline-pinning tests updated in
 `tests/test_torch_bridge_edges.py`, `tests/test_intake_defects.py`

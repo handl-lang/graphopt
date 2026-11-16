@@ -469,8 +469,8 @@ def main() -> None:
     torch.cuda.empty_cache()
 
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
-    from mlopt_torch.torch_bridge import _IR_TO_TORCH
+    from kit_torch.backend import TorchBackend
+    from kit_torch.torch_bridge import _IR_TO_TORCH
 
     optz = Optimizer(backend=TorchBackend())
     t0 = time.time()
@@ -522,8 +522,8 @@ def main() -> None:
     del_mod = low.module
 
     from mlopt_core.ir import IR
-    from mlopt_torch.report import verify_module
-    from mlopt_torch.torch_eval import ir_to_torch_module
+    from kit_torch.report import verify_module
+    from kit_torch.torch_eval import ir_to_torch_module
 
     fused_ir = IR(
         root=fused_term,

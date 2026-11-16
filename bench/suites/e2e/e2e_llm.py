@@ -60,7 +60,7 @@ Honesty conventions:
   ``config=quarter_b (OOM fallback)``.
 
 Usage:
-    PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
+    PYTHONPATH="packages/mlopt-core/src:packages/kit-torch/src:\
 packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \\
         /tmp/kit-cuda-venv/bin/python bench/suites/e2e/e2e_llm.py --device cuda
 """
@@ -81,8 +81,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from mlopt_orchestrator import Compositional, Optimizer
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.report import verify_equiv
+from kit_torch.backend import TorchBackend
+from kit_torch.report import verify_equiv
 from torch.utils.benchmark import Timer
 
 from bench.benchkit import (

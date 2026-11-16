@@ -35,7 +35,7 @@ documented below, not fixed here).
   `CARRIERS` preset = 331 rules** once `mlopt_carriers` is
   registered (132 without it — carrier registration is import-time,
   so probe scripts that only import `mlopt_orchestrator` see the
-  smaller set; `mlopt_torch` pulls carriers in).
+  smaller set; `kit_torch` pulls carriers in).
 
 ## Where the time actually went
 
@@ -168,7 +168,7 @@ ops.
 
 ## Compositional strategy — does sub-block splitting help?
 
-Yes, structurally: `mlopt_torch.composer._default_block_pred`
+Yes, structurally: `kit_torch.composer._default_block_pred`
 selects children of `nn.ModuleList`/`nn.Sequential`, and
 `WhisperDecoder.layers` is a `ModuleList` of 6
 `WhisperDecoderLayer`s — `optimize(decoder, strategy=Compositional())`

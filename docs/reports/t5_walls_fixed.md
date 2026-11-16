@@ -1,7 +1,7 @@
 # T5 walls #1–#3 — fixes (torch_bridge)
 
 Follow-up to `t5_r1.md`.  All three pipeline walls lived in
-`packages/mlopt-torch/src/mlopt_torch/torch_bridge.py`; two of them
+`packages/kit-torch/src/kit_torch/torch_bridge.py`; two of them
 were *silent wrong answers*, the worst kind.  Wall 4
 (`_seq_scan_sites` host-RAM OOM in `mlopt_discovery.play`) is a
 different package and is **not** addressed here.

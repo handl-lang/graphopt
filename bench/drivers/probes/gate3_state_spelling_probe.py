@@ -400,8 +400,8 @@ def _verify_pair_terms(t: int, a: Any, b: Any) -> None:
     import torch
     from mlopt_core.ir import IR
     from kit_discovery.zoo import _ChunkedRetention
-    from mlopt_torch.adapters import TorchSink
-    from mlopt_torch.torch_bridge import export_to_ir
+    from kit_torch.adapters import TorchSink
+    from kit_torch.torch_bridge import export_to_ir
 
     torch.manual_seed(0)
     model = _ChunkedRetention(16).eval().double()

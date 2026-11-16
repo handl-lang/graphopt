@@ -10,7 +10,7 @@ equivalent spelling of your model's graph.
 
 ```python
 from mlopt_orchestrator import Optimizer
-from mlopt_torch import TorchBackend
+from kit_torch import TorchBackend
 
 opt_mod, stats = Optimizer(backend=TorchBackend()).optimize(model, x)
 ```
@@ -48,7 +48,7 @@ opt_mod, stats = Optimizer(backend=TorchBackend()).optimize(
 
 ```python
 from kit_cuda import CudaGraphRunner
-from mlopt_torch import TorchCompileRunner
+from kit_torch import TorchCompileRunner
 
 opt_mod, stats = opt.optimize(model, x, runner=TorchCompileRunner())
 opt_mod, stats = opt.optimize(model, x, runner=CudaGraphRunner())

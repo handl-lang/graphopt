@@ -47,7 +47,7 @@ from mlopt_orchestrator.optimize import (
     lower,
     search,
 )
-from mlopt_torch.adapters import TorchSink, TorchSource
+from kit_torch.adapters import TorchSink, TorchSource
 
 from bench.discovery.cases import DiscoveryCase
 from bench.discovery.fixtures import SOURCES

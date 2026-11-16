@@ -15,14 +15,14 @@ bench hunts on five/six real-topology cells:
   reordering) and the product-law pairing of the three input
   projections into one GEMM.
 * ``palm_stack`` — PaLM/GPT-J parallel blocks
-  ``x + attn(norm x) + mlp(norm x)`` (``mlopt_torch.models.ParallelBlock``
+  ``x + attn(norm x) + mlp(norm x)`` (``kit_torch.models.ParallelBlock``
   ×2): five same-input projections the pairing pass can fold into
   one GEMM per block.  Same FLOPs, fewer launches.
 * ``moe_sum`` — mixture-of-small-matmuls / model-soup merge:
   ``Σ_i x @ W_i`` over 8 experts — ``weight_factor_linear`` folds it
   to ONE matmul (a real FLOP cut deployment tools do by hand).
 * ``conv_stem`` — ResNet-style 1×1 multi-branch stem
-  (``mlopt_torch.models.ParallelConv``): 4 same-input convs paired into
+  (``kit_torch.models.ParallelConv``): 4 same-input convs paired into
   one cuDNN call; Inductor does not fuse conv calls.
 * ``decode_retnet`` — chunked streaming decode of a RetNet step,
   UNBATCHED vector state (the form the affine carrier lifts): the
@@ -74,7 +74,7 @@ medians stable within ~10-20%):
   lift, not the timing, layer.
 
 Usage:
-    PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
+    PYTHONPATH="packages/mlopt-core/src:packages/kit-torch/src:\
 packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \
         /tmp/kit-cuda-venv/bin/python bench/suites/speedup/real_win_hunt.py \
         --device cuda
@@ -100,9 +100,9 @@ import torch
 import torch.nn as nn
 from mlopt_orchestrator import Optimizer
 from mlopt_orchestrator.optimize import Autotuned
-from mlopt_torch.autotune import TORCH_BUILDERS
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.models import (
+from kit_torch.autotune import TORCH_BUILDERS
+from kit_torch.backend import TorchBackend
+from kit_torch.models import (
     ParallelBlock,
     ParallelConv,
     ParallelLinear,

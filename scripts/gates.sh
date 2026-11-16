@@ -6,7 +6,10 @@
 # (`coverage run -m pytest tests/ -q`).  CI (`.github/workflows/ci.yml`)
 # only ever ran it once, under coverage, so the local duplicate bought
 # nothing and doubled the wall time.  This script runs the suite
-# exactly once, under coverage, and then applies both coverage floors.
+# exactly once.  (The coverage floors left with the last shipped
+# package in P3 Step D-1e — every domain package now lives in its own
+# repo and carries its measured floor there; this repo keeps the
+# cross-stack suite that exercises them through the git deps.)
 #
 # Order is cheap-first so a red gate fails fast: the static gates
 # (seconds) run before the suite (tens of minutes).
@@ -16,20 +19,19 @@
 #     MLOPT_GATES_NP=1 scripts/gates.sh  # force the suite serial
 #
 # Test lanes (the suite is tiered by kind — see AGENTS.md):
-#     smoke:  .venv/bin/python -m pytest tests/test_law_order.py \
-#               tests/test_law_provenance.py tests/test_decode_geom.py -q   # 81 tests, ~5 s
+#     smoke:  .venv/bin/python -m pytest tests/test_cost_edge_cases.py \
+#               tests/test_meta_edges.py tests/test_dtype_registry.py -q
 #     core:   -m "not e2e and not slow"             # unit/integration only
 #     dev:    -m "not slow"                         # drops the minutes-scale
-#     gate:   this script (everything, once, under coverage)
+#     gate:   this script (everything, once)
 #
 # Env knobs:
 #     MLOPT_GATES_LANE
 #         `dev` (default) — the day-to-day gate: static gates + the suite
-#         with `-m "not slow"` (the minutes-scale soak tests are excluded;
-#         coverage is not collected and the floors do not apply — both are
-#         full-suite properties).  `full` — everything, once, under
-#         coverage, both floors enforced.  CI/release runs should use
-#         `full`.
+#         with `-m "not slow"` (the minutes-scale soak tests are excluded).
+#         `full` — everything, once (no coverage stage: the floors moved
+#         to the kit repos with the packages).  CI/release runs should
+#         use `full`.
 #     MLOPT_GATES_NP
 #         xdist worker count for the suite stage.  Default 1 (serial) —
 #         see the measured serial-vs-parallel table in AGENTS.md.  Set to
@@ -95,30 +97,18 @@ stage "semgrep"         -- .venv/bin/semgrep --config .semgrep.yml packages
 stage "radon ratchet"   -- $PY scripts/radon_ratchet.py
 
 if [[ "$LANE" == "full" ]]; then
-    echo "== test suite (once, under coverage) =="
-    rm -f .coverage .coverage.*
+    echo "== test suite (everything, once) =="
     suite_s=$SECONDS
     if [[ "$NP" -gt 1 ]]; then
-        # pytest-cov combines xdist workers' coverage (a bare `coverage run`
-        # does not measure the worker subprocesses).  Its own fail_under
-        # check is disabled here: the `coverage report` stage below owns
-        # the floor.
-        $PY -m pytest tests/ -q -n "$NP" --cov --cov-report= --cov-fail-under=0
+        $PY -m pytest tests/ -q -n "$NP"
     else
-        .venv/bin/coverage run -m pytest tests/ -q
+        $PY -m pytest tests/ -q
     fi
     printf '  [ok] %-26s %3ds\n' "suite (NP=$NP)" "$((SECONDS - suite_s))"
-
-    echo "== coverage floors =="
-    # The shipped domain packages: fail_under=100 (config).
-    # (mlopt_core/-orchestrator/gamekit left at the phase-4 split —
-    # their floors live in the eqsat/gamekit repos.)
-    stage "coverage (domain wall, =100)" -- \
-        .venv/bin/coverage report -m
 else
     # dev lane — the day-to-day gate: suite minus the minutes-scale `slow`
-    # tests, no coverage (floors are a full-suite property; see LANE doc).
-    echo "== test suite (dev lane: -m 'not slow', no coverage) =="
+    # tests.
+    echo "== test suite (dev lane: -m 'not slow') =="
     suite_s=$SECONDS
     if [[ "$NP" -gt 1 ]]; then
         $PY -m pytest tests/ -q -n "$NP" -m "not slow"

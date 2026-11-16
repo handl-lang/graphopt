@@ -13,7 +13,7 @@ moved — the whole module surface stayed put).
 
 - `import torch` (line 48) and `_DEV = torch.device("cpu")`
   (line 87 — a module-level constant evaluated at import);
-- `from mlopt_torch.adapters import TorchSink, TorchSource`
+- `from kit_torch.adapters import TorchSink, TorchSource`
   (lines 64–65);
 - `class _LSTMSeq(torch.nn.Module)` — a module-level class whose
   base class binds torch at import.
@@ -26,7 +26,7 @@ had before the proposal pass).
 
 ## What changed (`impact.py`)
 
-- Module-level `import torch` and the `mlopt_torch.adapters` import
+- Module-level `import torch` and the `kit_torch.adapters` import
   removed; `TorchSink` is now a `TYPE_CHECKING`-only import so the
   `sink: TorchSink` annotations on `_cost_fn` / `_probe` /
   `reach_row` still resolve for `ty` (runtime annotations are lazy
@@ -35,14 +35,14 @@ had before the proposal pass).
   passes `torch.device("cpu")` to the builders.
 - `_LSTMSeq` moved **inside** `_model_cases` — the only consumer —
   so its `torch.nn.Module` base never binds at import.
-- `_model_cases` gained `import torch` + the `mlopt_torch.models`
+- `_model_cases` gained `import torch` + the `kit_torch.models`
   imports lazily (they were already function-local for the models;
   `import torch` joined them).
 - `_synthetic_case` gained a lazy `import torch` (the fp64 feed
   generator).
 - New lazy backend factories, mirroring `proposal_core._eval_backend`:
-  - `_torch_source()` → `TorchSource()` (lazy `mlopt_torch.adapters`)
-  - `_torch_sink()` → `TorchSink()` (lazy `mlopt_torch.adapters`)
+  - `_torch_source()` → `TorchSource()` (lazy `kit_torch.adapters`)
+  - `_torch_sink()` → `TorchSink()` (lazy `kit_torch.adapters`)
 - **Injected-backend API** (the `evaluate(numeric=...)` analogue):
   - `model_cases(source=None)` — *source* is anything with
     `to_ir(model, x)`; default is the lazily-bound `TorchSource`.
@@ -73,10 +73,10 @@ name moved, so no shim was required — every consumer binding
 
 Without torch, the torch-touching paths raise `ImportError` at call
 time (verified in a `sys.modules['torch'] = None` +
-`sys.modules['mlopt_torch'] = None` subprocess):
+`sys.modules['kit_torch'] = None` subprocess):
 
 - `im._bench_cases()` → `ImportError: import of torch halted`
-- `im.model_cases()` → `ImportError` (`mlopt_torch.adapters`)
+- `im.model_cases()` → `ImportError` (`kit_torch.adapters`)
 - `im.synthetic_cases()` → `ImportError: import of torch halted`
 - `cs.corpus()` / `cs.run_census()` / `cs.main()` → `ImportError`
   via the impact corpus builders
@@ -91,7 +91,7 @@ runs on caller-supplied terms with no torch at all.
 ```
 import sys
 sys.modules['torch'] = None
-sys.modules['mlopt_torch'] = None
+sys.modules['kit_torch'] = None
 import mlopt_discovery.impact   # OK
 import mlopt_discovery.census   # OK
 ```

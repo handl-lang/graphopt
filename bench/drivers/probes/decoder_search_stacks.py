@@ -37,7 +37,7 @@ def main() -> None:
     faulthandler.dump_traceback_later(60, repeat=True)
     from transformers import WhisperForConditionalGeneration
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     model = WhisperForConditionalGeneration.from_pretrained(
         MODEL, torch_dtype=torch.float32, attn_implementation="eager"

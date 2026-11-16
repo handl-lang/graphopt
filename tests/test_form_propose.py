@@ -217,8 +217,8 @@ def test_boundary_residual_is_a_value_mismatch():
     from mlopt_core.cost import flops_cost
     from mlopt_core.ir import IR
     from kit_discovery.zoo import _ChunkedRetention
-    from mlopt_torch.adapters import TorchSink
-    from mlopt_torch.torch_bridge import export_to_ir
+    from kit_torch.adapters import TorchSink
+    from kit_torch.torch_bridge import export_to_ir
 
     from kit_discovery.index_abstract import block_outputs
     from bench.drivers.probes import om_shared_state_probe as osp

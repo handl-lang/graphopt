@@ -5,7 +5,7 @@ incumbent spelling while FLA-style fused kernels sit ~7-11x ahead
 (``project/retros/retnet-external-baselines.md``, ``docs/results.md``
 §5).  The suspected cause is lowering, not semantics: the shipped
 delivery lowers extracted terms to per-leaf generic torch ops (the
-:class:`~mlopt_torch.torch_bridge.IRModule` plan tape), fp64 GEMMs on a
+:class:`~kit_torch.torch_bridge.IRModule` plan tape), fp64 GEMMs on a
 1:64-rate consumer GPU, and materialized intermediates — while the
 carrier executor batching (``decayed_lower``) and the CUDA-graph
 runner exist but only cover what claims them.
@@ -79,8 +79,8 @@ from mlopt_orchestrator.optimize import (
     VerifyDeclinedError,
     _lower_extracted,
 )
-from mlopt_torch.adapters import TorchSink, TorchSource
-from mlopt_torch.backend import TorchBackend
+from kit_torch.adapters import TorchSink, TorchSource
+from kit_torch.backend import TorchBackend
 
 GAMMA = 0.9
 

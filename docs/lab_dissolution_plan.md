@@ -58,7 +58,7 @@ auditing a committed artifact:
 | `lab/train/train_open_prior.py` | `scripts/train_open_prior.py` | `lawdata.OPEN_GAME_PLAYER_WEIGHTS` literal |
 | `lab/train/train_player_meta_arm.py` | `scripts/train_player_meta_arm.py` | `lawdata.PLAYER_ARENA_PLAYER_WEIGHTS` literal |
 | `lab/train/train_meta_macro_prior.py` | `scripts/train_meta_macro_prior.py` | the macro-aware meta-prior literal |
-| `lab/train/train_contraction_artifact.py` | `scripts/train_contraction_artifact.py` | `mlopt_torch/artifacts/contraction_policy_curriculum.pt` |
+| `lab/train/train_contraction_artifact.py` | `scripts/train_contraction_artifact.py` | `kit_torch/artifacts/contraction_policy_curriculum.pt` |
 | `lab/handl-spike/dump_fragments.py` | `scripts/dump_fragments.py` | `lab/handl-spike/fragments*/` (peer-test fixtures) |
 | `lab/audit/dspec_audit.py` | `scripts/dspec_audit.py` | the shipped-`dspec` vs git-oracle audit |
 
@@ -81,7 +81,7 @@ Reference updates landed with the moves:
   `lab/probes/conv_bn_fold_synth_probe.py` — the by-path
   `importlib` loaders repointed `lab/audit/` → `scripts/`.
 - Doc references: `lawdata/game/weights.py` (6 sites), `open_game.py` (2),
-  `mlopt_torch/contraction_policy.py` (2 — incl. a stale `tools/`
+  `kit_torch/contraction_policy.py` (2 — incl. a stale `tools/`
   ref), `tests/test_discovery_{meta,open}_prior.py`, `AGENTS.md`.
 - `scripts/dump_fragments.py` still defaults its output into
   `lab/handl-spike/fragments/` — the spike owns the committed

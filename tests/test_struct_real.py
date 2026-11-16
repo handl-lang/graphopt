@@ -26,10 +26,10 @@ import os
 import pytest
 import torch
 from mlopt_core.cost import flops_cost, param_bytes_cost_for
-from mlopt_torch.composer import param_report
+from kit_torch.composer import param_report
 from mlopt_orchestrator import Optimizer
 
-from mlopt_torch.backend import TorchBackend
+from kit_torch.backend import TorchBackend
 
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -258,7 +258,7 @@ def test_tied_embedding_classifier_if_stored_twice():
     share_duplicate_params merges the two Param leaves bitwise and the
     optimised file stores one copy — the pass would have exposed the
     tying rather than needing it declared."""
-    from mlopt_torch.composer import param_report
+    from kit_torch.composer import param_report
 
 
     torch.manual_seed(4)

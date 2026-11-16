@@ -58,8 +58,8 @@ from kit_onnx import (
     verify_equiv,
 )
 from mlopt_orchestrator.optimize import Optimizer
-from mlopt_torch.adapters import TorchSource
-from mlopt_torch.torch_bridge import export_to_ir
+from kit_torch.adapters import TorchSource
+from kit_torch.torch_bridge import export_to_ir
 
 DT = torch.float32
 
@@ -174,7 +174,7 @@ import sys
 
 class _Blocker:
     def find_spec(self, name, path=None, target=None):
-        if name.split(".")[0] in ("torch", "mlopt_torch",
+        if name.split(".")[0] in ("torch", "kit_torch",
                                   "kit_carriers", "kit_cuda"):
             raise ModuleNotFoundError(f"blocked import: {name}")
         return None
@@ -195,7 +195,7 @@ for _info in pkgutil.walk_packages(
     importlib.import_module(_info.name)
 
 assert "torch" not in sys.modules, sorted(sys.modules)
-assert "mlopt_torch" not in sys.modules
+assert "kit_torch" not in sys.modules
 assert "kit_carriers" not in sys.modules
 assert "mlopt_orchestrator" not in sys.modules
 

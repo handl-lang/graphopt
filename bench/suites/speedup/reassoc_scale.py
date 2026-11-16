@@ -79,8 +79,8 @@ from mlopt_core.laws import (
 )
 from mlopt_core.typing import has_var_leaf
 from mlopt_orchestrator import Optimizer
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.torch_bridge import export_to_ir
+from kit_torch.backend import TorchBackend
+from kit_torch.torch_bridge import export_to_ir
 
 from bench.benchkit import (
     Case,

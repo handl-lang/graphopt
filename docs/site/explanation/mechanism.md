@@ -91,7 +91,7 @@ representations from drifting silently.
 In [`eqsat`](https://github.com/handl-lang/eqsat): `mlopt_core` (IR,
 `EGraph`, laws, `verify_certificate`, cost models) ·
 `mlopt_orchestrator` (`Optimizer`, `search`, `lower`) — pinned here as
-git deps. In this repo: `mlopt_torch` / `kit_onnx` (the
+git deps. In this repo: `kit_torch` / `kit_onnx` (the
 `Source`/`Sink` ports) · `kit_discovery` (the meta-layer) ·
 `bench/drivers/` (measurement probes).
 

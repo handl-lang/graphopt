@@ -40,7 +40,7 @@ from kit_discovery.play import (
     _time_module,
     _triton_kernel_for,
 )
-from mlopt_torch.adapters import TorchSource
+from kit_torch.adapters import TorchSource
 
 _DTYPES = {"fp32": torch.float32, "fp64": torch.float64}
 

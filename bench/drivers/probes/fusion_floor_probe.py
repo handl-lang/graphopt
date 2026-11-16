@@ -210,7 +210,7 @@ def _region_leaves(root, members):
 
 def _eval_leaves(leaf_nodes, var_env, param_env, bindings, memo):
     """Evaluate boundary leaves once; shared memo dedups shared DAG."""
-    from mlopt_torch.torch_eval import eval_term
+    from kit_torch.torch_eval import eval_term
 
     out = {}
     for leaf in leaf_nodes:
@@ -295,10 +295,10 @@ def main() -> None:
     L = int(sys.argv[3]) if len(sys.argv) > 3 else 40
 
     import kit_carriers  # noqa: F401
-    import mlopt_torch  # noqa: F401
+    import kit_torch  # noqa: F401
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
-    from mlopt_torch.torch_bridge import _IR_TO_TORCH
+    from kit_torch.backend import TorchBackend
+    from kit_torch.torch_bridge import _IR_TO_TORCH
 
     HARVEST = min(6, ntok - 2)
     m = probe.load()

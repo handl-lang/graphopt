@@ -13,7 +13,7 @@ poisoned **before** the import:
 
 ```python
 import sys
-for n in ("torch", "mlopt_torch", "mlopt_carriers", "mlopt_cuda",
+for n in ("torch", "kit_torch", "mlopt_carriers", "mlopt_cuda",
           "mlopt_onnx"):
     sys.modules[n] = None
 import importlib
@@ -159,7 +159,7 @@ established lazy-bind contract:
   `family_synth`, `coherence2`, `training`, `play`,
   `player_arena`, `meta_arena`, `shape_proposal`, `verifier`,
   `law_order`, `oracle`, `impact`, `vocab`, `proposal_core`,
-  `shipped_primitives`: heavy lazy torch/`mlopt_torch` call surfaces
+  `shipped_primitives`: heavy lazy torch/`kit_torch` call surfaces
   (evaluation oracles, `TorchSink`/`TorchSource`, minted-op torch
   bindings, `torch.compile` codegen).  Import-clean per the seam
   contract — whether they *belong* in discoverykit is a packaging
@@ -176,7 +176,7 @@ the excluded set.  This report is the only file added.
 ## Verification
 
 - Sweep: 73 PASS / 12 FAIL, table above (script: per-module
-  subprocess, `sys.modules` poison for `torch`, `mlopt_torch`,
+  subprocess, `sys.modules` poison for `torch`, `kit_torch`,
   `mlopt_carriers`, `mlopt_cuda`, `mlopt_onnx`).
 - Existing seam pins still green:
   `tests/test_discovery_proposal.py::test_proposal_modules_import_without_torch`

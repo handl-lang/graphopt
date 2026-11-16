@@ -12,7 +12,7 @@ weight duplication (`_park_params`) and flagged two remaining gaps:
   (`SearchResult.param_values` + one `.clone()` per `IRModule`),
   ~6.5 GB for whisper-turbo bf16 on an 11 GB host.
 
-Both are addressed in `mlopt_torch.report` / `mlopt_torch.torch_bridge`
+Both are addressed in `kit_torch.report` / `kit_torch.torch_bridge`
 — no eqsat change was needed (see "Where the tolerance lives").
 
 ## GAP A — dtype-resolution rtol floor
@@ -96,7 +96,7 @@ are unchanged and still apply independently.
 
 ### Where the tolerance lives
 
-Only `mlopt_torch.report._verify_pair` computes it, so every torch
+Only `kit_torch.report._verify_pair` computes it, so every torch
 verify path inherits it: `verify_equiv`, `verify_module`,
 `TorchSink.verify`, the orchestrator's `lower`/`_optimize_compositional`/
 autotune/diagram gates (all call `sink.verify` — verified in

@@ -69,7 +69,7 @@ def main() -> None:
     import mlopt_orchestrator.optimize as opt
     from mlopt_core.egraph.core import EGraph
     from mlopt_core.laws import pairing
-    from mlopt_torch.adapters import TorchSource
+    from kit_torch.adapters import TorchSource
 
     # Saturation engine + non-local passes + extraction.  The pairing
     # helpers are ``from``-imported into ``optimize``'s namespace, so
@@ -94,7 +94,7 @@ def main() -> None:
 
     from transformers import WhisperForConditionalGeneration
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.backend import TorchBackend
 
     model = WhisperForConditionalGeneration.from_pretrained(
         MODEL, torch_dtype=torch.float32, attn_implementation="eager"

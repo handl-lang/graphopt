@@ -141,10 +141,10 @@ def pattern_ops(pat, counts=None):
 def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else "census"
     import kit_carriers  # noqa: F401 — registers the CARRIERS preset
-    import mlopt_torch  # noqa: F401 — torch bindings for export
+    import kit_torch  # noqa: F401 — torch bindings for export
     from mlopt_core.egraph import EGraph
     from mlopt_orchestrator.optimize import default_rules
-    from mlopt_torch.adapters import TorchSource
+    from kit_torch.adapters import TorchSource
     from transformers import WhisperForConditionalGeneration
 
     model = WhisperForConditionalGeneration.from_pretrained(

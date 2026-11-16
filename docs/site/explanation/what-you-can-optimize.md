@@ -49,7 +49,7 @@ tier rather than claiming `seqt`.
 
 ## The path for your model
 
-1. Express it in the tensor IR (Handl/`mlopt_torch` export).
+1. Express it in the tensor IR (Handl/`kit_torch` export).
 2. `opt.optimize(model, x)` — search, lower, verify ([how-to](../how-to/optimize-a-model)).
 3. For a whole new domain shape, a `domain_spec` JSON generates the
    playable domain and its own coverage ([define a domain](../how-to/define-a-domain)).

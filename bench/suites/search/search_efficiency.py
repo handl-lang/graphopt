@@ -77,7 +77,7 @@ from mlopt_core.laws import (
 )
 from mlopt_core.meta import canonicalize, stratified_run
 from mlopt_orchestrator import Optimizer
-from mlopt_torch.backend import TorchBackend
+from kit_torch.backend import TorchBackend
 
 from bench.benchkit import (
     Case,

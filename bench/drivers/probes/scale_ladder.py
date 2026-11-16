@@ -87,8 +87,8 @@ from mlopt_orchestrator.optimize import (
     Optimizer,
     default_rules,
 )
-from mlopt_torch.adapters import TorchSink
-from mlopt_torch.backend import TorchBackend
+from kit_torch.adapters import TorchSink
+from kit_torch.backend import TorchBackend
 
 # ``bench`` is a repo-root package, not an installed distribution —
 # ``kit_discovery.impact`` (imported above) puts the repo root on

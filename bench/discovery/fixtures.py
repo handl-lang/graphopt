@@ -477,7 +477,7 @@ def _gqa_repeat_kv(size: int):
     each kv head in-graph before ``F.sdpa``; ``gqa_absorb_repeat``
     pushes the copy into the kernel's ``enable_gqa`` flag.
     """
-    from mlopt_torch.models import RepeatKVAttention
+    from kit_torch.models import RepeatKVAttention
 
     t = max(4, size)
     return (

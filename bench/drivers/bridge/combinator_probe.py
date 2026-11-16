@@ -158,7 +158,7 @@ def screen_case(source: str, name: str, term: Any) -> Row:
 def _verify_pair(case: Any, rt_term: Any) -> float:
     """End-to-end: lower both terms, run on feeds, return max|Δ|."""
     from mlopt_core.ir import IR
-    from mlopt_torch.adapters import TorchSink
+    from kit_torch.adapters import TorchSink
 
     sink = TorchSink()
     ir_a = IR(
@@ -291,7 +291,7 @@ def gate2(
     from mlopt_core.cost import dag_cost, flops_cost
     from mlopt_core.ir import IR, Const, Param, TensorType, Var
     from kit_discovery.zoo import _ChunkedRetention
-    from mlopt_torch.adapters import TorchSink
+    from kit_torch.adapters import TorchSink
 
     torch.manual_seed(0)
     print("== gate 2: the shared-state carrier as a `loop` term ==")
@@ -485,8 +485,8 @@ def _verify_winner_terms(t: int, a: Any, b: Any) -> float:
     import kit_carriers  # noqa: F401
     from mlopt_core.ir import IR
     from kit_discovery.zoo import _ChunkedRetention
-    from mlopt_torch.adapters import TorchSink
-    from mlopt_torch.torch_bridge import export_to_ir
+    from kit_torch.adapters import TorchSink
+    from kit_torch.torch_bridge import export_to_ir
 
     torch.manual_seed(0)
     model = _ChunkedRetention(16).eval().double()

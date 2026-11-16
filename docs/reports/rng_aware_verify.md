@@ -11,7 +11,7 @@ could not distinguish "stochastic op" from "wrong kernel".
 ## Policy
 
 **Seeded-eval, auto-detected — never a statistical tolerance.**
-`mlopt_torch.report.verify_module` now:
+`kit_torch.report.verify_module` now:
 
 1. Snapshots the global RNG state — CPU (`torch.random.get_rng_state`)
    plus every visible CUDA device (`torch.cuda.get_rng_state_all`).
@@ -73,7 +73,7 @@ can resolve.
 
 ## Where it lives
 
-Only `mlopt_torch.report.verify_module` — so every torch verify path
+Only `kit_torch.report.verify_module` — so every torch verify path
 inherits it with **no eqsat change**:
 
 - `TorchSink.verify` (`adapters.py`) delegates and additionally

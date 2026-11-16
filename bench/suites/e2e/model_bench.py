@@ -53,7 +53,7 @@ Protocol per model (same contract as ``real_win_hunt``):
    ``reset_peak_memory_stats``.
 
 Usage:
-    PYTHONPATH="packages/mlopt-core/src:packages/mlopt-torch/src:\
+    PYTHONPATH="packages/mlopt-core/src:packages/kit-torch/src:\
 packages/kit-carriers/src:packages/mlopt-orchestrator/src:." \
         /tmp/kit-cuda-venv/bin/python bench/suites/e2e/model_bench.py \
         --device cuda
@@ -82,9 +82,9 @@ from mlopt_orchestrator.optimize import (
     Autotuned,
     OptimizationResourceError,
 )
-from mlopt_torch.autotune import TORCH_BUILDERS
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.models import ParallelBlock, ParallelConv
+from kit_torch.autotune import TORCH_BUILDERS
+from kit_torch.backend import TorchBackend
+from kit_torch.models import ParallelBlock, ParallelConv
 
 from bench.benchkit import (
     Case,

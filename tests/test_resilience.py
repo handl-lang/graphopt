@@ -387,7 +387,7 @@ def test_episode_board_partial_resume(tmp_path, monkeypatch):
 
 def test_contraction_resume_replays_instances(tmp_path, monkeypatch):
     """Fully-cached instances never re-seed a bond network."""
-    import mlopt_torch.contraction_policy as cp
+    import kit_torch.contraction_policy as cp
 
     from bench.players.runner import run_contraction
 

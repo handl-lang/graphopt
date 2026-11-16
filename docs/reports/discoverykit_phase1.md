@@ -169,7 +169,7 @@ the shim).
   too — pre-existing, not a regression.
 - **discoverykit gates**: `ruff check`/`ruff format --check` clean;
   `ty check` 0 errors (120 `import-not-found` *warnings* — the lazy
-  torch/`mlopt_torch`/`mlopt_discovery`/`bench` binds, downgraded via
+  torch/`kit_torch`/`mlopt_discovery`/`bench` binds, downgraded via
   `[tool.ty.rules]` since ty cannot see function-level intent);
   `vulture` clean; no import-linter contract (grimp cannot
   distinguish lazy binds — `test_smoke.py` enforces the contract

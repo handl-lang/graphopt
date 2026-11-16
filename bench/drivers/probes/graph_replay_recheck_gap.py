@@ -93,7 +93,7 @@ def retnet_case(probe, *, t: int, k: int, chunk: int) -> dict:
     import torch.nn as nn
     from mlopt_core.ir import IR
     from kit_cuda import CudaGraphRunner
-    from mlopt_torch.adapters import TorchSink
+    from kit_torch.adapters import TorchSink
 
     row: dict = {"case": f"retnet_T{t}_K{k}", "arms": []}
     sat = probe._saturate(t, k, iters=14, budget=200, chunk=chunk)
@@ -155,8 +155,8 @@ def chainfuse_case(probe, *, reps: int) -> dict:
     from mlopt_core.ir import IR
     from kit_cuda import CudaGraphRunner
     from mlopt_orchestrator.optimize import Optimizer
-    from mlopt_torch.adapters import TorchSink
-    from mlopt_torch.backend import TorchBackend
+    from kit_torch.adapters import TorchSink
+    from kit_torch.backend import TorchBackend
 
     row: dict = {"case": "chainfuse_mlp", "arms": []}
     model = probe._ChainFuse().to("cuda").double().eval()

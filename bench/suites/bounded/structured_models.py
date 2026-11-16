@@ -78,8 +78,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from mlopt_core.cost import flops_cost
 from mlopt_orchestrator import Compositional, Optimizer
-from mlopt_torch.backend import TorchBackend
-from mlopt_torch.report import verify_equiv
+from kit_torch.backend import TorchBackend
+from kit_torch.report import verify_equiv
 
 from bench.benchkit import (
     Case,
