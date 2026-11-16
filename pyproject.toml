@@ -3,11 +3,11 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mlopt"
+name = "mlopt-meta"
 version = "0.1.0dev"
-description = "A sound mathematical discovery and optimization engine — categorical semantics, verified transformations, learned search; applications and backends are replaceable adapters (meta distribution over the domain packages in packages/; no importable `mlopt` package)"
+description = "mlopt meta-dist: verified model optimization — the product member is packages/mlopt (domain packages in packages/)"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
     "mlopt-core",
     "kit-torch",
@@ -21,6 +21,7 @@ dependencies = [
     "mlopt-dtypes",
     "gamekit",
     "benchkit",
+    "mlopt",
     "torch>=2.0",
     "numpy>=1.24",
 ]
@@ -44,6 +45,15 @@ dev = [
     "mutmut>=3.8.0",
     "semgrep>=1.178.0",
 ]
+# Re-homed from packages/mlopt (P3 Step D-2): the product member's
+# optional adapter extras live at the root so
+# `uv sync --extra hf --extra kokoro` works from the repo root.
+hf = ["transformers"]
+# Kokoro TTS adapter: transformers + huggingface_hub + loguru + attrs
+# at load() time; the kokoro source tree itself is NOT a pip dep —
+# clone https://github.com/hexgrad/kokoro to $KOKORO_SRC (default
+# /tmp/kokoro-src) or pass kokoro_src= to load().
+kokoro = ["transformers", "huggingface_hub", "loguru", "attrs", "numpy"]
 
 [dependency-groups]
 bench = [
@@ -152,6 +162,10 @@ kit-onnx = { git = "https://github.com/handl-lang/kit-onnx.git", tag = "v0.1.4" 
 # handl-lang/kit-host-tensor — pinned git dep at the v0.1.4 tag.
 kit-host-tensor = { git = "https://github.com/handl-lang/kit-host-tensor.git", tag = "v0.1.4" }
 mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-dtypes", tag = "v0.1.12" }
+# packages/mlopt (P3 Step D-2): the product member — workspace dep so
+# `uv sync` installs it and its `mlopt` console script lands in
+# .venv/bin.
+mlopt = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -176,7 +190,20 @@ paths = ["packages", "tests"]
 # name; the double ignores it).  They were previously masked because
 # packages/mlopt-torch used the same names — that package split to
 # handl-lang/kit-torch in P3 Step D-1e.
-ignore_names = ["cap", "dev", "max_iterations"]
+# packages/mlopt findings (P3 Step D-2): pytest fixture parameters that
+# are intentionally unused (``game_env`` injects the fixture for side
+# effects), and deliberately-dead local stores in the whisper adapter /
+# emit tables kept for readability.  Tighten by fixing, not by adding.
+ignore_names = [
+    "cap",
+    "dev",
+    "max_iterations",
+    "game_env",
+    "query_length",
+    "want_max",
+    "want_all",
+    "want_std",
+]
 
 # import-linter: the hexagonal-boundary ratchet, pruned to the
 # intra-repo contracts (plan 0032 phase 4): "core is torch-free" and
@@ -281,9 +308,9 @@ python-version = "3.13"
 extra-paths = [
     # mlopt-core/-orchestrator (eqsat), kit_torch (P3 Step D-1e),
     # gamekit and kit_host_tensor (P3 Step D-1f) resolve through the
-    # installed git deps — no src path needed.  packages/ holds no
-    # Python package anymore (every domain package has split to its
-    # own repo), so ty's include set is empty by construction.
+    # installed git deps — no src path needed.  packages/mlopt (P3
+    # Step D-2) is scanned from source under include=["packages"] and
+    # resolves its own imports through the installed workspace member.
 ]
 
 [tool.ty.src]
