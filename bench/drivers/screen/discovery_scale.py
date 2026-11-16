@@ -64,8 +64,8 @@ import kit_carriers  # noqa: F401 — registers the carrier machinery
 import torch
 from mlopt_core.egraph.terms import _term_match
 from mlopt_core.ir import Op, term_from_data
-from mlopt_discovery import intake_dir
-from mlopt_discovery.impact import _iter_subterms, new_laws
+from kit_discovery import intake_dir
+from kit_discovery.impact import _iter_subterms, new_laws
 
 from bench.drivers.screen.exposed_discovery import discover
 from bench.drivers.screen.exposure_screen import _export, _workloads

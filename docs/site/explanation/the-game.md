@@ -22,7 +22,7 @@ One contract, every domain. Three drivers ride on it:
 - `train_policy(player, cases, board_of, *, budget)` — REINFORCE over episode returns.
 
 A new domain is data + a small adapter: a `case -> Board` factory and
-a featurizer. The domain registry (`mlopt_discovery.play.DOMAINS`)
+a featurizer. The domain registry (`kit_discovery.play.DOMAINS`)
 holds the boards — `meta`/`joint`/`search`/`torch`/`gen`/`open`/
 `player`/`fragment`/`bilinear` —
 played through one CLI (the registry is open: downstream domain repos
@@ -30,8 +30,8 @@ seat their own boards into `DOMAINS` through `play.spec_domain` at
 import):
 
 ```sh
-python -m mlopt_discovery.play --domain meta --player linear   # eval-only
-python -m mlopt_discovery.play --domain torch --deliver        # lower + verify the win
+python -m kit_discovery.play --domain meta --player linear   # eval-only
+python -m kit_discovery.play --domain torch --deliver        # lower + verify the win
 ```
 
 ## The players

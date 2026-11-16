@@ -10,8 +10,8 @@ game tests pin.
 
 import pytest
 from gamekit import engine
-from mlopt_discovery import bilinear_game as bg
-from mlopt_discovery.meta_arena import Action
+from kit_discovery import bilinear_game as bg
+from kit_discovery.meta_arena import Action
 
 from bench.drivers.probes.strassen_mcts import (
     MCTSPlayer,

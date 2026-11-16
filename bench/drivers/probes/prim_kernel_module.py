@@ -34,7 +34,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from mlopt_discovery import shipped_primitives as sp
+from kit_discovery import shipped_primitives as sp
 
 from bench.drivers.probes import prim_delivery_probe as probe
 from bench.drivers.probes import prim_kernel_probe as kprobe

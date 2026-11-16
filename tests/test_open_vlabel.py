@@ -1,5 +1,5 @@
 """Tests for the expected-yield feature part
-(:mod:`mlopt_discovery.open_vlabel`) and the round-7 driver's
+(:mod:`kit_discovery.open_vlabel`) and the round-7 driver's
 break-even gate (``bench/drivers/policy/stop_valuelabel.py``).
 
 The ``open:vlabel`` part turns the injected per-candidate *expected
@@ -23,10 +23,10 @@ import sys
 from pathlib import Path
 
 import pytest
-from mlopt_discovery import open_game as og
-from mlopt_discovery import open_vlabel as ovl
+from kit_discovery import open_game as og
+from kit_discovery import open_vlabel as ovl
 from gamekit.engine import run_episode
-from mlopt_discovery.meta_arena import Action
+from kit_discovery.meta_arena import Action
 from gamekit.players import PARTS, DomainSpec
 
 REPO = Path(__file__).resolve().parents[1]

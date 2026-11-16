@@ -387,7 +387,7 @@ def main() -> None:
             flush=True,
         )
 
-    from mlopt_discovery.play.sites import _fusion_sites
+    from kit_discovery.play.sites import _fusion_sites
 
     fs = _fusion_sites(term)
     print(f"[fusion_sites] sites={len(fs)}", flush=True)

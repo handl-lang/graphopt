@@ -9,7 +9,7 @@
  * 2-cells across fragments are a discovery fact, not an error.
  *
  * `Provenance.origin` ∈ `shipped` / `constructed` / `admitted` /
- * `minted` / `declared` / `imported`.  `mlopt_discovery.handl` is the
+ * `minted` / `declared` / `imported`.  `kit_discovery.handl` is the
  * schema bridge: op cells → `AstShapeDef` rows, law/object cells →
  * `TransformDef` rows, handle cells → `!Native` records.
  */

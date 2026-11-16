@@ -13,7 +13,7 @@ scope, so its ``fires=0`` typed-pay refusals could not see them).
 Stages:
 
 1. ``corpus`` — load the intake side-file (``--intake-json`` /
-   ``--tensors``, produced by ``python -m mlopt_discovery.intake
+   ``--tensors``, produced by ``python -m kit_discovery.intake
    --skip-pipeline --out …``), split the cases by provenance
    (``_PURPOSE_BUILT`` vs real), and ingest the held-out ``zoo``.
 2. ``funnel`` — run ``workload_gen._run_pipeline`` (the same
@@ -36,7 +36,7 @@ Stages:
 
 Run::
 
-    .venv/bin/python -m mlopt_discovery.intake --skip-pipeline \
+    .venv/bin/python -m kit_discovery.intake --skip-pipeline \
         --out /tmp/intake.json --tensors /tmp/intake_tensors.pt
     .venv/bin/python bench/drivers/screen/real_funnel.py \
         --intake-json /tmp/intake.json --tensors /tmp/intake_tensors.pt \
@@ -74,7 +74,7 @@ def _bucket(name: str, purpose: set, zoo: set) -> str:
 
 def _eligible(cases: list, records: list[dict]) -> list:
     """Probe-eligible subset: ingested + under the node cap."""
-    from mlopt_discovery.intake.ledger import _PROBE_MAX_NODES
+    from kit_discovery.intake.ledger import _PROBE_MAX_NODES
 
     meta = {r["name"]: (r["status"], r["n_op_nodes"]) for r in records}
     return [
@@ -87,9 +87,9 @@ def _eligible(cases: list, records: list[dict]) -> list:
 
 def _load_corpus(args: argparse.Namespace) -> dict:
     """Assemble the baseline + per-arm case lists."""
-    from mlopt_discovery import intake as li
-    from mlopt_discovery import zoo as zoo_mod
-    from mlopt_discovery.impact import _bench_cases, model_cases
+    from kit_discovery import intake as li
+    from kit_discovery import zoo as zoo_mod
+    from kit_discovery.impact import _bench_cases, model_cases
 
     bench, _be = _bench_cases()
     models, _me = model_cases()
@@ -205,9 +205,9 @@ def _run_arm(
     bucket_of: Any,
 ) -> dict:
     """Run the pipeline mirror; return evidence + per-case probe rows."""
-    from mlopt_discovery import pipeline as lpipe
-    from mlopt_discovery import workload_gen as lwg
-    from mlopt_discovery.impact import _probe as orig_probe
+    from kit_discovery import pipeline as lpipe
+    from kit_discovery import workload_gen as lwg
+    from kit_discovery.impact import _probe as orig_probe
 
     seen: dict[tuple[str, str], Any] = {}
 
@@ -282,7 +282,7 @@ def _run_arm(
 def _real_sites(rule: Any, terms: list) -> list:
     """Return ``(env, lhs)`` pairs for every real match of *rule*."""
     from mlopt_core.egraph.terms import _term_match
-    from mlopt_discovery.shape_proposal import Schema, real_matches
+    from kit_discovery.shape_proposal import Schema, real_matches
 
     schema = Schema(rule.name, rule.lhs, rule.rhs)
     sites = []
@@ -297,8 +297,8 @@ def _autocond_sweep(
     cands: list, corpus_terms: list, real_terms: list, zoo_terms: list
 ) -> list[dict]:
     """Mint guards for truth-refused candidates; sweep real regions."""
-    from mlopt_discovery import evidence as evd
-    from mlopt_discovery import object_synthesis as obs
+    from kit_discovery import evidence as evd
+    from kit_discovery import object_synthesis as obs
 
     out = []
     for row in cands:
@@ -354,7 +354,7 @@ def _autocond_sweep(
 
 def _gauntlet_retry(recs: list[dict], corpus: Any) -> list[dict]:
     """Run the armed admission gauntlet on minted candidates."""
-    from mlopt_discovery import evidence as evd
+    from kit_discovery import evidence as evd
 
     out = []
     for rec in recs:
@@ -539,11 +539,11 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif "autocond" in stages or "gauntlet" in stages:
         from mlopt_core.laws import ALL_RULES
-        from mlopt_discovery import evidence as evd
-        from mlopt_discovery import pipeline as pl
-        from mlopt_discovery.census import run_census
-        from mlopt_discovery.impact import _cost_fn
-        from mlopt_discovery.shape_proposal import _sink
+        from kit_discovery import evidence as evd
+        from kit_discovery import pipeline as pl
+        from kit_discovery.census import run_census
+        from kit_discovery.impact import _cost_fn
+        from kit_discovery.shape_proposal import _sink
 
         # candidates that die at truth on the real arm but have a real
         # match to measure — the blocker the retro named.

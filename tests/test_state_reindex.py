@@ -1,6 +1,6 @@
 """Tests for the ADR-0008 gate-3 state-reindex law family.
 
-``mlopt_discovery.state_reindex`` is the named close of the gate-3
+``kit_discovery.state_reindex`` is the named close of the gate-3
 residual: the ``matmul`` contraction-axis bisection, the split-
 naturality chain down to signed-offset ``decay_vec`` block-splits, and
 the scalar slide/merge laws — minting the compensated arm's missing
@@ -17,9 +17,9 @@ import pytest
 from mlopt_core.cost import count_cost
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import Const, Op, TensorType, Var
-from mlopt_discovery import form_propose as fp
-from mlopt_discovery import state_reindex as sr
-from mlopt_discovery.combinator import Loop, comb_to_dag
+from kit_discovery import form_propose as fp
+from kit_discovery import state_reindex as sr
+from kit_discovery.combinator import Loop, comb_to_dag
 
 from tests.test_form_propose import CB, _fold_term, _lin
 
@@ -384,7 +384,7 @@ def test_reindex_close_synthetic_fold():
 def test_state_reindex_closes_boundary():
     """The named close: ONE Loop(step,6) in the winner's e-class.
 
-    The state-reindex law family (``mlopt_discovery.state_reindex``)
+    The state-reindex law family (``kit_discovery.state_reindex``)
     supplies the three missing pieces the residual named: the bare
     ``matmul`` contraction bisection ``(4,4,4,4)``, signed-offset
     ``decay_vec`` block-splitting (mints ``dv(t=4,-1,-4i)`` and the

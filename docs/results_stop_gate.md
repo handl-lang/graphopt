@@ -3,7 +3,7 @@
 **Date:** 2026-10-24 · **Script:** `bench/drivers/policy/stop_gate.py`
 (new — same memoized-verdict protocol as `stop_isolated.py`, plus the
 serialization machinery this round prices) · **Part:**
-`mlopt_discovery.open_prior` (registered `open:prior`, unshipped) ·
+`kit_discovery.open_prior` (registered `open:prior`, unshipped) ·
 **Seed:** 0 · **Runner:**
 
 ```bash
@@ -69,7 +69,7 @@ the serialized artifact playing, not an argument that it could be.
 
 Every priced stop column so far read a runtime seam (`set_value_preds`
 behind `open:next-val`/`open:vlabel`, `set_self_scores` behind
-`open:self`).  The new **`mlopt_discovery.open_prior`** part removes
+`open:self`).  The new **`kit_discovery.open_prior`** part removes
 the seam by construction: it prices the pending pool with the
 *shipped prior's own linear model* — `w·_cand_feats` — computable at
 decode from shipped tables alone:

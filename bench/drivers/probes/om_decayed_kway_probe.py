@@ -44,7 +44,7 @@ from mlopt_core.laws.tensor import (
     MUL_DIV_SWAP,
     SPLIT_SCALAR_RULES,
 )
-from mlopt_discovery.zoo import _ChunkedRetention
+from kit_discovery.zoo import _ChunkedRetention
 from mlopt_torch.adapters import TorchSource
 
 #: The naturality bridges the fold's last hops need (plan 0023: the

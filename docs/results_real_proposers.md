@@ -27,7 +27,7 @@ attr namespace, or a literal the modules don't write.
 
 ## What changed
 
-Two moves, both in `pipeline.propose` (`mlopt_discovery/pipeline.py`),
+Two moves, both in `pipeline.propose` (`kit_discovery/pipeline.py`),
 both keeping the gauntlet untouched — this changes **what** gets
 minted, never the bar:
 

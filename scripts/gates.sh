@@ -101,9 +101,8 @@ if [[ "$LANE" == "full" ]]; then
     if [[ "$NP" -gt 1 ]]; then
         # pytest-cov combines xdist workers' coverage (a bare `coverage run`
         # does not measure the worker subprocesses).  Its own fail_under
-        # check is disabled here: it would apply the config's 100% floor to
-        # the union *including* mlopt_discovery, which sits on a 99%
-        # ratchet — the two `coverage report` stages below own both floors.
+        # check is disabled here: the `coverage report` stage below owns
+        # the floor.
         $PY -m pytest tests/ -q -n "$NP" --cov --cov-report= --cov-fail-under=0
     else
         .venv/bin/coverage run -m pytest tests/ -q
@@ -115,16 +114,7 @@ if [[ "$LANE" == "full" ]]; then
     # (mlopt_core/-orchestrator/gamekit left at the phase-4 split —
     # their floors live in the eqsat/gamekit repos.)
     stage "coverage (domain wall, =100)" -- \
-        .venv/bin/coverage report -m \
-        --omit="*/mlopt_discovery/*"
-    # mlopt_discovery ratchet floor.  Post-split (phase 4): the tests
-    # covering zoo/player_arena/shims moved to the eqsat/gamekit repos,
-    # so the union floor re-baselines to the post-split measurement —
-    # 95% (verify3 run, 2026-10-21).  Tighten from here, never lower
-    # within this repo's boundary.
-    stage "coverage (discovery)" -- \
-        .venv/bin/coverage report -m \
-        --include="*/mlopt_discovery/*" --fail-under=94
+        .venv/bin/coverage report -m
 else
     # dev lane — the day-to-day gate: suite minus the minutes-scale `slow`
     # tests, no coverage (floors are a full-suite property; see LANE doc).

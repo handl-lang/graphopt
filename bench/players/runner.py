@@ -34,7 +34,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from gamekit import engine
-from mlopt_discovery.play import DOMAINS
+from kit_discovery.play import DOMAINS
 from gamekit.players import registry
 from gamekit.players.registry import PlayerSpec
 
@@ -208,7 +208,7 @@ def _measure_pools(
 ) -> tuple[list[list], dict]:
     """Evaluate every pool member once under a per-candidate seed."""
     import torch
-    from mlopt_discovery import proposal as lp
+    from kit_discovery import proposal as lp
 
     by_key: dict = {}
     per_pool: list[list] = []
@@ -237,7 +237,7 @@ def _patched_evaluate(by_key: dict) -> Any:
 
 def _open_episode_stats(mk: Any, ev: list, budget: int) -> dict:
     """Play one arm over the held-out pages; tally yield and reward."""
-    from mlopt_discovery import open_game as og
+    from kit_discovery import open_game as og
 
     found = evals = 0
     reward = 0.0
@@ -260,7 +260,7 @@ def _open_episode_stats(mk: Any, ev: list, budget: int) -> dict:
 
 def _ap(scores: list[float], outcomes: dict) -> float:
     """Average precision of a best-first ordering under *scores*."""
-    from mlopt_discovery import proposal as lp
+    from kit_discovery import proposal as lp
 
     order = sorted(range(len(scores)), key=lambda i: -scores[i])
     return lp._average_precision(order, outcomes)
@@ -300,8 +300,8 @@ def run_open(
     record persist as they complete; when every row and the meta are
     already stored, the shared pool measurement is skipped whole.
     """
-    from mlopt_discovery import open_game as og
-    from mlopt_discovery import proposal as lp
+    from kit_discovery import open_game as og
+    from kit_discovery import proposal as lp
 
     specs = _requested("open", players)
     meta_key = ("open", "__meta__")

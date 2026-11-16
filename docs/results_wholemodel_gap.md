@@ -6,7 +6,7 @@ i5-12500H, fp64 delivery (the verify dtype) unless marked `32`.
 Run 2026-10-20; the box was shared, so treat the third significant
 figure as noise — the *ordering and decompositions* are what hold.
 
-**Dependency note.**  `mlopt_discovery` was mid-refactor when this ran
+**Dependency note.**  `kit_discovery` was mid-refactor when this ran
 (the game layer's move to `gamekit` was staged but not committed), so
 the probe vendors its two fixtures verbatim (`zoo._ChunkedRetention`,
 `play._time_module`) instead of importing them.  The FLA/Triton and
@@ -303,6 +303,6 @@ table vs Inductor.
   stale self-import (`from ... import om_decayed_kway_deliver_probe
   as P`) from the `lab/`→`bench/` dissolution — it does not run as
   committed.  Pre-existing; flagged, not fixed.
-- `mlopt_discovery` was mid-refactor during measurement; the probe
+- `kit_discovery` was mid-refactor during measurement; the probe
   vendors its fixtures.  Re-run via upstream `P._saturate` once the
   gamekit move lands — numbers should reproduce within noise.

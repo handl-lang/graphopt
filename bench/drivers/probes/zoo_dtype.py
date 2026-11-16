@@ -29,11 +29,11 @@ from typing import Any
 
 import torch
 from mlopt_core.ir import IR
-from mlopt_discovery import genkernel as gk
-from mlopt_discovery import lawdata
-from mlopt_discovery import zoo as zoo_mod
-from mlopt_discovery.meta_arena import _canon_concrete
-from mlopt_discovery.play import (
+from kit_discovery import genkernel as gk
+from kit_discovery import lawdata
+from kit_discovery import zoo as zoo_mod
+from kit_discovery.meta_arena import _canon_concrete
+from kit_discovery.play import (
     _gen_board,
     _mint_tiers,
     _probe_play,

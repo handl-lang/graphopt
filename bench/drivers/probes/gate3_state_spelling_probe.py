@@ -33,7 +33,7 @@ from mlopt_core.cost import dag_cost, flops_cost
 from mlopt_core.egraph import EGraph
 from mlopt_core.egraph.types import _member_key
 from mlopt_core.ir import Op
-from mlopt_discovery.impact import _iter_subterms
+from kit_discovery.impact import _iter_subterms
 
 from bench.drivers.probes import om_shared_state_probe as osp
 
@@ -399,7 +399,7 @@ def _verify_pair_terms(t: int, a: Any, b: Any) -> None:
     import kit_carriers  # noqa: F401 — carrier op bindings
     import torch
     from mlopt_core.ir import IR
-    from mlopt_discovery.zoo import _ChunkedRetention
+    from kit_discovery.zoo import _ChunkedRetention
     from mlopt_torch.adapters import TorchSink
     from mlopt_torch.torch_bridge import export_to_ir
 
@@ -432,7 +432,7 @@ def _verify_pair_terms(t: int, a: Any, b: Any) -> None:
 
 def _abstraction(term: Any, t: int, k: int) -> None:
     """Report the gate-3 abstraction verdict on a term."""
-    from mlopt_discovery import index_abstract as ia
+    from kit_discovery import index_abstract as ia
 
     rep = ia.abstract_index(term)
     print(
@@ -462,7 +462,7 @@ def _block_family(block: Any) -> tuple:
 def _family_report(root: Any) -> None:
     """Run the abstraction on each chunking family separately."""
     import mlopt_core.ir as ir
-    from mlopt_discovery import index_abstract as ia
+    from kit_discovery import index_abstract as ia
 
     blocks = _blocks(root)
     fams: dict[tuple, list[Any]] = {}

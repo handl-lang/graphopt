@@ -42,7 +42,7 @@ from typing import Any
 
 from gamekit import engine
 from gamekit.players import LearnedPlayer
-from mlopt_discovery import player_arena as pa
+from kit_discovery import player_arena as pa
 
 __all__ = ["GREEDY_CHILD_SCORE", "distilled_open", "main", "train"]
 

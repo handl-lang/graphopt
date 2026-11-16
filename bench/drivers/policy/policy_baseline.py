@@ -69,12 +69,12 @@ import torch
 from mlopt_core.features import compute_features
 from mlopt_core.trajectories import RuleSample, rule_vector
 from gamekit import engine
-from mlopt_discovery import play
-from mlopt_discovery import meta_arena as ma
-from mlopt_discovery import meta_player as mp
-from mlopt_discovery import open_game as og
-from mlopt_discovery import proposal as lp
-from mlopt_discovery.meta_arena import Action
+from kit_discovery import play
+from kit_discovery import meta_arena as ma
+from kit_discovery import meta_player as mp
+from kit_discovery import open_game as og
+from kit_discovery import proposal as lp
+from kit_discovery.meta_arena import Action
 from mlopt_torch.learned_policy import input_vector, train_rule_value
 
 #: Defaults — the shipped priors' measurement protocol.

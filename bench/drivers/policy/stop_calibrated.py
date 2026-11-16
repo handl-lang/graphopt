@@ -64,12 +64,12 @@ import stop_policy as sp
 import stop_valuelabel as svl
 from gamekit import advantage as adv
 from gamekit import engine
-from mlopt_discovery import play
-from mlopt_discovery import open_game as og
-from mlopt_discovery import open_self as osel
-from mlopt_discovery import open_vlabel as ovl
-from mlopt_discovery import proposal as lp
-from mlopt_discovery.meta_arena import Action
+from kit_discovery import play
+from kit_discovery import open_game as og
+from kit_discovery import open_self as osel
+from kit_discovery import open_vlabel as ovl
+from kit_discovery import proposal as lp
+from kit_discovery.meta_arena import Action
 from gamekit.players import DomainSpec, _dot
 
 from gamekit.calibrate import (

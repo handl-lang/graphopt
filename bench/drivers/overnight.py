@@ -10,7 +10,7 @@ outcome to an append-only, protocol-gated JSONL cell store.
 Stages:
 
 1. ``episodes`` — one ``OpenArena`` page per case
-   (:func:`mlopt_discovery.open_game.gen_cases` — disjoint slices of
+   (:func:`kit_discovery.open_game.gen_cases` — disjoint slices of
    the deterministic enumerated stream), played by a registered
    player (``--player``, default ``playbook``) under
    :func:`gamekit.engine.run_episode`.  Every ``evaluate`` report
@@ -49,7 +49,7 @@ domain that admitted (and refuted) the shipped ``syn_*`` mints.
 
 **Corpora** (``--corpus``).  ``grammar`` (default) is the arm above:
 episodes page the enumerated candidate stream.  ``zoo`` targets real
-structure: each episode is one held-out ``mlopt_discovery.zoo``
+structure: each episode is one held-out ``kit_discovery.zoo``
 module, exported through ``export_to_ir``, and the episode's pool is
 the stream's candidates whose pattern LHS strictly binds a subterm of
 that real term — the claims that would actually fire on the module.
@@ -247,9 +247,9 @@ from mlopt_core.laws.serialize import (
     law_to_data,
     missing_hooks,
 )
-from mlopt_discovery import open_game as og
-from mlopt_discovery import prim_mint as _pm
-from mlopt_discovery.verifier import verify_law
+from kit_discovery import open_game as og
+from kit_discovery import prim_mint as _pm
+from kit_discovery.verifier import verify_law
 
 __all__ = ["DEFAULTS", "DRY", "main", "render_markdown", "run"]
 
@@ -285,7 +285,7 @@ DRY: dict[str, Any] = {
 }
 
 #: The corpus arms — ``grammar`` pages the enumerated candidate
-#: stream; ``zoo`` pages the held-out ``mlopt_discovery.zoo`` module
+#: stream; ``zoo`` pages the held-out ``kit_discovery.zoo`` module
 #: registry, the same stream filtered to real-matching claims;
 #: ``zoo-real`` drops the stream entirely and mints each episode's
 #: pool from the module's own term (the ``pipeline.propose`` census
@@ -440,7 +440,7 @@ _EXPORT_CACHE: dict[tuple, tuple] = {}
 
 def _zoo_registry() -> dict[str, Any]:
     """``name -> Workload`` over the held-out zoo registry."""
-    from mlopt_discovery import zoo as zoo_mod
+    from kit_discovery import zoo as zoo_mod
 
     return {w.name: w for w in zoo_mod.zoo()}
 
@@ -510,7 +510,7 @@ class _ZooArena(og.OpenArena):
         from mlopt_core.egraph.terms import _term_match
         from mlopt_core.ir import Op
         from mlopt_core.meta import _positions
-        from mlopt_discovery.enumerate import enumerate_candidates
+        from kit_discovery.enumerate import enumerate_candidates
 
         self.pool: list = []
         self.verdicts: dict[int, str] = {}
@@ -558,7 +558,7 @@ def _zoo_export_env(cases: list) -> dict:
 
 def _zoo_probe(env: dict) -> list:
     """The covered modules as ``TermCase``s — the pay leg's domain."""
-    from mlopt_discovery.impact import TermCase
+    from kit_discovery.impact import TermCase
 
     probe = []
     for name, rec in env.items():
@@ -675,8 +675,8 @@ class _RealArena(og.OpenArena):
     binds a real subterm of the module, so the pool never spends an
     episode slot on a claim whose real region is empty by
     construction.  Every minted
-    :class:`~mlopt_discovery.pipeline.Proposal` becomes a
-    :class:`~mlopt_discovery.proposal.Candidate` carrying the proposal's
+    :class:`~kit_discovery.pipeline.Proposal` becomes a
+    :class:`~kit_discovery.proposal.Candidate` carrying the proposal's
     own ``Rewrite`` (``check``/``derive`` hooks intact) — the oracle
     verdict in the episode still measures the bare pair, while the
     gauntlet judges the side-conditioned rule.
@@ -720,9 +720,9 @@ class _RealArena(og.OpenArena):
 
     def __init__(self, case: dict) -> None:
         import kit_carriers  # noqa: F401 — carrier op bindings
-        from mlopt_discovery import pipeline as pipe
-        from mlopt_discovery.census import CorpusTerm, op_tuple_census
-        from mlopt_discovery.proposal import Candidate
+        from kit_discovery import pipeline as pipe
+        from kit_discovery.census import CorpusTerm, op_tuple_census
+        from kit_discovery.proposal import Candidate
 
         self.pool: list = []
         self.meta: dict[int, dict] = {}
@@ -814,9 +814,9 @@ class _RealArena(og.OpenArena):
         from mlopt_core import meta as meta_mod
         from mlopt_core.egraph.terms import _term_match
         from mlopt_core.ir import Op
-        from mlopt_discovery.census import _iter_subterms
-        from mlopt_discovery.evidence import _site_outcome
-        from mlopt_discovery.proposal import Candidate
+        from kit_discovery.census import _iter_subterms
+        from kit_discovery.evidence import _site_outcome
+        from kit_discovery.proposal import Candidate
 
         page = case.get("page", 48)
         bank = [
@@ -906,10 +906,10 @@ def _intake_cases() -> list:
     """The intake side-file census as ``TermCase``s ([] when absent).
 
     ``intake_dir()`` is a shared, regenerable cache: when a
-    ``mlopt_discovery.intake`` run has populated it, its ingested
+    ``kit_discovery.intake`` run has populated it, its ingested
     terms join the zoo-real arm's real-match domain and firing probe.
     """
-    from mlopt_discovery.intake import load_cases
+    from kit_discovery.intake import load_cases
 
     try:
         return load_cases()
@@ -929,7 +929,7 @@ def _real_subterms(roots: list) -> list:
     shared nodes but not equal spellings.
     """
     from mlopt_core.ir import Op, op_repr
-    from mlopt_discovery.census import _iter_subterms
+    from kit_discovery.census import _iter_subterms
 
     seen: set[str] = set()
     out: list = []
@@ -974,7 +974,7 @@ def _real_referee_ctx(env: dict, referees: Any) -> Any:
 
 def _real_case_ctxs(env: dict) -> list:
     """``novelty_sieve._CaseCtx``s over zoo + intake corpus terms."""
-    from mlopt_discovery.intake.ledger import _DEFAULT_JSON
+    from kit_discovery.intake.ledger import _DEFAULT_JSON
 
     from bench.drivers.screen import novelty_sieve as ns
 
@@ -1059,7 +1059,7 @@ def _xmodule_env(seed: int) -> dict:
 def _op_subterms(roots: dict) -> dict:
     """``name -> [Op subterm]`` — each module's bind domain.
 
-    Delegates to :func:`mlopt_discovery.prim_mint.op_subterms` — the
+    Delegates to :func:`kit_discovery.prim_mint.op_subterms` — the
     shared corpus helper the prim mint promoted with the pool.
     """
     return _pm.op_subterms(roots)
@@ -1068,7 +1068,7 @@ def _op_subterms(roots: dict) -> dict:
 def _modules_bound(pat: Any, subs_by_mod: dict) -> set:
     """Module names holding at least one subterm *pat* binds.
 
-    Delegates to :func:`mlopt_discovery.prim_mint.modules_bound` —
+    Delegates to :func:`kit_discovery.prim_mint.modules_bound` —
     the arm's binding granularity (``_term_match`` counted per
     module) lives with the pool machinery now.
     """
@@ -1138,10 +1138,10 @@ def _xanti_proposals(roots: dict, k: int) -> list:
     from mlopt_core.egraph import EGraph
     from mlopt_core.egraph.terms import _term_match
     from mlopt_core.ir import Op
-    from mlopt_discovery import pipeline as pipe
-    from mlopt_discovery.antiunify import mine_candidates
-    from mlopt_discovery.evidence import _site_outcome
-    from mlopt_discovery.pipeline import Proposal
+    from kit_discovery import pipeline as pipe
+    from kit_discovery.antiunify import mine_candidates
+    from kit_discovery.evidence import _site_outcome
+    from kit_discovery.pipeline import Proposal
 
     subs_by_mod = _op_subterms(roots)
     all_subs = [s for subs in subs_by_mod.values() for s in subs]
@@ -1234,9 +1234,9 @@ def _xmodule_pool(roots: dict, k: int) -> tuple:
     count; ``stats`` is the pool-level accounting (proposal count,
     the pre-gate bind histogram, cross-tuple and xanti counts).
     """
-    from mlopt_discovery import pipeline as pipe
-    from mlopt_discovery.census import CorpusTerm, op_tuple_census
-    from mlopt_discovery.proposal import Candidate
+    from kit_discovery import pipeline as pipe
+    from kit_discovery.census import CorpusTerm, op_tuple_census
+    from kit_discovery.proposal import Candidate
 
     terms = [CorpusTerm("zoo", n, r) for n, r in roots.items()]
     counts, terms_of = op_tuple_census(terms)
@@ -1371,17 +1371,17 @@ _PPOOL: dict = {}
 
 
 def _pat_spec(pat: Any) -> Any:
-    """Delegate to :func:`mlopt_discovery.prim_mint.pat_spec`."""
+    """Delegate to :func:`kit_discovery.prim_mint.pat_spec`."""
     return _pm.pat_spec(pat)
 
 
 def _pat_ops(pat: Any) -> set:
-    """Delegate to :func:`mlopt_discovery.prim_mint.pat_ops`."""
+    """Delegate to :func:`kit_discovery.prim_mint.pat_ops`."""
     return _pm.pat_ops(pat)
 
 
 def _spec_bind(spec: Any, attrs: dict, attr_mvars: tuple) -> Any:
-    """Delegate to :func:`mlopt_discovery.prim_mint.spec_bind`."""
+    """Delegate to :func:`kit_discovery.prim_mint.spec_bind`."""
     return _pm.spec_bind(spec, attrs, attr_mvars)
 
 
@@ -1401,7 +1401,7 @@ def _prim_binding(
 
 
 def _bare_call(t: Any) -> bool:
-    """Delegate to :func:`mlopt_discovery.prim_mint.bare_call`."""
+    """Delegate to :func:`kit_discovery.prim_mint.bare_call`."""
     return _pm.bare_call(t)
 
 
@@ -1418,10 +1418,10 @@ def _denoted_shapes() -> frozenset:
     records the exclusion.
     """
     from mlopt_core.laws.priorart import PRIOR_ART_RULES
-    from mlopt_discovery.antiunify import _alpha_norm
-    from mlopt_discovery.lawdata import HANDLERS
-    from mlopt_discovery.object_synthesis import term_from_spec
-    from mlopt_discovery.pipeline import _FUSION_SCHEMAS
+    from kit_discovery.antiunify import _alpha_norm
+    from kit_discovery.lawdata import HANDLERS
+    from kit_discovery.object_synthesis import term_from_spec
+    from kit_discovery.pipeline import _FUSION_SCHEMAS
 
     from bench.drivers.screen import novelty_sieve as ns
 
@@ -1435,12 +1435,12 @@ def _denoted_shapes() -> frozenset:
 
 
 def _prim_domain(sites: list, cap: int) -> list:
-    """Delegate to :func:`mlopt_discovery.prim_mint.prim_domain`."""
+    """Delegate to :func:`kit_discovery.prim_mint.prim_domain`."""
     return _pm.prim_domain(sites, cap)
 
 
 def _freeze_spec(spec: Any, subst: dict, attr_mvars: tuple) -> Any:
-    """Delegate to :func:`mlopt_discovery.prim_mint.freeze_spec`."""
+    """Delegate to :func:`kit_discovery.prim_mint.freeze_spec`."""
     return _pm.freeze_spec(spec, subst, attr_mvars)
 
 
@@ -1486,27 +1486,27 @@ def _prim_knobs(prim: dict | None = None) -> dict:
 
 
 def _synop_depth(op: str) -> int:
-    """Delegate to :func:`mlopt_discovery.prim_mint.synop_depth`."""
+    """Delegate to :func:`kit_discovery.prim_mint.synop_depth`."""
     return _pm.synop_depth(op)
 
 
 def _expand_synops(pat: Any) -> Any:
-    """Delegate to :func:`mlopt_discovery.prim_mint.expand_synops`."""
+    """Delegate to :func:`kit_discovery.prim_mint.expand_synops`."""
     return _pm.expand_synops(pat)
 
 
 def _synop_ops(pat: Any) -> set:
-    """Delegate to :func:`mlopt_discovery.prim_mint.synop_ops`."""
+    """Delegate to :func:`kit_discovery.prim_mint.synop_ops`."""
     return _pm.synop_ops(pat)
 
 
 def _synop_vocab() -> dict[str, int]:
-    """Delegate to :func:`mlopt_discovery.prim_mint.synop_vocab`."""
+    """Delegate to :func:`kit_discovery.prim_mint.synop_vocab`."""
     return _pm.synop_vocab()
 
 
 def _sub_alphas(pat: Any) -> set:
-    """Delegate to :func:`mlopt_discovery.prim_mint.sub_alphas`."""
+    """Delegate to :func:`kit_discovery.prim_mint.sub_alphas`."""
     return _pm.sub_alphas(pat)
 
 
@@ -1531,7 +1531,7 @@ def _prim_pool(
     """The graphopt prim-mint pool — the torch-domain hook wiring.
 
     The machinery itself lives in
-    :func:`mlopt_discovery.prim_mint.prim_pool` (promoted out of this
+    :func:`kit_discovery.prim_mint.prim_pool` (promoted out of this
     driver — the domain repos share one implementation); this
     wrapper supplies the graphopt hooks: the ambient
     ``_IR_TO_TORCH`` binding table (plus the carrier registrations),
@@ -1547,8 +1547,8 @@ def _prim_pool(
     """
     import kit_carriers  # noqa: F401 — carrier op bindings
     import mlopt_torch.torch_bridge as tb
-    from mlopt_discovery import shipped_primitives as _sp
-    from mlopt_discovery.oracle import eval_instance
+    from kit_discovery import shipped_primitives as _sp
+    from kit_discovery.oracle import eval_instance
 
     return _pm.prim_pool(
         roots,
@@ -1835,7 +1835,7 @@ def _admit(rule: Any, referee: str, ctx: Any) -> dict:
     and the spec records exactly which parent objects the transported
     hooks close over.
     """
-    from mlopt_discovery.evidence import _guard_transport_spec
+    from kit_discovery.evidence import _guard_transport_spec
 
     from bench import referees
 
@@ -1954,7 +1954,7 @@ def _promote_prim(
     is the ledger's per-op record; the live ``meta[i]["prim"]`` wins
     when the rebuild lands.
     """
-    from mlopt_discovery import prim_mint as _pm
+    from kit_discovery import prim_mint as _pm
 
     name = rec["name"]
     cell: dict[str, Any] = {
@@ -2500,10 +2500,10 @@ def render_markdown(summary: dict, *, env: dict | None = None) -> str:
         + (
             {
                 "zoo": " — held-out zoo modules "
-                "(mlopt_discovery.zoo), the stream filtered to "
+                "(kit_discovery.zoo), the stream filtered to "
                 "real-matching claims",
                 "zoo-real": " — held-out zoo modules "
-                "(mlopt_discovery.zoo), candidates minted from each "
+                "(kit_discovery.zoo), candidates minted from each "
                 "module's own op-tuple census (pipeline.propose); "
                 "real_terms are the corpus's distinct subterms",
                 "zoo-xmodule": " — one corpus-level mint: "
@@ -2800,7 +2800,7 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULTS["corpus"],
         help="the episode corpus — 'grammar' pages the enumerated "
         "candidate stream; 'zoo' pages the held-out model zoo "
-        "(mlopt_discovery.zoo), each module's exported term "
+        "(kit_discovery.zoo), each module's exported term "
         "filtering the stream to claims that fire on real structure; "
         "'zoo-real' drops the stream: each episode's pool is minted "
         "from the module's own op-tuple census (pipeline.propose — "

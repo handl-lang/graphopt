@@ -23,7 +23,7 @@ from mlopt_core.laws.serialize import (  # noqa: E402
     law_from_data,
     law_to_data,
 )
-from mlopt_discovery.oracle import eval_instance  # noqa: E402
+from kit_discovery.oracle import eval_instance  # noqa: E402
 
 import bench.drivers.mint.real_model_mint as rmm  # noqa: E402
 

@@ -46,7 +46,7 @@ handl-host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch 
 # mlopt-core's `EGraph`/`Rewrite` spec (`src/egraph.rs` drives it over
 # the discovery codec's JSON wire forms — `egraph-run` is the bin)
 handl-egraph = { git = "https://github.com/handl-lang/egraph", branch = "main" }
-# discovery — the ported domain-free half of `mlopt_discovery`: the
+# discovery — the ported domain-free half of `kit_discovery`: the
 # `term_to_data`/`term_from_data` codec the egraph leg speaks, and the
 # `GauntletLegs` trait surface `tests/gauntlet_stub.rs` injects into
 handl-discovery = { git = "https://github.com/handl-lang/discovery", branch = "main" }

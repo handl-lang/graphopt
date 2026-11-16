@@ -10,7 +10,7 @@ the injected per-candidate value is an **expected payoff** — the
 verdict-label predictors' output in reward units — and the stop row
 sees the pool-priced decision quantities directly:
 
-* the new ``open:vlabel`` part (:mod:`mlopt_discovery.open_vlabel`)
+* the new ``open:vlabel`` part (:mod:`kit_discovery.open_vlabel`)
   emits ``x:stop:vl_pool`` (Σ pending expected payoff — the
   *expected remaining yield*), ``x:stop:vl_net`` (yield net of the
   drain's eval costs), ``x:stop:vl_margin`` (best pending eval's EV),
@@ -66,12 +66,12 @@ import stop_advantage as sa
 import stop_policy as sp
 from gamekit import advantage as adv
 from gamekit import engine
-from mlopt_discovery import play
-from mlopt_discovery import open_game as og
-from mlopt_discovery import open_self as osel
-from mlopt_discovery import open_vlabel as ovl
-from mlopt_discovery import proposal as lp
-from mlopt_discovery.meta_arena import Action
+from kit_discovery import play
+from kit_discovery import open_game as og
+from kit_discovery import open_self as osel
+from kit_discovery import open_vlabel as ovl
+from kit_discovery import proposal as lp
+from kit_discovery.meta_arena import Action
 from gamekit.players import PARTS, DomainSpec, _dot
 
 #: Defaults — identical protocol to ``stop_advantage.py``.

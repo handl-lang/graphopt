@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 · **Scripts:** `bench/drivers/mint/macro_moves.py`
 (`instantiate` now carries the miner's evidence on
-`params["macro"]`), `mlopt_discovery/meta_player.py` (the new
+`params["macro"]`), `kit_discovery/meta_player.py` (the new
 `meta:macro` featurizer part), `bench/drivers/train/train_meta_macro_prior.py`
 · **Seed:** 0 throughout · **Runner:**
 
@@ -131,10 +131,10 @@ layer this doc added is exactly what that next run needs.
 ## Promoted: macros are the shipped legal set
 
 **Date:** 2026-10-19 · **Change:** the macro layer moved to prod —
-`mlopt_discovery/macro_moves.py` (the `"macro"` handler, `Macro`,
+`kit_discovery/macro_moves.py` (the `"macro"` handler, `Macro`,
 `instantiate`/`viable`, `offered`, `legal_with_macros`), the minted
 8-row table baked as `lawdata.MACROS`
-(`packages/mlopt-discovery/src/mlopt_discovery/lawdata/laws/macros.py`,
+(`kit-discovery/src/kit_discovery/lawdata/laws/macros.py`,
 regenerate with `scripts/macro_miner.py --emit`), and
 `meta_arena.legal_actions` itself offers the viable minted lines to
 **every** player — scripted, random, greedy, learned.  The lab-only

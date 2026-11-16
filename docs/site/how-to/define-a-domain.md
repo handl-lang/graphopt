@@ -1,12 +1,12 @@
 # Define a domain from a spec
 
-<!-- provenance: graphopt:mlopt_discovery/domain_spec.py + docs/reports/2026-11-12-domain-spec-*.md,2026-11-13-domain-spec-code-boards.md -->
+<!-- provenance: graphopt:kit_discovery/domain_spec.py + docs/reports/2026-11-12-domain-spec-*.md,2026-11-13-domain-spec-code-boards.md -->
 
 [Add a board](./add-a-board) seats a domain in Python. When the domain
 is a *variation* of a shipped board — a vocabulary subset, a corpus
 selection, a ruleset profile, an incumbent recipe — a JSON
 **domain-spec** seats the same `Domain` with no code at all.
-`mlopt_discovery.domain_spec` validates the spec, builds the cases
+`kit_discovery.domain_spec` validates the spec, builds the cases
 generator, board factory, player spec and scripted arm, and registers
 the result in `play.DOMAINS`.
 
@@ -79,7 +79,7 @@ the `--domain` name), `board`, `corpus`, `vocab`, `player`,
   device/dtype); recorded-only on the symbolic boards.
 
 Five specs ship packaged under
-`mlopt_discovery/domains/` — `pointwise` (meta-arena vocabulary
+`kit_discovery/domains/` — `pointwise` (meta-arena vocabulary
 demo), `attr-bounded` (the `vocab.attr_values` demo), `torch-silu`,
 `gen-fusion`, `search-folds` — and a bare name resolves to them.
 
@@ -87,15 +87,15 @@ demo), `attr-bounded` (the `vocab.attr_values` demo), `torch-silu`,
 
 ```sh
 # resolve the spec to its census (kinds, vocab sizes, bounds) — no episodes
-.venv/bin/python -m mlopt_discovery.domain_spec --spec search-folds
+.venv/bin/python -m kit_discovery.domain_spec --spec search-folds
 
 # register + play in one command — repeatable flag
-.venv/bin/python -m mlopt_discovery.play \
+.venv/bin/python -m kit_discovery.play \
     --domain-spec search-folds --domain search-folds \
     --train-cases 4 --eval-cases 2 --budget 8
 
 # the deliver hook rides the same flag
-.venv/bin/python -m mlopt_discovery.play \
+.venv/bin/python -m kit_discovery.play \
     --domain-spec gen-fusion --domain gen-fusion \
     --train-cases 2 --eval-cases 1 --budget 8 --deliver
 ```
@@ -103,7 +103,7 @@ demo), `attr-bounded` (the `vocab.attr_values` demo), `torch-silu`,
 Programmatically, `register_file(source, domains=DOMAINS)` takes a
 JSON path, a packaged name, or a plain dict — the same loader the CLI
 uses. When running `play` as `__main__` pass your own module's
-`DOMAINS` dict (the `__main__`/`mlopt_discovery.play` split makes the
+`DOMAINS` dict (the `__main__`/`kit_discovery.play` split makes the
 registries distinct objects).
 
 ## 4. When a spec is not enough

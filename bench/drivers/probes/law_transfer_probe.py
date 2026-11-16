@@ -82,12 +82,12 @@ from mlopt_core.laws.provenance import (
     MACHINE_STORED,
     law_provenance,
 )
-from mlopt_discovery.model_corpus import (
+from kit_discovery.model_corpus import (
     _term_case,
     export_ir,
     generate_mutants,
 )
-from mlopt_discovery.zoo import zoo as zoo_registry
+from kit_discovery.zoo import zoo as zoo_registry
 from mlopt_orchestrator.optimize import default_rules
 from mlopt_torch.adapters import TorchSource
 
@@ -721,8 +721,8 @@ def main() -> None:
             if not keep(f"mutant:{base_name}") and args.only:
                 continue
             try:
-                from mlopt_discovery import workload_gen as _wg
-                from mlopt_discovery.impact import _iter_subterms
+                from kit_discovery import workload_gen as _wg
+                from kit_discovery.impact import _iter_subterms
 
                 if f"zoo:{base_name}" in term_cases:
                     base_tc = term_cases[f"zoo:{base_name}"]

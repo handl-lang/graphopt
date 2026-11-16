@@ -36,7 +36,7 @@ from statistics import fmean
 def _arms(domain: str, seed: int) -> dict:
     """Build the arm factories: scripted + the registry players."""
     from gamekit.players import registry
-    from mlopt_discovery import play
+    from kit_discovery import play
 
     d = play.DOMAINS[domain]
     arms = {
@@ -86,7 +86,7 @@ def main(argv: list | None = None) -> int:
     )
     args = ap.parse_args(argv)
 
-    from mlopt_discovery import play
+    from kit_discovery import play
 
     d = play.DOMAINS[args.domain]
     cases = d.cases(args.seed + 7919, args.episodes)

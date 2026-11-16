@@ -8,13 +8,13 @@ The interim consolidation rule (``host/project/adrs/0174-…`` §4):
 key-existence guard (``test_host_surface.py``).  This file closes
 the remaining three:
 
-* ``mlopt_discovery.hnl_surface._SPECS`` — the 12-op measurement
+* ``kit_discovery.hnl_surface._SPECS`` — the 12-op measurement
   table.  Forward guard: every spec's ``target`` is a real
   ``tensor.*`` op in the artifact with an emittable status, and a
   canonical probe term per op emits a primary call whose arg count
   sits inside the port's signature arity (concrete signatures only —
   ``Value...`` ports are variadic by declaration).
-* ``mlopt_discovery.modelproj`` — the spec-side emitter's three
+* ``kit_discovery.modelproj`` — the spec-side emitter's three
   tables (``_BINARY_OPS`` / ``_ATTR_OPS`` / ``_FIXED_OPS`` plus the
   ``concat`` special case).  Same forward guard, driven through the
   real ``spec_to_hnl`` renderer.
@@ -217,7 +217,7 @@ def _hnl_probe(op: str) -> Op:
 class TestHnlSurfaceSpecs:
     def test_every_spec_target_is_a_host_op(self) -> None:
         """Forward guard — each ``_SPECS`` target exists + emittable."""
-        from mlopt_discovery.hnl_surface import _SPECS, emit
+        from kit_discovery.hnl_surface import _SPECS, emit
 
         ops = host_ops()
         assert ops, "host_surface.json loaded empty — dep broke"
@@ -240,7 +240,7 @@ class TestHnlSurfaceSpecs:
 
     def test_spec_targets_match_declared_table(self) -> None:
         """The target column itself is pinned — no silent retarget."""
-        from mlopt_discovery.hnl_surface import _SPECS
+        from kit_discovery.hnl_surface import _SPECS
 
         targets = {n: s.target for n, s in _SPECS.items()}
         assert targets == {
@@ -308,7 +308,7 @@ def _model_probe(op: str) -> tuple[Any, list[str]]:
 class TestModelprojTables:
     def test_every_table_op_is_a_host_op(self) -> None:
         """Forward guard — each modelproj op lands on a real port."""
-        from mlopt_discovery import modelproj as mp
+        from kit_discovery import modelproj as mp
 
         ops = host_ops()
         table_ops = (
@@ -329,7 +329,7 @@ class TestModelprojTables:
 
     def test_table_membership_is_pinned(self) -> None:
         """The covered-op set itself is pinned — additions are loud."""
-        from mlopt_discovery import modelproj as mp
+        from kit_discovery import modelproj as mp
 
         covered = (
             set(mp._BINARY_OPS)

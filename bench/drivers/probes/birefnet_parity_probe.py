@@ -29,7 +29,7 @@ Protocol (``bench/drivers/probes/om_decayed_kway_deliver_probe.py`` harness):
    sink.supported_ops)``; lower via ``TorchSink().lower``; verify
    against the source (``sink.verify``, ``max_abs`` reported).
 3. Time the 2x2: source eager / source compiled / delivered eager /
-   delivered compiled — ``mlopt_discovery.play._time_module``
+   delivered compiled — ``kit_discovery.play._time_module``
    (10 warm-ups, median of *reps*), plus steady-state peak CUDA
    memory (peak counters reset *after* compilation, so compile-time
    allocations do not pollute the steady-state number).
@@ -51,7 +51,7 @@ from mlopt_core.cost import backend_cost, dag_cost, flops_cost
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import IR, Op
 from mlopt_core.laws import tags as _law_tags
-from mlopt_discovery.play import _time_module
+from kit_discovery.play import _time_module
 from mlopt_orchestrator import default_rules
 from mlopt_torch.adapters import TorchSink, TorchSource
 

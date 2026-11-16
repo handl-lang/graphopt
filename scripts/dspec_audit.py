@@ -292,8 +292,8 @@ def _call_derive(derive: Any, env: dict) -> Any:
 
 def measure_domain(rule: Any, limit: int, deep: bool) -> Any:
     """``_measure_domain`` with the rule's own hooks, ``deep`` opt-in."""
+    from kit_discovery import object_synthesis as osyn
     from mlopt_core.egraph import Rewrite
-    from mlopt_discovery import object_synthesis as osyn
 
     probe = Rewrite(rule.name, rule.lhs, rule.rhs, derive=rule.derive)
     return osyn._measure_domain(probe, (), limit, deep=deep)
@@ -303,8 +303,8 @@ def measure_domain_oracle(
     rule: Any, oracle: Any, limit: int, corpus: Any = ()
 ) -> Any:
     """Deep domain of *rule*, probed with the *oracle* as the derive."""
+    from kit_discovery import object_synthesis as osyn
     from mlopt_core.egraph import Rewrite
-    from mlopt_discovery import object_synthesis as osyn
 
     probe = Rewrite(rule.name, rule.lhs, rule.rhs, derive=oracle)
     return osyn._measure_domain(probe, corpus, limit, deep=True)
@@ -493,7 +493,7 @@ def _stream_hits(
     ``(size, repr)`` hit is the same one the deduped enumeration
     would mint.
     """
-    from mlopt_discovery import dspec_synth as dsp
+    from kit_discovery import dspec_synth as dsp
 
     hits: list[tuple] = []
     n = len(expected)
@@ -553,7 +553,7 @@ def _prefix_level(
     level: list[tuple], samples: list[tuple]
 ) -> list[tuple]:
     """One shipped enumeration level over *level* — deduped."""
-    from mlopt_discovery import dspec_synth as dsp
+    from kit_discovery import dspec_synth as dsp
 
     nxt: list[tuple] = []
     for op in dsp.BINOPS:
@@ -592,7 +592,7 @@ def bounded_synth(
     ``meta`` reports ``levels`` sizes, ``checked`` pairs and whether
     the *budget_s* deadline truncated the sweep (``truncated``).
     """
-    from mlopt_discovery import dspec_synth as dsp
+    from kit_discovery import dspec_synth as dsp
 
     meta: dict[str, Any] = {
         "checked": 0,
@@ -728,7 +728,7 @@ def audit_shipped(rules: dict, limit: int) -> list[dict]:
 
 def _env_desc(env: dict) -> str:
     """Short env description for divergence witnesses."""
-    from mlopt_discovery import oracle as lvo
+    from kit_discovery import oracle as lvo
 
     return repr(
         sorted(

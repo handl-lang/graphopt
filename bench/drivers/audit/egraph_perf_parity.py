@@ -2,14 +2,14 @@
 
 Plan 0033's hard gate — "``handl-egraph`` saturation time/memory
 within 2x of ``EGraph`` on the 68-module corpus" — measured, not
-asserted.  Each held-out ``mlopt_discovery.zoo`` workload is lifted
+asserted.  Each held-out ``kit_discovery.zoo`` workload is lifted
 to an IR term (``TorchSource().to_ir``), then saturated twice:
 
 * **Python** — ``mlopt_core.egraph.EGraph.run`` in-process, timed
   with ``perf_counter``; peak Python-heap bytes via ``tracemalloc``
   (a second, untraced run supplies the honest wall time — tracing
   perturbs it);
-* **Rust** — the same spec through ``mlopt_discovery.handl_egraph``
+* **Rust** — the same spec through ``kit_discovery.handl_egraph``
   (``egraph-run`` subprocess).  Wall time is ``perf_counter``; peak
   RSS is the child's own ``VmHWM`` polled from ``/proc`` — per-module,
   post-exec, immune to the parent's resident set.
@@ -235,8 +235,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--b", type=int, default=2)
     args = ap.parse_args(argv)
 
-    from mlopt_discovery import handl_egraph as he
-    from mlopt_discovery import zoo
+    from kit_discovery import handl_egraph as he
+    from kit_discovery import zoo
 
     bin_path = he.egraph_run_bin()
     if bin_path is None:

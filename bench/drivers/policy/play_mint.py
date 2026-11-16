@@ -34,8 +34,8 @@ from mlopt_core.egraph import EGraph
 from mlopt_core.laws import DEFAULT
 from mlopt_core.laws.serialize import law_to_data
 from mlopt_core.meta import synthesize_rules
-from mlopt_discovery import play as P
-from mlopt_discovery.verifier import verify_law
+from kit_discovery import play as P
+from kit_discovery.verifier import verify_law
 
 
 def mint(

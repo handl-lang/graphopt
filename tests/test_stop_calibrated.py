@@ -232,7 +232,7 @@ def test_scores_for_reads_only_the_given_candidates():
 
     train = [_Cand("assoc:0", f"t{i}", "u") for i in range(3)]
     held = [_Cand("assoc:0", f"h{i}", "u") for i in range(2)]
-    from mlopt_discovery import open_game as og
+    from kit_discovery import open_game as og
 
     accessed: list = []
 

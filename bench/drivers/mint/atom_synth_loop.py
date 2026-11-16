@@ -76,13 +76,13 @@ import kit_carriers  # noqa: F401 — registers carrier bindings
 import torch
 from mlopt_core.ir import Const, Op, TensorType, Var
 from mlopt_core.laws.serialize import law_to_data, missing_hooks
-from mlopt_discovery import vocab as vc
-from mlopt_discovery.genkernel import _spec_metas
-from mlopt_discovery.handler_synth import (
+from kit_discovery import vocab as vc
+from kit_discovery.genkernel import _spec_metas
+from kit_discovery.handler_synth import (
     handler_record,
     mint_handlers,
 )
-from mlopt_discovery.impact import _iter_subterms
+from kit_discovery.impact import _iter_subterms
 
 from bench.drivers.mint import atom_law_loop as l3
 from bench.drivers.screen.exposure_screen import _export, _workloads
@@ -787,7 +787,7 @@ def _bind_minted(need: Need, handler_row: dict) -> Any:
     bindings = tb._IR_TO_TORCH
 
     def fn(*args: Any, **_attrs: Any) -> Any:
-        from mlopt_discovery.handler_synth import eval_body
+        from kit_discovery.handler_synth import eval_body
 
         env = dict(zip(metas, args, strict=True))
         return eval_body(body, env, bindings)
@@ -893,7 +893,7 @@ def _fragment(need: Need, handler_row: dict, certified: list) -> dict:
     need; the store machinery that merges it is ``cellstore``.
     """
     from mlopt_core.cells import Provenance
-    from mlopt_discovery.cellstore import (
+    from kit_discovery.cellstore import (
         handlers_fragment,
         laws_fragment,
     )

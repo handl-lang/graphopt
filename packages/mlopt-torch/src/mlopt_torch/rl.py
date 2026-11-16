@@ -42,7 +42,7 @@ _STATE_DIM = len(DIMENSIONS) + 1
 _EPS = 1e-12
 
 #: REINFORCE baseline constants — the ``LinearPolicy`` recipe
-#: (``mlopt_discovery.players._BASELINE_EMA`` / ``_CLIP``): the
+#: (``kit_discovery.players._BASELINE_EMA`` / ``_CLIP``): the
 #: baseline is a 0.2-EMA of episode totals and advantages are clipped.
 _BASELINE_EMA = 0.2
 _ADV_CLIP = 40.0
@@ -245,7 +245,7 @@ def train_reinforce(
     ``programs`` is a cycle of starting programs; each episode samples
     rules, applies them, and updates on the discounted reward with a
     cross-episode EMA baseline (see :class:`EmaBaseline`) — the same
-    recipe ``mlopt_discovery.players.LinearPolicy`` uses — so the
+    recipe ``kit_discovery.players.LinearPolicy`` uses — so the
     advantage keeps its cross-episode level: sparse episodes no longer
     push a zero-return absorbing action above the baseline, and a
     degenerate (single-step / flat) episode yields a raw advantage

@@ -7,7 +7,7 @@ gates —
 
 1. **cert** — the machine certifies the law itself: the candidate's
    own rule derives its instance sides with a *standalone-replayable*
-   certificate (``mlopt_discovery.verifier.verify_law`` +
+   certificate (``kit_discovery.verifier.verify_law`` +
    ``verify_certificate`` — reused, not rebuilt).  A rule whose own
    rewrite cannot carry a replayable witness fails here.
 2. **measured** — the candidate *pays*: on at least one
@@ -18,7 +18,7 @@ gates —
    certificate actually invokes the candidate (a win the rule never
    touched is not the rule's win).  When no registered case exercises
    the law, the gate falls back to the **held-out zoo**
-   (``mlopt_discovery.law_order.zoo_terms`` — the 53-module registry
+   (``kit_discovery.law_order.zoo_terms`` — the 53-module registry
    the ``zoo_*`` cases sample): every spelled zoo term the LHS
    strictly matches is measured as a two-arm e-graph site — the floor
    is the spelled cost *and the bank's own extraction under the same
@@ -96,8 +96,8 @@ from mlopt_core.meta import (
     match_pattern,
     pattern_metavars,
 )
-from mlopt_discovery import REPO_ROOT, lawdata, verifier
-from mlopt_discovery.verifier import verify_law
+from kit_discovery import REPO_ROOT, lawdata, verifier
+from kit_discovery.verifier import verify_law
 from mlopt_orchestrator.optimize import _resolve_rules, default_rules
 
 __all__ = [
@@ -207,7 +207,7 @@ def shipped_candidates() -> list:
     """
     by_name = {r.name: r for r in known_bank()}
     laws = [by_name[n] for n in sorted(MACHINE_SHIPPED) if n in by_name]
-    from mlopt_discovery import impact
+    from kit_discovery import impact
 
     laws += impact.new_laws()
     return laws
@@ -255,7 +255,7 @@ def _zoo_instance(
 
 def _synth_instance(rule: Any, limit: int) -> tuple[Any, Any] | None:
     """A guard-accepted site from the gauntlet's binding enumeration."""
-    from mlopt_discovery.evidence import _synth_sites
+    from kit_discovery.evidence import _synth_sites
 
     for bound, lhs_t in _synth_sites(rule.lhs, rule.rhs, limit=limit):
         try:
@@ -470,7 +470,7 @@ def zoo_contexts() -> list[_ZooCtx]:
     export boundary.  Modules that fail to export are honestly
     absent (``zoo_terms`` reports them; they simply never match).
     """
-    from mlopt_discovery import law_order
+    from kit_discovery import law_order
 
     terms, _errors = law_order.zoo_terms()
     return [_ZooCtx(name, term) for name, term in terms]
@@ -836,7 +836,7 @@ def sieve(
 
     # -- truth: fp64 numeric eval of the instance (informational; an
     #    "unequal" is a measured counterexample and refutes outright)
-    from mlopt_discovery import oracle
+    from kit_discovery import oracle
 
     truth, _tnote = oracle.eval_instance(lhs, rhs)
     row_kw["truth"] = truth
@@ -977,7 +977,7 @@ def render_markdown(
         "best registered baseline AND the derivation certificate "
         "invokes the candidate (the `beat_best` floor plus "
         "attribution).  When no registered case exercises the law the "
-        "gate falls back to the held-out `mlopt_discovery.zoo` "
+        "gate falls back to the held-out `kit_discovery.zoo` "
         "registry: every spelled zoo term the LHS strictly matches "
         "(`zoo:`-prefixed rows) is measured as a two-arm e-graph site "
         "whose floor is the spelled cost AND the bank's own "

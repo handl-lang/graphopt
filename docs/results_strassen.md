@@ -1,6 +1,6 @@
 # Strassen rediscovery spike — the Q2 go/no-go measurement
 
-**Date:** 2026-11-06 · **Board:** `mlopt_discovery.bilinear_game` ·
+**Date:** 2026-11-06 · **Board:** `kit_discovery.bilinear_game` ·
 **Driver:** `bench/drivers/probes/strassen_probe.py` · **Seed:** 0
 throughout · **Runner:**
 

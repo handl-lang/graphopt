@@ -216,7 +216,7 @@ class TestCorpusZooReal:
         """
         from mlopt_core.egraph.terms import _term_match
         from mlopt_core.ir import Op
-        from mlopt_discovery.census import _iter_subterms
+        from kit_discovery.census import _iter_subterms
 
         case = {"zoo": "AdditiveAttention", "wseed": 0, "page": 48}
         arena = on._RealArena(case)
@@ -314,7 +314,7 @@ class TestCorpusZooRealCompose:
         from mlopt_core.egraph.terms import _term_match
         from mlopt_core.ir import Op
         from mlopt_core.meta import provenance
-        from mlopt_discovery.census import _iter_subterms
+        from kit_discovery.census import _iter_subterms
 
         case = self._case(zoo="ChunkedRetention")
         arena = on._RealArena(case)
@@ -357,8 +357,8 @@ class TestCorpusZooRealCompose:
         """
         from mlopt_core.egraph.terms import _term_match
         from mlopt_core.ir import Op
-        from mlopt_discovery.census import _iter_subterms
-        from mlopt_discovery.evidence import _site_outcome
+        from kit_discovery.census import _iter_subterms
+        from kit_discovery.evidence import _site_outcome
 
         case = self._case()  # AdditiveAttention — the rerr module
         arena = on._RealArena(case)
@@ -407,8 +407,8 @@ class TestCorpusZooRealCompose:
         """
         from mlopt_core.egraph.terms import _term_match
         from mlopt_core.ir import Op
-        from mlopt_discovery.census import _iter_subterms
-        from mlopt_discovery.evidence import _site_outcome
+        from kit_discovery.census import _iter_subterms
+        from kit_discovery.evidence import _site_outcome
 
         case = self._case(zoo="ChunkedRetention")
         arena = on._RealArena(case)
@@ -519,7 +519,7 @@ class TestCorpusZooRealCompose:
         import re
 
         from mlopt_core.ir import Op
-        from mlopt_discovery.census import _iter_subterms
+        from kit_discovery.census import _iter_subterms
 
         case = self._case(zoo="RMSNormPerHead")
         arena = on._RealArena(case)
@@ -848,8 +848,8 @@ class TestCorpusZooPrim:
         ``gather`` family already covers: restricting the grammar to
         ``ew`` refuses, the minted descriptor covers it.
         """
-        from mlopt_discovery import family_synth as _fs
-        from mlopt_discovery.handler_synth import mint_handlers
+        from kit_discovery import family_synth as _fs
+        from kit_discovery.handler_synth import mint_handlers
 
         spec = (
             "mul",
@@ -886,8 +886,8 @@ class TestCorpusZooPrim:
             _term_match,
         )
         from mlopt_core.ir import Op
-        from mlopt_discovery.census import _iter_subterms
-        from mlopt_discovery.oracle import eval_instance
+        from kit_discovery.census import _iter_subterms
+        from kit_discovery.oracle import eval_instance
 
         cands, _meta, _stats = on._prim_pool(self._roots(), 2)
         assert cands
@@ -1215,12 +1215,10 @@ class TestCorpusZooPrim:
         import shutil
         from pathlib import Path
 
-        from mlopt_discovery import vocabdir
+        from kit_discovery import vocabdir
 
         vdir = tmp_path / "vocab"
-        shutil.copytree(
-            Path(__file__).resolve().parents[1] / "vocab", vdir
-        )
+        shutil.copytree(vocabdir.default_vocab_dir(), vdir)
         before = set(vocabdir.load_vocab(vdir, fresh=True).prims)
         assert (
             on.main(
@@ -1355,7 +1353,7 @@ class TestCorpusZooPrimBootstrap:
         """eval_instance(LHS-with-synop, synop2-call) is fp64-equal."""
         from mlopt_core.egraph.terms import _term_match
         from mlopt_core.meta import instantiate_pattern
-        from mlopt_discovery.oracle import eval_instance
+        from kit_discovery.oracle import eval_instance
 
         _name, roots = self._boot()
         cands, meta, _stats = on._prim_pool(roots, 2, bootstrap=True)
@@ -1574,7 +1572,7 @@ class TestCorpusZooPrimDepth3:
         """eval_instance(LHS-with-synop2, synop3-call) is fp64-equal."""
         from mlopt_core.egraph.terms import _term_match
         from mlopt_core.meta import instantiate_pattern
-        from mlopt_discovery.oracle import eval_instance
+        from kit_discovery.oracle import eval_instance
 
         _name2, roots = self._boot3()
         cands, meta, _stats = on._prim_pool(
@@ -1621,7 +1619,7 @@ class TestCorpusZooPrimDepth3:
         from mlopt_core.egraph.terms import _term_match
         from mlopt_core.laws import ALL_RULES
         from mlopt_core.meta import instantiate_pattern
-        from mlopt_discovery.verifier import verify_law
+        from kit_discovery.verifier import verify_law
 
         _name2, roots = self._boot3()
         cands, meta, _stats = on._prim_pool(
@@ -1719,7 +1717,7 @@ class TestCorpusZooPrimDepth3:
         out-prices ``synop_*``'s.
         """
         from mlopt_core.laws import minted
-        from mlopt_discovery.antiunify import _n_ops
+        from kit_discovery.antiunify import _n_ops
 
         vocab = on._synop_vocab()
         assert set(vocab) == minted.SYNOP_SHIPPED

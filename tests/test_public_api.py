@@ -199,8 +199,8 @@ _PUBLIC_SURFACE: dict[str, tuple[str, ...]] = {
         "ScoreVerdict",
         "score",
     ),
-    "mlopt_discovery.verifier": ("verify_law", "LawResult"),
-    "mlopt_discovery.play": (
+    "kit_discovery.verifier": ("verify_law", "LawResult"),
+    "kit_discovery.play": (
         "DOMAINS",
         "Domain",
         "play",
@@ -346,7 +346,7 @@ class TestSignaturePins:
         assert "memo" in params
 
     def test_verify_law_shape(self):
-        from mlopt_discovery.verifier import verify_law
+        from kit_discovery.verifier import verify_law
 
         params = inspect.signature(verify_law).parameters
         assert list(params)[:3] == ["lhs", "rhs", "rules"]
@@ -694,13 +694,13 @@ class TestBoundaryNotes:
 
 
 class TestGamekitCompatShims:
-    """``mlopt_discovery.{engine,scoring,advantage,players,lawdata.game}``
+    """``kit_discovery.{engine,scoring,advantage,players,lawdata.game}``
     re-export the gamekit modules — same objects, one home (plan 0032
     lane A)."""
 
     def test_engine_shim(self):
         import gamekit.engine
-        import mlopt_discovery.engine as shim
+        import kit_discovery.engine as shim
 
         assert shim.Board is gamekit.engine.Board
         assert shim.run_episode is gamekit.engine.run_episode
@@ -710,42 +710,42 @@ class TestGamekitCompatShims:
 
     def test_scoring_shim(self):
         import gamekit.scoring
-        import mlopt_discovery.scoring as shim
+        import kit_discovery.scoring as shim
 
         assert shim.score is gamekit.scoring.score
         assert shim.ScoringSpec is gamekit.scoring.ScoringSpec
 
     def test_advantage_shim(self):
         import gamekit.advantage
-        import mlopt_discovery.advantage as shim
+        import kit_discovery.advantage as shim
 
         assert shim.AdvantagePlayer is gamekit.advantage.AdvantagePlayer
 
     def test_players_shim(self):
         import gamekit.players
-        import mlopt_discovery.players as shim
+        import kit_discovery.players as shim
 
         assert shim.LinearPolicy is gamekit.players.LinearPolicy
         assert shim._dot is gamekit.players._dot
 
     def test_players_submodules_are_the_same_module_object(self):
-        """``mlopt_discovery.players.{registry,_base}`` alias — one
+        """``kit_discovery.players.{registry,_base}`` alias — one
         registry ``_INDEX``, never a forked copy."""
         import gamekit.players._base
         import gamekit.players.registry
-        import mlopt_discovery.players._base as pbase
-        import mlopt_discovery.players.registry as preg
+        import kit_discovery.players._base as pbase
+        import kit_discovery.players.registry as preg
 
         assert preg is gamekit.players.registry
         assert pbase is gamekit.players._base
 
     def test_lawdata_game_alias(self):
-        """``mlopt_discovery.lawdata.game`` aliases ``gamekit.gamedata``."""
+        """``kit_discovery.lawdata.game`` aliases ``gamekit.gamedata``."""
         import gamekit.gamedata
         import gamekit.gamedata as game
         import gamekit.gamedata.features as features
         import gamekit.gamedata.weights as weights
-        import mlopt_discovery.lawdata as data
+        import kit_discovery.lawdata as data
 
         assert game is gamekit.gamedata
         assert data.game is gamekit.gamedata

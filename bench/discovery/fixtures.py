@@ -363,7 +363,7 @@ def _retnet_chunked(size: int):
     zoo's ``_ChunkedRetention`` (Sun et al. 2023, ``(QKᵀ ⊙ D) V`` with
     the decay matrix built in-graph).
     """
-    from mlopt_discovery.zoo import _ChunkedRetention
+    from kit_discovery.zoo import _ChunkedRetention
 
     t = max(8, size)
     return _ChunkedRetention(16).eval().double(), _r(2, t, 16)
@@ -511,7 +511,7 @@ def _cumsum_scan(size: int):
 #  Real-corpus sources — the held-out zoo's own modules
 # ---------------------------------------------------------------------------
 #
-# These builders instantiate the *actual* ``mlopt_discovery.zoo``
+# These builders instantiate the *actual* ``kit_discovery.zoo``
 # workload classes — the architectures the model-zoo-yield /
 # human-bar retros measured — rather than a purpose-built respelling.
 # The case TOML then replays the recorded fire so the scorecard's
@@ -520,7 +520,7 @@ def _cumsum_scan(size: int):
 
 def _zoo_lora_adapter(size: int):
     """The zoo ``LoRAAdapter``; ``size`` is the model width d."""
-    from mlopt_discovery.zoo import _LoRAAdapter
+    from kit_discovery.zoo import _LoRAAdapter
 
     d = max(8, size)
     return _LoRAAdapter(d, 4).eval().double(), _r(4, d)
@@ -528,7 +528,7 @@ def _zoo_lora_adapter(size: int):
 
 def _zoo_time_cond_conv(size: int):
     """The zoo ``TimeCondConv`` diffusion block (fixed channels)."""
-    from mlopt_discovery.zoo import _TimeCondConv
+    from kit_discovery.zoo import _TimeCondConv
 
     del size  # the zoo pins ch=8, temb=4 — the measured cell
     return _TimeCondConv(8, 4).eval().double(), (_r(1, 8, 8, 8), _r(1))
@@ -536,7 +536,7 @@ def _zoo_time_cond_conv(size: int):
 
 def _zoo_gau(size: int):
     """The zoo ``GatedAttentionUnit``; ``size`` is the width d."""
-    from mlopt_discovery.zoo import _GatedAttentionUnit
+    from kit_discovery.zoo import _GatedAttentionUnit
 
     d = max(8, size)
     return _GatedAttentionUnit(d).eval().double(), _r(2, 8, d)
@@ -544,7 +544,7 @@ def _zoo_gau(size: int):
 
 def _zoo_spline_kan(size: int):
     """The zoo ``SplineKAN`` edge layer; ``size`` is the input dim."""
-    from mlopt_discovery.zoo import _SplineKAN
+    from kit_discovery.zoo import _SplineKAN
 
     d = max(8, size)
     return _SplineKAN(d, 8).eval().double(), _r(4, d)
@@ -552,7 +552,7 @@ def _zoo_spline_kan(size: int):
 
 def _zoo_cosine_attention(size: int):
     """The zoo ``CosineAttention``; ``size`` is the width d."""
-    from mlopt_discovery.zoo import _CosineAttention
+    from kit_discovery.zoo import _CosineAttention
 
     d = max(8, size)
     return _CosineAttention(d, 4).eval().double(), _r(2, 8, d)
@@ -560,7 +560,7 @@ def _zoo_cosine_attention(size: int):
 
 def _zoo_mos_head(size: int):
     """The zoo ``MoSHead``; ``size`` is the feature width d."""
-    from mlopt_discovery.zoo import _MoSHead
+    from kit_discovery.zoo import _MoSHead
 
     d = max(8, size)
     return _MoSHead(d, 10, 3).eval().double(), _r(4, d)
@@ -568,7 +568,7 @@ def _zoo_mos_head(size: int):
 
 def _zoo_adaln_block(size: int):
     """The zoo ``AdaLNBlock``; ``size`` is the width d."""
-    from mlopt_discovery.zoo import _AdaLNBlock
+    from kit_discovery.zoo import _AdaLNBlock
 
     d = max(8, size)
     return (
@@ -579,7 +579,7 @@ def _zoo_adaln_block(size: int):
 
 def _zoo_delta_rule(size: int):
     """The zoo ``DeltaRuleBlock`` — the unrolled matrix-state write."""
-    from mlopt_discovery.zoo import _DeltaRuleBlock
+    from kit_discovery.zoo import _DeltaRuleBlock
 
     d = max(8, size)
     return _DeltaRuleBlock(d, d, 4).eval().double(), _r(2, 4, d)

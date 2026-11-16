@@ -16,7 +16,7 @@ uv sync --group bench      # creates .venv/ — dev env + the bench CLI deps
 
 There is no `mlopt` facade package: import the domain packages
 directly (`mlopt_core`, `mlopt_torch`, `mlopt_orchestrator`,
-`mlopt_discovery`, `gamekit`, …). `.venv/bin/python` is the
+`kit_discovery`, `gamekit`, …). `.venv/bin/python` is the
 interpreter every command in this track uses. `uv sync` pulls the
 substrate and game-kernel packages in as pinned git deps on the
 `eqsat`/`gamekit` repos — the import names are unchanged.
@@ -74,7 +74,7 @@ saturate, extract, lower, verify — on CPU with no GPU required.
 | the pipeline | `mlopt_orchestrator` | `eqsat` | `Optimizer`, `search`, `lower` — backend-neutral |
 | the game layer | `gamekit` | [`gamekit`](https://github.com/handl-lang/gamekit) | `Board` protocol, players, scoring, calibration |
 | torch adapters | `mlopt_torch` | graphopt | `TorchSource`/`TorchSink`/`TorchBackend`, runners |
-| discovery | `mlopt_discovery` | graphopt | census → propose → verify → measure → rank → emit |
+| discovery | `kit_discovery` | graphopt | census → propose → verify → measure → rank → emit |
 | benchmarks | `bench` | graphopt | harnessed suites + the discovery scorecard — the harness itself is `benchkit` in [`gamekit`](https://github.com/handl-lang/gamekit) (`bench/benchkit` is the compat alias) |
 
 ## Next

@@ -65,9 +65,9 @@ from mlopt_core.trajectories import (
     rule_vector,
 )
 from gamekit import engine
-from mlopt_discovery import families, play
-from mlopt_discovery import open_game as og
-from mlopt_discovery import proposal as lp
+from kit_discovery import families, play
+from kit_discovery import open_game as og
+from kit_discovery import proposal as lp
 from mlopt_torch.learned_policy import input_vector, train_rule_value
 
 #: Defaults — the baseline protocol.

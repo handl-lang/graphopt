@@ -7,7 +7,7 @@ moved to ``handl-lang/eqsat`` (``test_cond_laws.py``,
 ``test_cost.py``, ``test_native_extract.py``,
 ``test_backend_neutral.py``, ``test_opmeta.py``): each exercises
 substrate machinery *through* a domain package that stays here
-(``mlopt_discovery``, ``kit_carriers``, ``mlopt_torch``, ``torch``,
+(``kit_discovery``, ``kit_carriers``, ``mlopt_torch``, ``torch``,
 or the ambient carrier registry), so they run against the pinned
 eqsat git dep from this repo.  The private helpers below are
 verbatim copies of the ones the source files carried.
@@ -101,7 +101,7 @@ def test_mm_addends_rank_ge2_requires_contraction_axis():
     ``dim-eq(a, -2, b, -2)`` declines it and keeps every sound
     rank>=2 mixed-rank binding."""
     from mlopt_core.egraph.terms import _term_instantiate
-    from mlopt_discovery import oracle as vo
+    from kit_discovery import oracle as vo
 
     bad = {"W": _p("W", 4, 3), "a": _v("a", 3, 5), "b": _v("b", 1, 5)}
     assert not DISTRIBUTE_MUL.check(bad)
@@ -134,7 +134,7 @@ def test_gqa_absorb_repeat_requires_rank4_operands():
     [2, 6] but got: [2, 3]``).  The ``rank == 4`` clauses decline it.
     """
     from mlopt_core.egraph.terms import _term_instantiate
-    from mlopt_discovery import oracle as vo
+    from kit_discovery import oracle as vo
 
     # the measured counterexample: all repeat clauses pass, rank-3
     # leaves make the enable_gqa RHS ill-typed.
@@ -299,7 +299,7 @@ def test_migrated_carrier_derives_mint_identically():
 def test_shipped_object_restores_through_the_store():
     """store → admit rebuilds the transported hooks; fires identically."""
     from mlopt_core.laws.serialize import alpha_key
-    from mlopt_discovery import evidence as ev
+    from kit_discovery import evidence as ev
 
     lib = {r.name: r for r in [*BATCH_NORM_RULES, *CONV_FOLD_RULES]}
     conn = ev.connect(":memory:")
@@ -871,7 +871,7 @@ def test_view_sets_agree_across_modules():
     """``pipeline._VIEW_OPS`` and ``signature._VIEW_OPS`` are the same
     *source*, and the generator's alphabet is a subset of it — the
     measured inconsistency the registry removes."""
-    from mlopt_discovery import pipeline as pl
+    from kit_discovery import pipeline as pl
     from mlopt_orchestrator.morphisms import signature as sig
 
     assert set(pl._VIEW_OPS) <= set(sig._VIEW_OPS)
@@ -884,8 +884,8 @@ def test_consumers_read_the_registry_object():
     a copy, so a twin cannot drift."""
     from mlopt_core.cost import basic as cost_basic
     from mlopt_core.laws import layout
-    from mlopt_discovery import oracle as orc
-    from mlopt_discovery import pipeline as pl
+    from kit_discovery import oracle as orc
+    from kit_discovery import pipeline as pl
     from mlopt_orchestrator.morphisms import signature as sig
 
     assert cost_basic._VIEW_OPS is om.COST_VIEW_OPS

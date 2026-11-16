@@ -27,7 +27,7 @@ from typing import Any
 
 def _sweep(rules: list[Any], label: str, corpus: Any, db: str) -> None:
     """Store + gauntlet every rule; print the stage-by-stage account."""
-    from mlopt_discovery import evidence as ev
+    from kit_discovery import evidence as ev
 
     conn = ev.connect(db)
     try:
@@ -61,8 +61,8 @@ def _sweep(rules: list[Any], label: str, corpus: Any, db: str) -> None:
 def main(argv: list[str]) -> int:
     """Run the sweep over the requested families (default: both)."""
     from mlopt_core.laws import BATCH_NORM_RULES, CONV_FOLD_RULES
-    from mlopt_discovery import cache_dir
-    from mlopt_discovery import evidence as ev
+    from kit_discovery import cache_dir
+    from kit_discovery import evidence as ev
 
     which = argv[1] if len(argv) > 1 else "all"
     t0 = time.monotonic()

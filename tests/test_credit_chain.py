@@ -33,7 +33,7 @@ import json
 import pytest
 from gamekit import engine
 from gamekit.players import LearnedPlayer
-from mlopt_discovery.meta_arena import Action
+from kit_discovery.meta_arena import Action
 
 from bench.drivers.policy import credit_chain as cc
 

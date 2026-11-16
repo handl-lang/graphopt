@@ -59,11 +59,11 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import torch
+from kit_discovery import lawdata
+from kit_discovery import meta_arena as ma
+from kit_discovery import meta_player as mp
+from kit_discovery.macro_moves import Macro
 from mlopt_core.cost.basic import count_cost
-from mlopt_discovery import lawdata
-from mlopt_discovery import meta_arena as ma
-from mlopt_discovery import meta_player as mp
-from mlopt_discovery.macro_moves import Macro
 
 from scripts.macro_miner import (
     MacroScripted,

@@ -104,7 +104,7 @@ from kit_carriers.om import (
 from mlopt_core.cost import dag_cost, flops_cost
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import Op
-from mlopt_discovery.zoo import _ChunkedRetention
+from kit_discovery.zoo import _ChunkedRetention
 from mlopt_torch.adapters import TorchSource
 
 

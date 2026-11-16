@@ -1,7 +1,7 @@
 """Delivered wall-time of the shipped ``prim:synop*`` folds on bound modules.
 
 The pay leg for the shipped primitive folds
-(``mlopt_discovery.shipped_primitives`` — the ``zoo-prim`` /
+(``kit_discovery.shipped_primitives`` — the ``zoo-prim`` /
 ``prim-bootstrap`` mints, core-shipped default-on) was measured in the
 pipeline's *own* cost model: a ``synop_*`` call prices as one dispatch
 against the manual subgraph's N, and extraction reports 0.5-0.8x
@@ -102,8 +102,8 @@ from mlopt_torch.torch_bridge import (
 if not hasattr(minted, "SYNOP3_SHIPPED"):
     minted.SYNOP3_SHIPPED = frozenset()
 
-from mlopt_discovery import shipped_primitives as sp
-from mlopt_discovery import zoo as zoo_mod
+from kit_discovery import shipped_primitives as sp
+from kit_discovery import zoo as zoo_mod
 
 #: The bound modules — the records' ``mods`` ledger (every SSM-cluster
 #: module binds the mint's recurring-scan folds; ``synop_bb8c54c201`` —

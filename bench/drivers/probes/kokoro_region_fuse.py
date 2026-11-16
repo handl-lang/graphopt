@@ -73,7 +73,7 @@ kokoro = _load("tts_kokoro_probe", "tts_kokoro_probe.py")
 
 
 def _elem_ops():
-    from mlopt_discovery import genkernel as gk
+    from kit_discovery import genkernel as gk
 
     return gk.ELEMENTWISE
 

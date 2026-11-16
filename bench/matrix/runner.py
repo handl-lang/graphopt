@@ -187,7 +187,7 @@ def _episode_cells(
     costs the in-flight player, nothing earlier.
     """
     from gamekit import engine
-    from mlopt_discovery.play import DOMAINS
+    from kit_discovery.play import DOMAINS
     from gamekit.players import registry
 
     d = DOMAINS[board]
@@ -295,8 +295,8 @@ def _open_cells(
     is skipped entirely.
     """
     from gamekit import engine
-    from mlopt_discovery import open_game as og
-    from mlopt_discovery import proposal as lp
+    from kit_discovery import open_game as og
+    from kit_discovery import proposal as lp
     from gamekit.players import registry
 
     from bench.players.runner import (
@@ -462,7 +462,7 @@ def coverage(
     not run them: an unsupported board, or a board whose episodes
     produce no equality claims.
     """
-    from mlopt_discovery.play import DOMAINS
+    from kit_discovery.play import DOMAINS
     from gamekit.players import registry
 
     out: list[Cell] = []

@@ -62,10 +62,10 @@ from typing import Any
 import policy_baseline as pb
 import schema_leaderboard as sl
 from gamekit import engine
-from mlopt_discovery import play
-from mlopt_discovery import open_game as og
-from mlopt_discovery import proposal as lp
-from mlopt_discovery.meta_arena import Action
+from kit_discovery import play
+from kit_discovery import open_game as og
+from kit_discovery import proposal as lp
+from kit_discovery.meta_arena import Action
 from gamekit.players import PARTS, DomainSpec, _dot
 
 #: Defaults — the shipped bake protocol under memoized verdicts.

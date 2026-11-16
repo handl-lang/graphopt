@@ -3,7 +3,7 @@
 **Date:** 2026-10-19 · **Script:** `bench/drivers/policy/stop_valuelabel.py`
 (new — the `stop_advantage.py` harness with the label→payoff
 injection, the `open:vlabel` part, and two analytic break-even
-gates) · **Part:** `mlopt_discovery.open_vlabel` (registered as
+gates) · **Part:** `kit_discovery.open_vlabel` (registered as
 `open:vlabel`, unshipped) · **Seed:** 0 · **Runner:**
 
 ```bash

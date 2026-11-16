@@ -1,6 +1,6 @@
 # Add a board
 
-<!-- provenance: gamekit:packages/gamekit/src/gamekit/engine.py + graphopt:mlopt_discovery/play.py@bac1a61 -->
+<!-- provenance: gamekit:packages/gamekit/src/gamekit/engine.py + graphopt:kit_discovery/play.py@bac1a61 -->
 
 A **board** is one optimization game as an RL environment — observe a
 state, play a move, get a report, repeat until done. A **domain** is the
@@ -55,7 +55,7 @@ the episode early, as does `state.done`.
 ## 3. Register the domain
 
 ```python
-# mlopt_discovery/play.py — one row in DOMAINS
+# kit_discovery/play.py — one row in DOMAINS
 DOMAINS["mine"] = spec_domain(
     my_cases,          # (seed, n) -> [case, ...]
     my_board_of,       # case -> Board
@@ -79,10 +79,10 @@ Or set the fields directly — `Domain` is data:
 ## 4. Drive it
 
 ```sh
-.venv/bin/python -m mlopt_discovery.play \
+.venv/bin/python -m kit_discovery.play \
     --domain mine --train-cases 12 --eval-cases 4 --budget 24
-.venv/bin/python -m mlopt_discovery.play --domain mine --player linear
-.venv/bin/python -m mlopt_discovery.play --domain mine --player linear --deliver
+.venv/bin/python -m kit_discovery.play --domain mine --player linear
+.venv/bin/python -m kit_discovery.play --domain mine --player linear --deliver
 ```
 
 `--player` evaluates a [registered player](./register-a-player)

@@ -288,7 +288,7 @@ def gate_synth_fit(r: dict[str, Any]) -> dict[str, Any]:
     supplied ``scale``, needing only multiplication), which isolates
     whether a refusal is a missing-op gap or something else.
     """
-    from mlopt_discovery import dspec_synth as dsp
+    from kit_discovery import dspec_synth as dsp
 
     rows = _scalar_samples(r)
     raw_bounds = [
@@ -330,7 +330,7 @@ def gate_prescaled_fit(r: dict[str, Any]) -> dict[str, Any]:
     tier refuses, the refusal is precisely the missing ``sqrt``/``fdiv``
     ops, not a structural mismatch.
     """
-    from mlopt_discovery import dspec_synth as dsp
+    from kit_discovery import dspec_synth as dsp
 
     rows = _scalar_samples(r)
 
@@ -378,7 +378,7 @@ def gate_scale_fit(r: dict[str, Any]) -> dict[str, Any]:
     the statistic reads (``gamma``/``var``/``eps``), so the level
     product stays small enough for the streamed sweep to terminate.
     """
-    from mlopt_discovery import dspec_synth as dsp
+    from kit_discovery import dspec_synth as dsp
 
     rows = _scalar_samples(r)
     bounds = [
@@ -464,7 +464,7 @@ def gate_value_domain() -> dict[str, Any]:
     """
     import mlopt_core.laws.cond as cond
     from mlopt_core.ir import Const, Param, TensorType
-    from mlopt_discovery import dspec_synth as dsp
+    from kit_discovery import dspec_synth as dsp
 
     table: dict[str, Any] = {}
 

@@ -1,4 +1,4 @@
-"""``mlopt_discovery.hnl_surface`` — the term→``.hnl`` emitter.
+"""``kit_discovery.hnl_surface`` — the term→``.hnl`` emitter.
 
 Unit-level pins for the emit machinery moved out of
 ``bench/drivers/kit/term_hnl.py`` (the e2e kit eval lives in
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
-from mlopt_discovery.hnl_surface import (
+from kit_discovery.hnl_surface import (
     KitEvalError,
     KitRunner,
     UnsupportedOpError,
@@ -318,7 +318,7 @@ class TestLeavesAndProgram:
 
 class TestCompatShim:
     def test_shim_is_the_same_objects(self) -> None:
-        from mlopt_discovery import hnl_surface as canon
+        from kit_discovery import hnl_surface as canon
 
         from bench.drivers.kit import term_hnl as shim
 
@@ -484,7 +484,7 @@ class TestEmitBranches:
 
     def test_slot_lit_and_bad_slot_kinds(self) -> None:
         """``_slot``'s literal and unknown-kind branches, directly."""
-        from mlopt_discovery.hnl_surface import _slot
+        from kit_discovery.hnl_surface import _slot
 
         assert _slot(("lit", 5), [], {}, lambda t: "?") == "5"
         with pytest.raises(UnsupportedOpError, match="bad emit slot"):

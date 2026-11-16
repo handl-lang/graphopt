@@ -2007,7 +2007,7 @@
       "name": "zoo_lora_adapter",
       "title": "Zoo LoRAAdapter \u2014 the assoc_linear win, replayed",
       "category": "speed",
-      "citation": "The held-out zoo's own `LoRAAdapter` (Hu et al. 2021): the real\n`W x + alpha\u00b7(B (A x))` production spelling, imported verbatim from\n`mlopt_discovery.zoo` \u2014 not a purpose-built respelling.  `assoc_linear`\nfolds the low-rank chain `up(down(x))` into one dense GEMM whose\n`B\u00b7A` weight product folds at compile time.  Replays the \u221219.985 %\nverified win of `project/retros/human-bar.md` \u2014 under the executor\naxis it measures \u221220.0 % here \u2014 the largest single-model yield the\nzoo retro recorded.\n",
+      "citation": "The held-out zoo's own `LoRAAdapter` (Hu et al. 2021): the real\n`W x + alpha\u00b7(B (A x))` production spelling, imported verbatim from\n`kit_discovery.zoo` \u2014 not a purpose-built respelling.  `assoc_linear`\nfolds the low-rank chain `up(down(x))` into one dense GEMM whose\n`B\u00b7A` weight product folds at compile time.  Replays the \u221219.985 %\nverified win of `project/retros/human-bar.md` \u2014 under the executor\naxis it measures \u221220.0 % here \u2014 the largest single-model yield the\nzoo retro recorded.\n",
       "found": true,
       "picked": true,
       "certified": true,

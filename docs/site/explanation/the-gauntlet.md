@@ -1,6 +1,6 @@
 # The gauntlet — what a minted law must survive
 
-<!-- provenance: graphopt:mlopt_discovery.verifier + docs/{public_api,mechanism}.md@eea02f6 -->
+<!-- provenance: graphopt:kit_discovery.verifier + docs/{public_api,mechanism}.md@eea02f6 -->
 
 A candidate law is *proposed* cheaply and *admitted* expensively. The
 admission gauntlet is the pipeline every minted law runs before it may
@@ -27,7 +27,7 @@ propose → numeric oracle → derivability check → typed-pay gate
    wall/peak cost on the fixtures, under the
    [three-costs](./three-costs) discipline — `dag_cost` ranking is
    never enough.
-4. **The adversarial sweep.** `mlopt_discovery.gap_gen` generates
+4. **The adversarial sweep.** `kit_discovery.gap_gen` generates
    bindings the corpus cannot — witnesses inside the guard's *false
    region* — and tries to falsify the candidate's side conditions.
    This is where the teeth are: the sweep killed **212 bad accepts**

@@ -141,12 +141,12 @@ def main() -> int:
     from mlopt_core.egraph import EGraph
     from mlopt_core.egraph.terms import _term_match
     from mlopt_core.laws.serialize import alpha_key
-    from mlopt_discovery import evidence as ev
-    from mlopt_discovery import pipeline as pl
-    from mlopt_discovery.impact import TermCase, _cost_fn, _probe
-    from mlopt_discovery.pipeline import _typed_probe
-    from mlopt_discovery.shape_proposal import _sink
-    from mlopt_discovery.verifier import verify_law
+    from kit_discovery import evidence as ev
+    from kit_discovery import pipeline as pl
+    from kit_discovery.impact import TermCase, _cost_fn, _probe
+    from kit_discovery.pipeline import _typed_probe
+    from kit_discovery.shape_proposal import _sink
+    from kit_discovery.verifier import verify_law
 
     t0 = time.monotonic()
     seed, ir, tensors, x = real_seed()

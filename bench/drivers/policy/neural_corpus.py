@@ -20,8 +20,8 @@ side of the baseline protocol untouched:
   ``(repr(lhs), repr(rhs))`` — the stream is a superset enumeration,
   so the protocol's candidates recur inside it.
 * **sites** — real ``nn.Module``-derived candidates: the zoo
-  (``mlopt_discovery.zoo.zoo()``) plus the new variant draw
-  (:func:`mlopt_discovery.zoo.zoo_variants` — the same
+  (``kit_discovery.zoo.zoo()``) plus the new variant draw
+  (:func:`kit_discovery.zoo.zoo_variants` — the same
   architectures re-parametrized) plus a capped prefix of the intake's
   ``real_workloads()`` are exported through the intake boundary, and
   ``lp.near_miss_candidates`` mines each saturated e-graph for
@@ -79,16 +79,16 @@ from mlopt_core.trajectories import (
     rule_samples,
     rule_vector,
 )
-from mlopt_discovery import families, lawdata, play
-from mlopt_discovery import intake as li
-from mlopt_discovery import open_game as og
-from mlopt_discovery import proposal as lp
-from mlopt_discovery import zoo as zoo_mod
-from mlopt_discovery.enumerate import (
+from kit_discovery import families, lawdata, play
+from kit_discovery import intake as li
+from kit_discovery import open_game as og
+from kit_discovery import proposal as lp
+from kit_discovery import zoo as zoo_mod
+from kit_discovery.enumerate import (
     DEFAULT_OPS,
     enumerate_candidates,
 )
-from mlopt_discovery.meta_arena import Action
+from kit_discovery.meta_arena import Action
 from mlopt_torch.adapters import TorchSink
 from mlopt_torch.learned_policy import input_vector, train_rule_value
 

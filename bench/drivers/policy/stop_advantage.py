@@ -9,7 +9,7 @@ softmax columns / CE imitation / the head fold, lands a degenerate
 point).  This driver prices the two remaining levers, both new:
 
 * **the policy's own posterior as evidence** — the ``open:self`` part
-  (:mod:`mlopt_discovery.open_self`): the model's softmax over the
+  (:mod:`kit_discovery.open_self`): the model's softmax over the
   pending ``evaluate`` moves IS a weak value estimate, and round 3's
   blocker — a ``RelFeats`` part cannot see the weights — is lifted
   by injecting the scorer (``open_self.set_self_scores``).  The
@@ -74,11 +74,11 @@ from mlopt_core.features import compute_features
 from mlopt_core.trajectories import RuleSample, rule_vector
 from gamekit import advantage as adv
 from gamekit import engine
-from mlopt_discovery import play
-from mlopt_discovery import open_game as og
-from mlopt_discovery import open_self as oself
-from mlopt_discovery import proposal as lp
-from mlopt_discovery.meta_arena import Action
+from kit_discovery import play
+from kit_discovery import open_game as og
+from kit_discovery import open_self as oself
+from kit_discovery import proposal as lp
+from kit_discovery.meta_arena import Action
 from gamekit.players import PARTS, DomainSpec, _dot
 from mlopt_torch.learned_policy import input_vector, train_rule_value
 
@@ -98,7 +98,7 @@ _GREEDY_SEED = 50_000
 
 #: The extra-part vocabulary this driver knows — the shipped extras
 #: plus the round-6 ``open:self`` part (registered in
-#: ``mlopt_discovery.open_self``, outside ``OPEN_EXTRA_FEATURES``).
+#: ``kit_discovery.open_self``, outside ``OPEN_EXTRA_FEATURES``).
 EXTRA: dict[str, tuple[str, ...]] = {
     **og.OPEN_EXTRA_FEATURES,
     "open:self": oself.SELF_FEATURES,

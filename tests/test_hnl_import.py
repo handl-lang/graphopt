@@ -1,6 +1,6 @@
 """``.hnl`` → mlopt term — the reverse bridge's contract.
 
-``mlopt_discovery.hnl_import.hnl_to_term`` parses the expression
+``kit_discovery.hnl_import.hnl_to_term`` parses the expression
 grammar ``hnl_surface.emit`` produces (plus the ``do { … }`` program
 form and handl-native ``tensor.*`` calls on the covered surface) back
 into ``mlopt_core.ir`` terms.  These tests pin:
@@ -21,12 +21,12 @@ from __future__ import annotations
 
 import pytest
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
-from mlopt_discovery.hnl_import import (
+from kit_discovery.hnl_import import (
     HnlImportError,
     covered_ops,
     hnl_to_term,
 )
-from mlopt_discovery.hnl_surface import UnsupportedOpError, emit
+from kit_discovery.hnl_surface import UnsupportedOpError, emit
 
 
 def _x() -> Var:

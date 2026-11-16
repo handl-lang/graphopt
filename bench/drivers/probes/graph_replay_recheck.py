@@ -180,10 +180,10 @@ def _deliver_module(case: Any) -> tuple[Any, Any, Any, dict]:
     dict (verified rep fields, case labels).  Raises on any decline.
     """
     from mlopt_core.ir import IR
-    from mlopt_discovery import genkernel as gk
-    from mlopt_discovery import play as play_mod
-    from mlopt_discovery import shipped_primitives as sp
-    from mlopt_discovery.meta_arena import _ops_of
+    from kit_discovery import genkernel as gk
+    from kit_discovery import play as play_mod
+    from kit_discovery import shipped_primitives as sp
+    from kit_discovery.meta_arena import _ops_of
 
     ex = case[5]
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -229,8 +229,8 @@ def recheck_one(
 ) -> dict:
     """Deliver one zoo workload and re-verify its graph arm on fresh inputs."""
     from kit_cuda import CudaGraphRunner
-    from mlopt_discovery import play as play_mod
-    from mlopt_discovery import zoo as zoo_mod
+    from kit_discovery import play as play_mod
+    from kit_discovery import zoo as zoo_mod
 
     d, t, b = shape
     wl = next(w for w in zoo_mod.zoo(d, t, b) if w.name == name)

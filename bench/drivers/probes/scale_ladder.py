@@ -81,7 +81,7 @@ from typing import Any
 import kit_carriers  # noqa: F401 — registers the carrier machinery
 import torch
 from mlopt_core.cost import dag_cost
-from mlopt_discovery.impact import TermCase, _iter_subterms
+from kit_discovery.impact import TermCase, _iter_subterms
 from mlopt_orchestrator.optimize import (
     OptimizationResourceError,
     Optimizer,
@@ -91,7 +91,7 @@ from mlopt_torch.adapters import TorchSink
 from mlopt_torch.backend import TorchBackend
 
 # ``bench`` is a repo-root package, not an installed distribution —
-# ``mlopt_discovery.impact`` (imported above) puts the repo root on
+# ``kit_discovery.impact`` (imported above) puts the repo root on
 # ``sys.path`` at module import, which is what makes this resolve
 # under ``python bench/drivers/probes/scale_ladder.py``.
 from bench.referees import components
@@ -433,7 +433,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
 
-    from mlopt_discovery import zoo as zoo_mod
+    from kit_discovery import zoo as zoo_mod
 
     wanted = [w.strip() for w in args.workloads.split(",") if w.strip()]
     ts = [int(s) for s in args.ts.split(",") if s.strip()]

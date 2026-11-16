@@ -23,7 +23,7 @@ from mlopt_core.features import compute_features
 from mlopt_core.game import Action, GameState
 from mlopt_core.laws import all_rules
 from mlopt_core.trajectories import rule_samples
-from mlopt_discovery import families
+from kit_discovery import families
 from mlopt_torch.learned_policy import LearnedPolicy, train_rule_value
 
 

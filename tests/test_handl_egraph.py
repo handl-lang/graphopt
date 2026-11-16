@@ -1,7 +1,7 @@
 """Phase-5 native saturation: the ``vocab/`` rewrite bank through
 ``handl-egraph``.
 
-``mlopt_discovery.handl_egraph`` encodes the fragment vocabulary's
+``kit_discovery.handl_egraph`` encodes the fragment vocabulary's
 declarative rewrite rows into the ``egraph-run`` JSON spec and lets
 the Rust ``EGraph::run`` saturate — matching, union, congruence,
 extraction all on the handl side.  These tests pin:
@@ -32,7 +32,7 @@ from pathlib import Path
 import pytest
 from mlopt_core.egraph import EGraph, _leaf_key
 from mlopt_core.ir import Const, Op, Var
-from mlopt_discovery import handl_egraph as he
+from kit_discovery import handl_egraph as he
 
 from bench.drivers.audit import egraph_differential as ed
 
@@ -178,7 +178,7 @@ def test_vocab_rewrites_requires_a_directory(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """No resolvable vocab dir is a loud error, not an empty bank."""
-    from mlopt_discovery import vocabdir
+    from kit_discovery import vocabdir
 
     monkeypatch.setattr(vocabdir, "default_vocab_dir", lambda: None)
     with pytest.raises(ValueError, match="no vocab directory"):

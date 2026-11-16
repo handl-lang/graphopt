@@ -1,8 +1,8 @@
 # Watch a law get minted
 
-<!-- provenance: graphopt:docs/mechanism.md@eea02f6 + mlopt_discovery.pipeline -->
+<!-- provenance: graphopt:docs/mechanism.md@eea02f6 + kit_discovery.pipeline -->
 
-The shipped bank is not fixed. `mlopt_discovery` runs a closed loop
+The shipped bank is not fixed. `kit_discovery` runs a closed loop
 over a corpus of real exported models:
 
 ```text
@@ -18,9 +18,9 @@ false region, replayable certificate.
 CPU-only, bounded to a few minutes:
 
 ```sh
-.venv/bin/python -m mlopt_discovery.pipeline                     # the full loop
-.venv/bin/python -m mlopt_discovery.pipeline --holdout select_mul  # rediscover a shipped law
-.venv/bin/python -m mlopt_discovery.pipeline --json /tmp/pipeline.json
+.venv/bin/python -m kit_discovery.pipeline                     # the full loop
+.venv/bin/python -m kit_discovery.pipeline --holdout select_mul  # rediscover a shipped law
+.venv/bin/python -m kit_discovery.pipeline --json /tmp/pipeline.json
 ```
 
 The `--holdout` arm removes a shipped law and asks the loop to
@@ -30,7 +30,7 @@ re-derive it — a falsifiable test of the "laws are emergent" claim
 ## 2. Emit an admission patch
 
 ```sh
-.venv/bin/python -m mlopt_discovery.pipeline \
+.venv/bin/python -m kit_discovery.pipeline \
     --holdout softmax_fold \
     --emit-admission recognize:softmax --out /tmp/admission
 ```
@@ -42,8 +42,8 @@ to a hand-written one in the held-out check.
 ## 3. Verify a law standalone
 
 ```sh
-.venv/bin/python -m mlopt_discovery.verifier
-.venv/bin/python -m mlopt_discovery.verifier --json /tmp/law.json
+.venv/bin/python -m kit_discovery.verifier
+.venv/bin/python -m kit_discovery.verifier --json /tmp/law.json
 ```
 
 `verify_law(lhs, rhs, rules, ...) -> LawResult` puts both sides in a

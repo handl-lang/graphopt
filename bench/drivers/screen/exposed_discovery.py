@@ -51,15 +51,15 @@ import torch
 from mlopt_core.ir import Op, op_repr, term_to_data
 from mlopt_core.laws import ALL_RULES
 from mlopt_core.opmeta import arity as _op_arity
-from mlopt_discovery import pipeline as pipe
-from mlopt_discovery import proposal as lp
-from mlopt_discovery.census import CorpusTerm, op_tuple_census
-from mlopt_discovery.enumerate import (
+from kit_discovery import pipeline as pipe
+from kit_discovery import proposal as lp
+from kit_discovery.census import CorpusTerm, op_tuple_census
+from kit_discovery.enumerate import (
     _ARITY_OVERRIDES,
     enumerate_candidates,
 )
-from mlopt_discovery.grammar import _evaluate as _bounded_evaluate
-from mlopt_discovery.impact import (
+from kit_discovery.grammar import _evaluate as _bounded_evaluate
+from kit_discovery.impact import (
     TermCase,
     _cost_fn,
     _iter_subterms,
@@ -67,7 +67,7 @@ from mlopt_discovery.impact import (
     new_laws,
     reach_row,
 )
-from mlopt_discovery.shape_proposal import _sink
+from kit_discovery.shape_proposal import _sink
 
 from bench.drivers.screen.exposure_screen import _export, _workloads
 

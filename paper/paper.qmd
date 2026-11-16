@@ -214,8 +214,8 @@ is implemented machinery, not aspiration, and it lives in
 `handl-lang/gamekit`: `gamekit.engine` defines the `Board` protocol
 and the episode/train/eval drivers, and `gamekit.players` provides
 the `LinearPolicy` arm over a domain-specified featurizer —
-`mlopt_discovery.engine`/`players` are compatibility re-export shims
-over those modules.  `mlopt_discovery.play` carries the domain
+`kit_discovery.engine`/`players` are compatibility re-export shims
+over those modules.  `kit_discovery.play` carries the domain
 registry (`meta`, `joint`, `torch`, `search`, `gen`, `open`,
 `player`; `torch` and `gen` ship `deliver` hooks that lower the
 winning extraction to a verified module).  A domain is data — a case

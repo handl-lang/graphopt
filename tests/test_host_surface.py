@@ -96,7 +96,7 @@ class TestBindingsDrift:
     def test_import_covered_ops_are_host_ops(self) -> None:
         """``hnl_import.covered_ops`` names real ``tensor.*`` ops —
         minus ``t``, the one derived spelling with no host op."""
-        from mlopt_discovery.hnl_import import covered_ops
+        from kit_discovery.hnl_import import covered_ops
 
         surface = host_ops()
         missing = {

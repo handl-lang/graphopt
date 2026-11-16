@@ -72,8 +72,8 @@ from mlopt_core.laws.tensor import (
     MUL_DIV_SWAP,
     SPLIT_SCALAR_RULES,
 )
-from mlopt_discovery.play import _time_module
-from mlopt_discovery.zoo import _ChunkedRetention
+from kit_discovery.play import _time_module
+from kit_discovery.zoo import _ChunkedRetention
 from mlopt_orchestrator.optimize import (
     Optimizer,
     VerifyDeclinedError,
@@ -98,8 +98,8 @@ _BRIDGES = [
 
 # ---------------------------------------------------------------------------
 #  Fixtures — imported, not vendored: ``_ChunkedRetention`` is
-#  ``mlopt_discovery.zoo``'s and ``_time_module`` is
-#  ``mlopt_discovery.play``'s harness (the mid-refactor copy this
+#  ``kit_discovery.zoo``'s and ``_time_module`` is
+#  ``kit_discovery.play``'s harness (the mid-refactor copy this
 #  section used to carry is gone — the tree moved, the imports stayed).
 # ---------------------------------------------------------------------------
 

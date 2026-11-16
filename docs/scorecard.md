@@ -454,7 +454,7 @@ under the executor axis here.
 
 The held-out zoo's own `LoRAAdapter` (Hu et al. 2021): the real
 `W x + alpha·(B (A x))` production spelling, imported verbatim from
-`mlopt_discovery.zoo` — not a purpose-built respelling.  `assoc_linear`
+`kit_discovery.zoo` — not a purpose-built respelling.  `assoc_linear`
 folds the low-rank chain `up(down(x))` into one dense GEMM whose
 `B·A` weight product folds at compile time.  Replays the −19.985 %
 verified win of `project/retros/human-bar.md` — under the executor

@@ -7,7 +7,7 @@ nets' ``open:next-val``/``open:vlabel`` (held-out AP <= 0.10 on the
 labels that pay), the policy's own ``open:self`` posterior — and the
 verdict named the remaining lever: **verdict-conditioned or
 verifier-visible usefulness**.  This driver prices it.  The new
-``open:verdict`` part (:mod:`mlopt_discovery.open_verdict`) emits
+``open:verdict`` part (:mod:`kit_discovery.open_verdict`) emits
 columns built from what the domain *certifies*, not from net
 outputs:
 
@@ -74,12 +74,12 @@ import stop_policy as sp
 from gamekit import advantage as adv
 from gamekit import engine
 from gamekit.players import PARTS, DomainSpec, PlayHist, _dot
-from mlopt_discovery import open_game as og
-from mlopt_discovery import open_self as osel
-from mlopt_discovery import open_verdict as ov
-from mlopt_discovery import play
-from mlopt_discovery import proposal as lp
-from mlopt_discovery.meta_arena import Action
+from kit_discovery import open_game as og
+from kit_discovery import open_self as osel
+from kit_discovery import open_verdict as ov
+from kit_discovery import play
+from kit_discovery import proposal as lp
+from kit_discovery.meta_arena import Action
 
 #: Defaults — identical protocol to ``stop_valuelabel.py``.
 SEED = 0

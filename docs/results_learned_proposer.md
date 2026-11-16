@@ -1,6 +1,6 @@
 # Learned mint proposer — ranking and mutating candidates by measured viability
 
-**Date:** 2026-10-23 · **Shipped:** `mlopt_discovery/learned_propose.py`
+**Date:** 2026-10-23 · **Shipped:** `kit_discovery/learned_propose.py`
 (module + `DEFAULT_WEIGHTS` bake), `scripts/train_learned_proposer.py`
 (baker), `tests/test_learned_propose.py` · **Seed:** 0 throughout ·
 **Runner:**
@@ -127,7 +127,7 @@ this box-sample.
 Not wired — the driver is owned elsewhere.  Three seams are ready:
 
 ```python
-from mlopt_discovery import learned_propose, open_game
+from kit_discovery import learned_propose, open_game
 
 # --proposer learned: mix mutation-minted candidates into the pool
 extra = learned_propose.propose_learned(

@@ -293,11 +293,11 @@ export class Course {
         "trace a workload from a real `nn.Module` through `torch.export` and the intake, and read what each class of the funnel means.",
       repo: [
         {
-          path: "python -m mlopt_discovery.intake",
+          path: "python -m kit_discovery.intake",
           note: "the intake path: export → classify → persist",
         },
         {
-          path: "packages/mlopt-discovery/src/mlopt_discovery/zoo.py",
+          path: "kit-discovery/src/kit_discovery/zoo.py",
           note: "the held-out workload zoo",
         },
         {
@@ -942,11 +942,11 @@ export class Course {
         "trace an atom through the minting funnel — need → signature → handler → laws → admission — and read where each law came from.",
       repo: [
         {
-          path: "packages/mlopt-discovery/src/mlopt_discovery/pipeline.py",
+          path: "kit-discovery/src/kit_discovery/pipeline.py",
           note: "the composed need → handler → laws → admission loop",
         },
         {
-          path: "packages/mlopt-discovery/src/mlopt_discovery/handler_synth.py",
+          path: "kit-discovery/src/kit_discovery/handler_synth.py",
           note: "the handler synthesizer",
         },
         {
@@ -1001,7 +1001,7 @@ export class Course {
         "explain why a guard must be swept adversarially, and why a guard that is perfect on the measured domain can still be unsound.",
       repo: [
         {
-          path: "packages/mlopt-discovery/src/mlopt_discovery/oracle.py",
+          path: "kit-discovery/src/kit_discovery/oracle.py",
           note: "the numeric oracle that decides truth",
         },
         {
@@ -1047,11 +1047,11 @@ export class Course {
         "measure FLOPs-weighted exposure, explain its bimodal shape, and say why exposure is necessary but not sufficient.",
       repo: [
         {
-          path: "packages/mlopt-discovery/src/mlopt_discovery/census.py",
+          path: "kit-discovery/src/kit_discovery/census.py",
           note: "the corpus census — where a need is counted",
         },
         {
-          path: "packages/mlopt-discovery/src/mlopt_discovery/zoo.py",
+          path: "kit-discovery/src/kit_discovery/zoo.py",
           note: "the workload zoo the screen runs over",
         },
         {
@@ -1098,7 +1098,7 @@ export class Course {
           note: "the combinator presentation, as code",
         },
         {
-          path: "packages/mlopt-discovery/src/mlopt_discovery/antiunify.py",
+          path: "kit-discovery/src/kit_discovery/antiunify.py",
           note: "the definitional-atom bridge (layer 1)",
         },
         {
@@ -1195,11 +1195,11 @@ export class Course {
           note: "`Cell` / `merge_fragments` / `CellStore`",
         },
         {
-          path: "packages/mlopt-discovery/src/mlopt_discovery/cellstore.py",
+          path: "kit-discovery/src/kit_discovery/cellstore.py",
           note: "the ambient store and the machine fragment",
         },
         {
-          path: "packages/mlopt-discovery/src/mlopt_discovery/handl.py",
+          path: "kit-discovery/src/kit_discovery/handl.py",
           note: "the handl schema bridge",
         },
         {
@@ -1256,19 +1256,19 @@ export class Course {
         "describe the game layer — a `Board` protocol, players, the meta-arena, and `play --domain` — and what a learned prior measurably buys.",
       repo: [
         {
-          path: "packages/mlopt-discovery/src/mlopt_discovery/engine.py",
+          path: "kit-discovery/src/kit_discovery/engine.py",
           note: "the `Board` protocol + episode/train/eval drivers",
         },
         {
-          path: "packages/mlopt-discovery/src/mlopt_discovery/players.py",
+          path: "kit-discovery/src/kit_discovery/players.py",
           note: "`LinearPolicy`, the learned arm",
         },
         {
-          path: "packages/mlopt-discovery/src/mlopt_discovery/meta_arena.py",
+          path: "kit-discovery/src/kit_discovery/meta_arena.py",
           note: "the mid-search construction board",
         },
         {
-          path: "packages/mlopt-discovery/src/mlopt_discovery/play.py",
+          path: "kit-discovery/src/kit_discovery/play.py",
           note: "the domain registry + CLI",
         },
       ],
@@ -1281,7 +1281,7 @@ export class Course {
             "a graph and a sink",
           ],
           ok: "a program, a legal move set, a referee",
-          why: "`mlopt_discovery.engine` factors the shared shape out: every domain is 'a program + a legal move set + a referee', and the reward is certified improvement.",
+          why: "`kit_discovery.engine` factors the shared shape out: every domain is 'a program + a legal move set + a referee', and the reward is certified improvement.",
           concept: "board",
         },
         {

@@ -22,8 +22,11 @@ a checked ONNX artifact, `OnnxSource` lifts ONNX graphs back to IR;
 both verified through onnxruntime — **split to
 `handl-lang/kit-onnx` in P3 Step D-1** (was `packages/mlopt-onnx`;
 pin `kit-onnx` git dep, import `kit_onnx`);
-`mlopt-discovery` — the law-discovery engine, formerly
-`tools/law_*.py`; invoke as `python -m mlopt_discovery.<mod>`;
+`kit-discovery` — the law-discovery engine, formerly
+`tools/law_*.py`; **split to `handl-lang/kit-discovery` in P3
+Step D-1d** (was `packages/mlopt-discovery`; pin `kit-discovery`
+git dep, import `kit_discovery`; invoke as
+`python -m kit_discovery.<mod>`);
 the game layer is extracted to `packages/gamekit/` (plan 0032
 lane A): `gamekit.engine` (the `Board` protocol + generic
 episode/train/eval drivers), `gamekit.players` — a package:
@@ -37,10 +40,10 @@ plus `gamekit.scoring` (the referee's value spec),
 `gamekit.advantage` (the actor-critic player) and
 `gamekit.gamedata` (the game weight/feature tables — the
 ex-`lawdata.game` half).  The old paths
-(`mlopt_discovery.engine`/`scoring`/`advantage`/`players`/
+(`kit_discovery.engine`/`scoring`/`advantage`/`players`/
 `lawdata.game`) are re-exporting shims; `play` (the
 domain registry +
-`python -m mlopt_discovery.play --domain meta|joint|torch|search|fragment|gen|open|player|bilinear`
+`python -m kit_discovery.play --domain meta|joint|torch|search|fragment|gen|open|player|bilinear`
 CLI; `--player <name>` runs a registered player eval-only, and
 `--deliver` lowers+verifies the winning extraction on domains
 that ship a deliver hook — torch does)).  The `kernel` domain
@@ -70,10 +73,12 @@ travelled with them — domain-bound test functions carved out live in
 per-repo: this repo's wall is the domain packages
 (`fail_under=100` on `mlopt_torch`;
 `mlopt_onnx` split to handl-lang/kit-onnx in P3 Step D-1,
-`kit_carriers` to handl-lang/kit-carriers in P3 Step D-1b, and
-`kit_cuda` to handl-lang/kit-cuda in P3 Step D-1c — their
-floors live there) + the 99%
-`mlopt_discovery` ratchet); the substrate and
+`kit_carriers` to handl-lang/kit-carriers in P3 Step D-1b,
+`kit_cuda` to handl-lang/kit-cuda in P3 Step D-1c and
+`kit_discovery` to handl-lang/kit-discovery in P3 Step D-1d —
+their floors live there); this repo still measures the installed
+`kit_discovery` through the cross-stack suite under a re-baselined
+ratchet stage in `scripts/gates.sh`/`ci.yml`).  The substrate and
 game floors were re-measured in their own repos (56% / 98%).
 
 **The research/measurement surface is `bench/`** — the dissolved
@@ -94,11 +99,11 @@ not `baselines/` rows:
   admission loop).  The minted-macro miner is tooling:
   `scripts/macro_miner.py` mines + evals `lawdata.MACROS` candidate
   tables; the shipped replay machinery is
-  `mlopt_discovery.macro_moves` and the retrain driver is
+  `kit_discovery.macro_moves` and the retrain driver is
   `scripts/train_meta_macro_prior.py`.
 - `bench/drivers/bridge/` — `combinator_probe.py`, `sharing_extract.py`
   (the ADR-0008 bridge).  The substrate and all four proposers
-  promoted to `mlopt_discovery.combinator` / `.form_propose` /
+  promoted to `kit_discovery.combinator` / `.form_propose` /
   `.state_reindex` / `.index_abstract` / `.loop_propose`.
 - `bench/drivers/audit/` — `grammar_probe.py`, `handl_differential.py`,
   `egraph_differential.py` (the handl-side oracles).
@@ -156,11 +161,11 @@ shipped-artifact bakers promoted out of `lab/`: `train_meta_prior.py`,
 `dump_fragments.py` — the handl-spike fragment dirs; and
 `dspec_audit.py` — the shipped-`dspec` audit).
 **Regenerable artifacts live in the cache**, not the tree:
-`mlopt_discovery.cache_dir()`
+`kit_discovery.cache_dir()`
 (`$MLOPT_CACHE_DIR` → `$XDG_CACHE_HOME/mlopt` → `~/.cache/mlopt`)
 holds the intake census side-files (`intake_dir()`) and the evidence
 store — shared across worktrees.  The minting machinery itself is in
-`mlopt_discovery` (`antiunify`, `handler_synth`) — ADR 0007/0008.
+`kit_discovery` (`antiunify`, `handler_synth`) — ADR 0007/0008.
 
 **The handl bridge.**  `tests/fixtures/handl-spike/` holds the dumped
 `fragments/`/`fragments-all/` language YAML the peer tests consume —
@@ -175,7 +180,7 @@ see `manifest/kit.toml` and the `Makefile`).
 destination (the per-file inventory and history live in
 `docs/lab_dissolution_plan.md`):
 
-- **prod machinery → `mlopt_discovery`** — code shipped modules
+- **prod machinery → `kit_discovery`** — code shipped modules
   depend on.  `combinator` / `form_propose` / `state_reindex`
   promoted at the 99% floor earlier; `index_abstract` /
   `loop_propose` followed at dissolution (shipped modules
@@ -194,8 +199,9 @@ destination (the per-file inventory and history live in
 
 New work lands by the same rule: a driver that starts emitting a
 committed artifact graduates to `scripts/`; machinery shipped modules
-depend on graduates to `mlopt_discovery` (the 99% ratchet applies to
-the package union).
+depend on graduates to `kit_discovery` (the ratchet floor lives in
+the kit-discovery repo now — its package-bound suite moved with the
+split; this repo keeps the cross-stack measurement stage).
 
 **Machine-admitted laws are in `DEFAULT`.**  `search(..., rules=DEFAULT)`
 ships **71 machine-authored laws** alongside the hand-written kernel —
@@ -313,9 +319,9 @@ uv run pytest                 # 6,867 tests; does NOT finish in 30 min on
                               # either serial or `-n 2` (see the table
                               # below).  Iterate with `-m "not slow"`.
                               # Single-process: see the warning below.
-coverage run -m pytest tests/ -q   # source list: the four shipped packages + mlopt_discovery
-coverage report -m --omit="*/mlopt_discovery/*"   # the shipped packages: fail_under=100
-coverage report -m --include="*/mlopt_discovery/*" --fail-under=99   # ratchet floor — measured 99%; tighten, never lower
+coverage run -m pytest tests/ -q   # source list: the four shipped packages + kit_discovery
+coverage report -m --omit="*/kit_discovery/*"   # the shipped packages: fail_under=100
+coverage report -m --include="*/kit_discovery/*" --fail-under=NN   # cross-stack ratchet — measured NN%; tighten, never lower
 ```
 
 **Scope the ruff commands to the shipped source, as above.**  The bare
@@ -405,7 +411,7 @@ Manual-stage gates (not run on every commit — network/slower):
 .venv/bin/pip-audit                                          # dependency CVEs (network)
 .venv/bin/semgrep --config p/python --config p/security-audit packages  # registry rules (network)
 sh scripts/runtime_types.sh                                    # typeguard runtime contracts
-MUTMUT_ONLY=mlopt_discovery/antiunify.py MUTMUT_TESTS='tests/test_antiunify.py' scripts/mutmut.sh run  # mutation testing
+MUTMUT_ONLY=mlopt_torch/region_fuse.py MUTMUT_TESTS='tests/test_region_fuse.py' scripts/mutmut.sh run  # mutation testing
 ```
 
 Pre-commit (`pre-commit install`) runs ruff check/format, **ty**,
@@ -602,7 +608,7 @@ package registers a `CarrierMachinery` value — all thunks, so
 registration loads no tensor library — when it is imported.  Without a
 registration the passes degrade to their carrier-free defaults.  The
 remaining package graph is pinned by the import-linter `dependency
-layers` contract: `mlopt_discovery` above `mlopt_torch` above
+layers` contract: `kit_cuda` above `mlopt_torch` above
 `mlopt_orchestrator`, above `mlopt_native`, above `mlopt_core` (the
 carriers' own layering contract lives in the kit-carriers repo; the
 `mlopt_torch` → `kit_carriers` edge here stays lazy and undeclared —
@@ -623,11 +629,11 @@ from `kit_cuda`.
   handl-lang/kit-carriers in P3 Step D-1b and `kit_cuda` to
   handl-lang/kit-cuda in P3 Step D-1c the same way); new branches
   need tests (or a justified `pragma: no cover`).
-  `mlopt_discovery` joined the source list after its staged climb
-  and sits under a **pinned ratchet floor** (`--fail-under=99` at
-  landing — tighten the number as the residual gaps close, never
-  lower it; the unreachable-defensive arcs are documented in
-  `project/retros/discovery-package.md`).
+  `kit_discovery` split to handl-lang/kit-discovery in P3 Step D-1d
+  — its package-bound suite and floor moved with it; this repo keeps
+  a **cross-stack ratchet stage** measuring the installed package
+  through the staying suite (`--fail-under` re-baselined at the
+  post-split measurement — tighten, never lower).
 - Tests allocating CUDA tensors use the `requires_cuda` marker
   (auto-skipped when CUDA is absent).  Tests that exercise the CPU
   no-op path of `capture_cuda_graph` force `torch.cuda.is_available()`
@@ -701,9 +707,9 @@ Rules also carry tags from `mlopt_core.laws.tags` (pass
 `R(..., tags=...)`); `EXPANSIVE` marks the closure-generating rules the
 pipeline budgets (`rules.tagged(EXPANSIVE)`).  Each rule's kernel kind
 lives on `Rewrite.derivation`/`rule.kind` — `R(..., derivation=(...))`
-names the axioms that prove a lemma (`mlopt_discovery.coherence
+names the axioms that prove a lemma (`kit_discovery.coherence
 --emit-basis` emits the measured table; see
-`project/retros/axiom-lemma-split.md`).  `mlopt_discovery.lemma_cert`
+`project/retros/axiom-lemma-split.md`).  `kit_discovery.lemma_cert`
 materializes each recorded derivation as a replayable `Certificate`
 (codec: `cert_to_data`/`cert_from_data` in `mlopt_core.egraph.certs`;
 see `project/retros/lemma-certificates.md`).  The composable `RuleSet`

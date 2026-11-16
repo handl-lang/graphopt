@@ -63,9 +63,9 @@ import torch
 import torch.nn.functional as F
 from mlopt_core.features import compute_features
 from mlopt_core.trajectories import rule_vector
-from mlopt_discovery import open_game as og
-from mlopt_discovery import play
-from mlopt_discovery import proposal as lp
+from kit_discovery import open_game as og
+from kit_discovery import play
+from kit_discovery import proposal as lp
 from mlopt_torch.learned_policy import (
     RuleValueNet,
     input_vector,

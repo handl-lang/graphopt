@@ -39,9 +39,8 @@
 #     over the torch-free core (curated green subset).
 #   * coverage run + coverage report -m — the full suite under the
 #     pinned 100% coverage floor ([tool.coverage.report] fail_under),
-#     applied to the shipped packages; mlopt_discovery
-#     is measured under its own 99% ratchet floor (mirrors
-#     scripts/gates.sh's `full` lane).
+#     applied to the shipped packages (mlopt_torch — the remaining
+#     in-repo floor; the kit-* floors live in their own repos).
 #
 # NOTE: `coverage` is invoked as `.venv/bin/coverage` because CI does
 # not activate the virtualenv between steps (uv sync only creates it).
@@ -102,15 +101,9 @@ jobs:
       - name: coverage run (full suite)
         run: >-
           .venv/bin/coverage run
-          --source=mlopt_torch,mlopt_discovery
+          --source=mlopt_torch
           -m pytest tests/ -q
 
       - name: coverage report (fail_under=100, shipped packages)
         run: >-
           .venv/bin/coverage report -m
-          --omit="*/mlopt_discovery/*"
-
-      - name: coverage report (mlopt_discovery, fail_under=99)
-        run: >-
-          .venv/bin/coverage report -m
-          --include="*/mlopt_discovery/*" --fail-under=99

@@ -31,9 +31,9 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from mlopt_discovery import genkernel as gk
-from mlopt_discovery import play
-from mlopt_discovery import zoo as zoo_mod
+from kit_discovery import genkernel as gk
+from kit_discovery import play
+from kit_discovery import zoo as zoo_mod
 
 
 def audit(wl: Any, dtype: str) -> dict:

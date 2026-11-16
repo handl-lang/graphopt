@@ -85,7 +85,7 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
-from mlopt_discovery.play import _time_module
+from kit_discovery.play import _time_module
 from mlopt_orchestrator import Compositional, Optimizer
 from mlopt_torch.adapters import TorchSource
 from mlopt_torch.backend import TorchBackend

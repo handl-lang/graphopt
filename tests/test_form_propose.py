@@ -1,6 +1,6 @@
 """Tests for the ADR-0008 gate-3 form-level proposer.
 
-``mlopt_discovery.form_propose`` is the anti-unification move the gate-3
+``kit_discovery.form_propose`` is the anti-unification move the gate-3
 retros named: it uses the saturated e-graph as the oracle — the factored
 ``matmul(q̃, M)`` reads and the ``add(mul(w, M), B)`` state chain are
 *derived members* extraction did not choose — synthesises one step
@@ -17,11 +17,11 @@ import pytest
 from mlopt_core.cost import count_cost
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
-from mlopt_discovery import form_propose as fp
-from mlopt_discovery.combinator import comb_to_dag
+from kit_discovery import form_propose as fp
+from kit_discovery.combinator import comb_to_dag
 
-from mlopt_discovery.index_abstract import block_outputs
-from mlopt_discovery.loop_propose import loop_headed
+from kit_discovery.index_abstract import block_outputs
+from kit_discovery.loop_propose import loop_headed
 
 X = Var("x", TensorType((2, 64, 16)))
 CB = Op.make(
@@ -216,11 +216,11 @@ def test_boundary_residual_is_a_value_mismatch():
     )
     from mlopt_core.cost import flops_cost
     from mlopt_core.ir import IR
-    from mlopt_discovery.zoo import _ChunkedRetention
+    from kit_discovery.zoo import _ChunkedRetention
     from mlopt_torch.adapters import TorchSink
     from mlopt_torch.torch_bridge import export_to_ir
 
-    from mlopt_discovery.index_abstract import block_outputs
+    from kit_discovery.index_abstract import block_outputs
     from bench.drivers.probes import om_shared_state_probe as osp
 
     t, k = 64, 4

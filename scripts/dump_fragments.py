@@ -1,6 +1,6 @@
 """Dump mlopt's vocabulary as a handl fragment directory.
 
-The bridge (`mlopt_discovery.handl`) already emits handl-shaped rows;
+The bridge (`kit_discovery.handl`) already emits handl-shaped rows;
 this tool writes them into the *ten-file layout* `language_from_dir`
 reads (`handl-kit-data-prelude`), so a handl host can assemble a
 `Language` from mlopt's vocabulary:
@@ -37,10 +37,10 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from kit_discovery.cellstore import ambient_store
+from kit_discovery.handl import store_to_handl
+from kit_discovery.vocabdir import emit_yaml_rows
 from mlopt_core.laws import ALL_RULES
-from mlopt_discovery.cellstore import ambient_store
-from mlopt_discovery.handl import store_to_handl
-from mlopt_discovery.vocabdir import emit_yaml_rows
 
 #: The repo root — the default output lives under the spike's committed
 #: fixture dir even though this tool moved to ``scripts/`` (the spike
@@ -66,7 +66,7 @@ _SLICE_LAW = "assoc_add"
 def _dump(path: Path, rows: list) -> None:
     """Write *rows* as one YAML sequence (the fragment file's shape).
 
-    Delegates to :func:`mlopt_discovery.vocabdir.emit_yaml_rows` — the
+    Delegates to :func:`kit_discovery.vocabdir.emit_yaml_rows` — the
     same tag-spelling emitter the ``vocab/`` projections use (plan
     0033 phase 0: one emitter, not two).
     """

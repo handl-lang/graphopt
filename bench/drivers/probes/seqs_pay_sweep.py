@@ -18,7 +18,7 @@ import argparse
 import sys
 
 import torch
-from mlopt_discovery import genkernel as gk
+from kit_discovery import genkernel as gk
 
 _CUMSPEC = (
     "applyd",
@@ -228,8 +228,8 @@ def sweep_bn(reps):
 
 def sweep_inmodule(_reps=30):
     """The real referee: ``play._zoo_case`` on CumsumLinearAttention."""
-    from mlopt_discovery import play
-    from mlopt_discovery import zoo as _zoo
+    from kit_discovery import play
+    from kit_discovery import zoo as _zoo
 
     print("== in-module _zoo_case referee ==")
     for d, t, b in (

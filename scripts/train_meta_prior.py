@@ -1,10 +1,10 @@
 """Train the meta-arena policy and emit the baked prior.
 
 The sibling of ``scripts/train_open_prior.py`` for the meta board:
-trains a *cold* :class:`mlopt_discovery.meta_player.MetaLearnedPlayer`
+trains a *cold* :class:`kit_discovery.meta_player.MetaLearnedPlayer`
 over a fixed case stream and prints the trained weight table as the
 Python literal that bakes into
-:data:`mlopt_discovery.meta_prior.META_ARENA_PLAYER_WEIGHTS` (the
+:data:`kit_discovery.meta_prior.META_ARENA_PLAYER_WEIGHTS` (the
 ``MetaLearnedPlayer`` default — the imitation+RL recipe is
 ``meta_player.main --imitate-epochs``; this cold-RL script is the
 earlier bake path).
@@ -33,8 +33,8 @@ import random
 from typing import Any
 
 import torch
-from mlopt_discovery import meta_arena as ma
-from mlopt_discovery import meta_player as mp
+from kit_discovery import meta_arena as ma
+from kit_discovery import meta_player as mp
 
 #: Defaults — the case counts and horizon the meta driver uses.
 TRAIN_CASES = 40

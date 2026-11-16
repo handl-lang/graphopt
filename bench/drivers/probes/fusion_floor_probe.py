@@ -73,7 +73,7 @@ def timeit(fn, warm=3, reps=20):
 
 
 def _elem_ops():
-    from mlopt_discovery import genkernel as gk
+    from kit_discovery import genkernel as gk
 
     return gk.ELEMENTWISE
 
@@ -234,8 +234,8 @@ def _fused_kernel_for(root):
     the region root itself).
     """
     from discoverykit.meta_arena import _concrete_match
-    from mlopt_discovery import genkernel as gk
-    from mlopt_discovery.play.sites import _fusion_pattern_sz
+    from kit_discovery import genkernel as gk
+    from kit_discovery.play.sites import _fusion_pattern_sz
 
     pat, _size = _fusion_pattern_sz(root, {}, {}, None)
     metas = gk._spec_metas(pat)
@@ -359,7 +359,7 @@ def main() -> None:
 
     # the gen-tier collector's own verdict — sites need >=2 DISTINCT
     # ops in one elementwise-connex pattern
-    from mlopt_discovery.play.sites import _fusion_sites
+    from kit_discovery.play.sites import _fusion_sites
 
     fs = _fusion_sites(term)
     print(f"[fusion_sites] {_fusion_sites.__name__} sites={len(fs)}")

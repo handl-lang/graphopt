@@ -3,7 +3,7 @@
 **Date:** 2026-10-25 · **Script:** `bench/drivers/policy/stop_evidence.py`
 (new — reuses `stop_gate.py`'s payload/drain machinery and
 `stop_verdict.py`'s corpus seam + jackknife) · **Parts:**
-`mlopt_discovery.open_verdict` (registered `open:verdict`, unshipped)
+`kit_discovery.open_verdict` (registered `open:verdict`, unshipped)
 · **Seed:** 0 · **Runner:**
 
 ```bash

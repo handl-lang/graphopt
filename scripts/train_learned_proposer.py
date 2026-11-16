@@ -4,9 +4,9 @@ Reads the overnight ledger cells
 (``bench/results/checkpoints/overnight_*.jsonl`` — every
 ``("candidate", name)`` record carries its serialized law and its
 gauntlet stages), fits the logistic ranker of
-:mod:`mlopt_discovery.learned_propose` on the *survived-the-oracle*
+:mod:`kit_discovery.learned_propose` on the *survived-the-oracle*
 label, and prints the trained table as the Python literal that bakes
-into :data:`mlopt_discovery.learned_propose.DEFAULT_WEIGHTS` — the
+into :data:`kit_discovery.learned_propose.DEFAULT_WEIGHTS` — the
 same baker convention as ``train_meta_prior.py``.
 
 The split is seeded and honest: a held-out slice is never trained on,
@@ -33,7 +33,7 @@ import random
 from pathlib import Path
 from typing import Any
 
-from mlopt_discovery import learned_propose as lp
+from kit_discovery import learned_propose as lp
 
 #: Defaults — sized to the ~400-row ledger set.
 EPOCHS = 400

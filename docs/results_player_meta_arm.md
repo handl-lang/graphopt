@@ -101,7 +101,7 @@ record carries the table by name, like the other baked specs).
 * `bench/drivers/train/train_player_meta_arm.py` — the driver: stub oracle,
   `imitate_policy` warm start, REINFORCE loop, real-oracle held-out
   phase (`--skip-real` for the curve only).
-* `mlopt_discovery/lawdata/game/weights.py` —
+* `kit_discovery/lawdata/game/weights.py` —
   `PLAYER_ARENA_PLAYER_WEIGHTS`; `player_arena.PLAYER_SPEC` binds
   it (`weights={}` still reaches the cold start).
 * `docs/results_player_on_board.md` — the board's design doc;

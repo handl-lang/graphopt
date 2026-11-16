@@ -43,7 +43,7 @@ re-runnable, no torch):
 * ``paymeasured_confound`` — ``pay_measured*.json`` rows verdict
   ``confounded``: the marginal compares different executors, so the
   measurement itself is the gap.
-* ``coverage_*`` — :func:`mlopt_discovery.corpus_cov.coverage_gaps`
+* ``coverage_*`` — :func:`kit_discovery.corpus_cov.coverage_gaps`
   over a fresh base+coverage case stream: ops/attrs/handlers/rules
   the arena vocabulary expresses but no case exercises.  Corpus
   headroom — the Stage-1 lever-1 residual.
@@ -772,13 +772,13 @@ def _sig_coverage(seed: int, n: int) -> list[dict]:
     round's agenda.  Torch-free: terms only, no arena runs.
     """
     try:
-        from mlopt_discovery import corpus_cov, meta_player
+        from kit_discovery import corpus_cov, meta_player
     except Exception as exc:  # honest skip — report, don't crash
         return [
             _proposal(
                 "coverage_unavailable",
                 f"Coverage census unavailable: {exc}",
-                lever="Fix the mlopt_discovery import and re-run.",
+                lever="Fix the kit_discovery import and re-run.",
                 headroom=0.0,
                 confidence="low",
             )

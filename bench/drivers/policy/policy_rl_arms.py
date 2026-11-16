@@ -85,10 +85,10 @@ import policy_baseline as pb
 import torch
 from mlopt_core.features import compute_features
 from mlopt_core.trajectories import RULE_VECTOR_LEN, rule_vector
-from mlopt_discovery import open_game as og
-from mlopt_discovery import play
-from mlopt_discovery import proposal as lp
-from mlopt_discovery.meta_arena import Action
+from kit_discovery import open_game as og
+from kit_discovery import play
+from kit_discovery import proposal as lp
+from kit_discovery.meta_arena import Action
 from mlopt_torch import rl as rl_mod
 from mlopt_torch.learned_policy import input_vector
 from torch import nn

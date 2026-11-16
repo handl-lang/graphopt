@@ -12,7 +12,7 @@ Protocol (per workload, one seeded export, one hash seed):
   ``flops_cost``.
 * ``atoms`` (the strict arm) — saturate ``--iters-a`` iterations on
   the same graph, mine + mint + admit atoms
-  (:func:`mlopt_discovery.antiunify`), then continue with the
+  (:func:`kit_discovery.antiunify`), then continue with the
   *compressed* rule set: intro rules plus ``fold_ruleset(rules,
   atoms, sides, replace=True)`` under the remaining iterations and
   the same node budget.  ``replace=True`` drops rules that gained an
@@ -58,7 +58,7 @@ from typing import Any
 from mlopt_core.cost import dag_cost, flops_cost
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import Op
-from mlopt_discovery.antiunify import (
+from kit_discovery.antiunify import (
     MintedAtom,
     admit_atoms,
     fold_ruleset,
@@ -71,7 +71,7 @@ from mlopt_discovery.antiunify import (
 def _export(workload: str, args: argparse.Namespace) -> tuple:
     """Build the seeded workload module's ``(IR, leaves)`` export."""
     import torch
-    from mlopt_discovery.zoo import (
+    from kit_discovery.zoo import (
         _ChunkedRetention,
         _DeepEquilibrium,
         _DeltaRuleBlock,
@@ -190,7 +190,7 @@ def _run_arm(
             # plan 0033 phase 3: mined atoms are vocabulary data —
             # each lands as a ``fold:<atom>`` schema row with its
             # ``expand`` premise, the ``intro`` law, and the op row.
-            from mlopt_discovery import vocabdir
+            from kit_discovery import vocabdir
 
             for atom in atoms:
                 vocabdir.emit_atom(args.vocab_dir, atom)

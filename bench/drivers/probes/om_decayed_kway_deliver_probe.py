@@ -17,7 +17,7 @@ against the source.  This probe closes the loop:
    the source module in fp64 (``max_abs``).
 4. Time it — eager baseline, ``torch.compile`` of the source, and the
    lowered carrier — under the exact ``gen_probe`` harness
-   (``mlopt_discovery.play._time_module``: 10 warm-ups, median of
+   (``kit_discovery.play._time_module``: 10 warm-ups, median of
    *reps*).
 
 The measured row answers the product question: does the 4.4x FLOP
@@ -54,8 +54,8 @@ from mlopt_core.laws.tensor import (
     MUL_DIV_SWAP,
     SPLIT_SCALAR_RULES,
 )
-from mlopt_discovery.play import _time_module
-from mlopt_discovery.zoo import _ChunkedRetention
+from kit_discovery.play import _time_module
+from kit_discovery.zoo import _ChunkedRetention
 from mlopt_torch.adapters import TorchSink, TorchSource
 
 #: The naturality bridges the fold's last hops need (plan 0023) —

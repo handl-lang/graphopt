@@ -5,7 +5,7 @@ gone; every file landed by destination.  The final destination map:
 
 | destination | what landed |
 |---|---|
-| `mlopt_discovery` | `index_abstract.py`, `loop_propose.py` (the last bridge modules shipped code imported — `form_propose`/`state_reindex` depend on them, so they were de-facto prod; the 99% ratchet applies to the package union) |
+| `kit_discovery` | `index_abstract.py`, `loop_propose.py` (the last bridge modules shipped code imported — `form_propose`/`state_reindex` depend on them, so they were de-facto prod; the 99% ratchet applies to the package union) |
 | `scripts/` | `macro_miner.py` (the `lawdata.MACROS` `--emit` bake driver, imported by `train_meta_macro_prior.py`) |
 | `bench/drivers/probes/` | all 23 probes incl. `contraction/` (12) |
 | `bench/drivers/screen/` | `exposure_screen`, `exposed_discovery`, `discovery_scale` |
@@ -28,16 +28,16 @@ dissolved to `bench/` with its consumers.
 
 **History below** — the executed-2026-10-19 state: the safe moves landed
 then; the classified queue follows.  `combinator.py` promoted to
-`mlopt_discovery.combinator` at the 99% floor (92% → 100% under
+`kit_discovery.combinator` at the 99% floor (92% → 100% under
 `tests/test_combinator_bridge.py`).
 
 **The rule.** `lab/` was the promotion queue with a single exit
-("driver → `mlopt_discovery` at the 99% coverage floor").  The exit
+("driver → `kit_discovery` at the 99% coverage floor").  The exit
 set is now three, matching what the files actually *are*:
 
 | destination | for | gate |
 |---|---|---|
-| `mlopt_discovery` | prod machinery — code whose output is shipped behaviour | tests at the **99% floor** (the discovery ratchet — tighten, never lower) |
+| `kit_discovery` | prod machinery — code whose output is shipped behaviour | tests at the **99% floor** (the discovery ratchet — tighten, never lower) |
 | `scripts/` | dev-facing tooling — drivers that *regenerate or audit a committed artifact* | ruff/format clean, documented invocation |
 | stays in `lab/` | research drivers — measurement whose output is a result document (`docs/results_*.md`, `project/retros/`) | — |
 | archive | dead / superseded work | nothing qualifies today — every file was committed within the last week |
@@ -110,13 +110,13 @@ admission loop) are active research with no shipped artifact yet.
 **`macro_miner.py` + `macro_moves.py` are owned by a concurrent
 promotion** — classified only here: `macro_moves.py` is the `Macro`/
 `legal_with_macros` machinery (prod machinery — a promote candidate;
-a `mlopt_discovery.macro_moves` module + `lawdata/laws/macros.py` were
+a `kit_discovery.macro_moves` module + `lawdata/laws/macros.py` were
 already in flight in the working tree when this landed), and
 `macro_miner.py` is its minting driver (prod-generating — the minted
 macros feed the macro prior bake).  `scripts/train_meta_macro_prior.py`
 still imports `from lab.mint.macro_moves` / `lab.mint.macro_miner`;
 **when the concurrent promotion lands, that import wants
-`mlopt_discovery.macro_moves`** — flagged, not pre-edited (the package
+`kit_discovery.macro_moves`** — flagged, not pre-edited (the package
 module does not exist on `main` yet, so editing now would break the
 script).
 
@@ -127,9 +127,9 @@ Measured under `coverage run --source=lab -m pytest
 
 | module | coverage | test file | gap |
 |---|---|---|---|
-| ~~`combinator.py`~~ → **`mlopt_discovery.combinator`** ✅ | **92% → 100%** | `test_combinator_bridge.py` | promoted: +9 targeted tests closed the guards (`arity`/`_apply`/`comb_to_dag` `raise`s, `_par`/`_mux` edges, `morph_stats` Drop/Loop/non-morphism, `dag_size`); the one residual — the closing-`Drop` in `dag_to_comb` — is provably unreachable (a ctx wire survives to the close only while `remaining[w] > 0`, and at the close `remaining` counts exactly the output uses), so it carries a documented `pragma: no cover` |
-| ~~`form_propose.py`~~ → **`mlopt_discovery.form_propose`** ✅ | **84% → 99%** | `test_form_propose.py` | promoted: targeted tests cover every statement and all-but-three arcs; the residuals are provably unreachable (the `m_eid is None` guard in `factored_states` — an extracted term is always graph-resident — and the `prog_stats`/`boundary` falsy arcs in the report, unreachable under the `ok`/`setdefault` invariants); the dead `unbound-wires` guard and the `("raw", …)` concat-skeleton arms carry documented `pragma: no cover`s |
-| ~~`state_reindex.py`~~ → **`mlopt_discovery.state_reindex`** ✅ | **83% → 100%** | `test_state_reindex.py` (new, dedicated) | promoted: law-guard/derive unit tests + a non-slow synthetic-fold `reindex_close` close cover everything; the `("raw", …)` scan arm carries the same documented pragma |
+| ~~`combinator.py`~~ → **`kit_discovery.combinator`** ✅ | **92% → 100%** | `test_combinator_bridge.py` | promoted: +9 targeted tests closed the guards (`arity`/`_apply`/`comb_to_dag` `raise`s, `_par`/`_mux` edges, `morph_stats` Drop/Loop/non-morphism, `dag_size`); the one residual — the closing-`Drop` in `dag_to_comb` — is provably unreachable (a ctx wire survives to the close only while `remaining[w] > 0`, and at the close `remaining` counts exactly the output uses), so it carries a documented `pragma: no cover` |
+| ~~`form_propose.py`~~ → **`kit_discovery.form_propose`** ✅ | **84% → 99%** | `test_form_propose.py` | promoted: targeted tests cover every statement and all-but-three arcs; the residuals are provably unreachable (the `m_eid is None` guard in `factored_states` — an extracted term is always graph-resident — and the `prog_stats`/`boundary` falsy arcs in the report, unreachable under the `ok`/`setdefault` invariants); the dead `unbound-wires` guard and the `("raw", …)` concat-skeleton arms carry documented `pragma: no cover`s |
+| ~~`state_reindex.py`~~ → **`kit_discovery.state_reindex`** ✅ | **83% → 100%** | `test_state_reindex.py` (new, dedicated) | promoted: law-guard/derive unit tests + a non-slow synthetic-fold `reindex_close` close cover everything; the `("raw", …)` scan arm carries the same documented pragma |
 | `index_abstract.py` | 81% | `test_index_abstract.py` | 62 + 18 |
 | `loop_propose.py` | 80% | `test_loop_propose.py` | 24 + 4 |
 
@@ -199,11 +199,11 @@ not piecemeal.
 ## Promote-candidate ranking (gap-to-99%)
 
 1. ~~**`lab/bridge/combinator.py`**~~ — **promoted** to
-   `mlopt_discovery.combinator` (92% → 100%).
+   `kit_discovery.combinator` (92% → 100%).
 2. ~~**`lab/bridge/form_propose.py`**~~ — **promoted** to
-   `mlopt_discovery.form_propose` (84% → 99%).
+   `kit_discovery.form_propose` (84% → 99%).
 3. ~~**`lab/bridge/state_reindex.py`**~~ — **promoted** to
-   `mlopt_discovery.state_reindex` (83% → 100%); now has the
+   `kit_discovery.state_reindex` (83% → 100%); now has the
    dedicated `tests/test_state_reindex.py` (the slow close test moved
    out of `test_form_propose.py`).
 4. **`lab/bridge/index_abstract.py`** — 81%.

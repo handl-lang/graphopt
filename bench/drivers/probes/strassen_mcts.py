@@ -52,8 +52,8 @@ import sys
 import time
 from statistics import fmean
 
-from mlopt_discovery import bilinear_game as bg
-from mlopt_discovery.meta_arena import Action
+from kit_discovery import bilinear_game as bg
+from kit_discovery.meta_arena import Action
 
 #: Legal flip shifts — a collapse flip is only offered when its
 #: λ is in the board's own ``FLIP_LAMBDAS``.
@@ -353,7 +353,7 @@ class MCTSPlayer:
 def _arms(domain: str, seed: int, sims: list) -> dict:
     """Build the arm factories: the anchors plus one MCTS per budget."""
     from gamekit.players import registry
-    from mlopt_discovery import play
+    from kit_discovery import play
 
     d = play.DOMAINS[domain]
     arms = {
@@ -409,7 +409,7 @@ def main(argv: list | None = None) -> int:
     )
     args = ap.parse_args(argv)
 
-    from mlopt_discovery import play
+    from kit_discovery import play
 
     d = play.DOMAINS[args.domain]
     sims = [int(s) for s in args.sims.split(",") if s]

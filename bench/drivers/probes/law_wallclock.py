@@ -1,7 +1,7 @@
 """Wall-clock verification for the two shipped machine-discovered laws.
 
 ``tools/law_impact.py`` (since retired) and
-``python -m mlopt_discovery.pipeline`` measured the laws
+``python -m kit_discovery.pipeline`` measured the laws
 under the pipeline's *own* cost model — ``executor_cost_for``'s
 roofline-plus-per-dispatch proxy — and ``law_bench`` timed only the
 registered synthetic terms.  Nothing so far has timed the *real

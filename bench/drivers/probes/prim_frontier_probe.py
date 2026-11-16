@@ -56,7 +56,7 @@ def _seated_graph(roots):
     """The bootstrap-seated corpus e-graph (``_prim_pool``'s leg)."""
     from mlopt_core.egraph import EGraph
     from mlopt_core.laws import minted as _minted
-    from mlopt_discovery import shipped_primitives as _sp
+    from kit_discovery import shipped_primitives as _sp
 
     eg = EGraph()
     for r in roots.values():
@@ -101,7 +101,7 @@ def _mine_instrumented(
 ):
     import heapq as hq
 
-    from mlopt_discovery.antiunify import (
+    from kit_discovery.antiunify import (
         _alpha_norm,
         _emit,
         _grow_all,

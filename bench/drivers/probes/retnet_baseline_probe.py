@@ -53,8 +53,8 @@ import types
 
 import torch
 from mlopt_core.ir import IR
-from mlopt_discovery.play import _time_module
-from mlopt_discovery.zoo import _ChunkedRetention
+from kit_discovery.play import _time_module
+from kit_discovery.zoo import _ChunkedRetention
 from mlopt_orchestrator.optimize import _lower_extracted
 from mlopt_torch.adapters import TorchSink
 

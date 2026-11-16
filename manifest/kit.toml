@@ -88,7 +88,7 @@ repo = "handl-lang/discovery"
 float = "main"
 kind = "cargo-git"
 crates = ["handl-discovery"]
-role = "the ported domain-free half of `mlopt_discovery` — the `term_to_data`/`term_from_data` codec the egraph leg speaks, and the `GauntletLegs` trait surface `tests/gauntlet_stub.rs` injects into `run_gauntlet`. A real mlopt-kit dep, mirrored from `packages/mlopt-kit/Cargo.toml`."
+role = "the ported domain-free half of `kit_discovery` — the `term_to_data`/`term_from_data` codec the egraph leg speaks, and the `GauntletLegs` trait surface `tests/gauntlet_stub.rs` injects into `run_gauntlet`. A real mlopt-kit dep, mirrored from `packages/mlopt-kit/Cargo.toml`."
 
 [[component]]
 name = "mlopt-kit"
@@ -112,7 +112,7 @@ kind = "python-git"
 packages = [
     "mlopt-core",
     "mlopt-torch",
-    "mlopt-discovery",
+    "kit-discovery",
     "mlopt-orchestrator",
     "kit-onnx",
 ]

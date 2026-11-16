@@ -95,7 +95,7 @@ from gamekit.players import (
     RelFeats,
     StateBroadcast,
 )
-from mlopt_discovery.meta_arena import Action
+from kit_discovery.meta_arena import Action
 
 __all__ = [
     "BASE_LAW",

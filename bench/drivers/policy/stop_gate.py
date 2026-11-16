@@ -22,7 +22,7 @@ serializable by construction, not by argument.
 The evidence candidates — priced from **shipped machinery only**,
 no ``set_value_preds`` at decode:
 
-* ``open:prior`` (new — :mod:`mlopt_discovery.open_prior`): the stop
+* ``open:prior`` (new — :mod:`kit_discovery.open_prior`): the stop
   row carries the *shipped prior's own* pending-pool pricing —
   ``x:stop:prior_best``/``_top3``/``_pool``/``_frac`` (the pending
   pool under ``w·_cand_feats``), ``x:stop:prior_margin`` (the prior's
@@ -92,12 +92,12 @@ from gamekit.players import (
     registry,
     spec_from_record,
 )
-from mlopt_discovery import play
-from mlopt_discovery import open_game as og
-from mlopt_discovery import open_prior as opr
-from mlopt_discovery import open_self as osel
-from mlopt_discovery import proposal as lp
-from mlopt_discovery.meta_arena import Action
+from kit_discovery import play
+from kit_discovery import open_game as og
+from kit_discovery import open_prior as opr
+from kit_discovery import open_self as osel
+from kit_discovery import proposal as lp
+from kit_discovery.meta_arena import Action
 
 #: Defaults — identical protocol to ``stop_isolated.py``.
 SEED = svl.SEED

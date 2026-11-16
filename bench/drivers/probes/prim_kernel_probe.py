@@ -40,8 +40,8 @@ from typing import Any
 
 import torch
 from mlopt_core.laws import minted
-from mlopt_discovery import genkernel
-from mlopt_discovery import shipped_primitives as sp
+from kit_discovery import genkernel
+from kit_discovery import shipped_primitives as sp
 
 DEFAULT_OPS = (
     "synop_bb8c54c201",

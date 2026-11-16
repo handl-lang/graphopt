@@ -29,7 +29,7 @@ from mlopt_core.game import Action, Evaluator, GameState
 from mlopt_core.laws import all_rules
 from mlopt_core.search_env import SearchEnv
 from mlopt_core.trajectories import rule_samples
-from mlopt_discovery import families
+from kit_discovery import families
 from mlopt_torch.rl import RLPolicy, train_reinforce
 
 

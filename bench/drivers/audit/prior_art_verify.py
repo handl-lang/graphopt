@@ -41,8 +41,8 @@ from mlopt_core.ir import Const, TensorType, Var
 from mlopt_core.laws.priorart import PRIOR_ART_RULES
 from mlopt_core.meta import instantiate_pattern
 
-from mlopt_discovery import REPO_ROOT, oracle
-from mlopt_discovery.verifier import verify_law
+from kit_discovery import REPO_ROOT, oracle
+from kit_discovery.verifier import verify_law
 
 __all__ = ["LawRow", "certify_all", "certify_rule", "main"]
 

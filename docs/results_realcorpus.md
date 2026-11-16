@@ -25,7 +25,7 @@ One intake ingestion (seed 0, `--skip-pipeline`) wrote
 `/tmp/full_intake_corpus.json` + `intake_tensors.pt`: 254 exported
 (206 ingested, 48 census-only), 2 export rejections (`nn.CTCLoss`,
 `nn.GaussianNLLLoss`). The driver splits cases by `PURPOSE_BUILT`
-(46 spellings) and ingests the held-out `mlopt_discovery.zoo`
+(46 spellings) and ingests the held-out `kit_discovery.zoo`
 registry through the same boundary. Four pipeline arms run
 `workload_gen._run_pipeline` — the intake driver's own census →
 propose → measure → rank mirror — with `pipeline._probe` wrapped so

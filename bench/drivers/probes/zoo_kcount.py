@@ -27,7 +27,7 @@ import json
 from pathlib import Path
 
 import torch
-from mlopt_discovery import zoo as zoo_mod
+from kit_discovery import zoo as zoo_mod
 
 
 def _profile(wl, *, d: int, t: int, b: int, reps: int) -> dict:

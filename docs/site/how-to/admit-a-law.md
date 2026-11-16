@@ -1,6 +1,6 @@
 # Admit a law
 
-<!-- provenance: graphopt:mlopt_discovery/{pipeline,verifier,emit}.py + eqsat:packages/mlopt-core/src/mlopt_core/laws/provenance.py@bac1a61 -->
+<!-- provenance: graphopt:kit_discovery/{pipeline,verifier,emit}.py + eqsat:packages/mlopt-core/src/mlopt_core/laws/provenance.py@bac1a61 -->
 
 Move a candidate equality through [the gauntlet](../explanation/the-gauntlet)
 into `DEFAULT` — with `MACHINE_SHIPPED` provenance, by hand or through
@@ -11,9 +11,9 @@ verdict.
 ## 1. Get a candidate
 
 ```sh
-.venv/bin/python -m mlopt_discovery.pipeline
-.venv/bin/python -m mlopt_discovery.pipeline --holdout select_mul   # sanity: re-derive a shipped law
-.venv/bin/python -m mlopt_discovery.pipeline --json /tmp/pipeline.json
+.venv/bin/python -m kit_discovery.pipeline
+.venv/bin/python -m kit_discovery.pipeline --holdout select_mul   # sanity: re-derive a shipped law
+.venv/bin/python -m kit_discovery.pipeline --json /tmp/pipeline.json
 ```
 
 One run does census → propose → verify → measure → rank over the real
@@ -25,7 +25,7 @@ it is not trustworthy.
 ## 2. Check derivability standalone
 
 ```python
-from mlopt_discovery.verifier import verify_law
+from kit_discovery.verifier import verify_law
 
 res = verify_law(lhs, rhs, rules)   # -> LawResult
 res.derivable        # the two roots share an e-class?
@@ -42,7 +42,7 @@ bound can only ever *refuse*, never accept: resource exhaustion reports
 `derivable=False`, never a fabricated merge. Or run the module CLI:
 
 ```sh
-.venv/bin/python -m mlopt_discovery.verifier --json /tmp/law.json
+.venv/bin/python -m kit_discovery.verifier --json /tmp/law.json
 ```
 
 ## 3. Prove it pays — and that the guard is honest
@@ -51,7 +51,7 @@ The pipeline's measure stage already runs the pay audit per candidate:
 the rule fires alone over every real model (fires, cost delta, lowered
 `sink.verify`), every merged fire is audited for *well-typedness*, and a
 closure-safety check flags rules that explode saturation. What remains
-is the adversarial sweep — `mlopt_discovery.gap_gen` generates bindings
+is the adversarial sweep — `kit_discovery.gap_gen` generates bindings
 inside the guard's *false region* and tries to falsify the side
 conditions. This is where candidates die: the sweep killed 212 bad
 accepts on `mul_unsq_nat`'s first guard before the exact
@@ -60,7 +60,7 @@ accepts on `mul_unsq_nat`'s first guard before the exact
 ## 4. Emit the admission patch
 
 ```sh
-.venv/bin/python -m mlopt_discovery.pipeline \
+.venv/bin/python -m kit_discovery.pipeline \
     --emit-admission <candidate> --out /tmp/admission
 ```
 
@@ -91,7 +91,7 @@ For the strict prim shape — a `prim:<name>` fold whose RHS is a bare
 `<name>(args)` call over an embedded `.expand` premise — the hand
 step is optional. `admit_prim_record(name, record)`
 (`mlopt_core.laws.minted`, reached from the discovery side as
-`mlopt_discovery.prim_mint.admit_prim`) persists a gauntlet-cleared
+`kit_discovery.prim_mint.admit_prim`) persists a gauntlet-cleared
 record into the store's `AUTO_TIER`; it joins `PRIM_FOLDS` /
 `MINTED_RULES` / `DEFAULT` at the next import and reports
 `"machine"` provenance via `AUTO_ADMITTED ⊂ MACHINE_SHIPPED`. It

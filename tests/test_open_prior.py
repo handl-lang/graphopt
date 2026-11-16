@@ -1,5 +1,5 @@
 """Tests for the shipped-prior feature part
-(:mod:`mlopt_discovery.open_prior`).
+(:mod:`kit_discovery.open_prior`).
 
 The ``open:prior`` part prices the pending pool with the shipped
 prior's own linear model — ``_dot(OPEN_SPEC.weights, _cand_feats)``
@@ -24,10 +24,10 @@ import sys
 from pathlib import Path
 
 import pytest
-from mlopt_discovery import open_game as og
-from mlopt_discovery import open_prior as opr
+from kit_discovery import open_game as og
+from kit_discovery import open_prior as opr
 from gamekit.engine import run_episode
-from mlopt_discovery.meta_arena import Action
+from kit_discovery.meta_arena import Action
 from gamekit.players import PARTS, DomainSpec, _dot
 
 REPO = Path(__file__).resolve().parents[1]

@@ -321,7 +321,7 @@ def gate_dspec_scalar() -> dict[str, Any]:
     the shipped ``synth_dspec`` defaults to ``max_depth=2`` and refuses;
     the streamed audit twin decides them.
     """
-    from mlopt_discovery import dspec_synth as dsp
+    from kit_discovery import dspec_synth as dsp
 
     audit = _audit()
     rng = np.random.default_rng(0)
@@ -449,7 +449,7 @@ def gate_dspec_tensor() -> dict[str, Any]:
     on this leaf bank) exceeds the streamed budget.
     """
     import mlopt_core.laws.cond as cond
-    from mlopt_discovery import dspec_synth as dsp
+    from kit_discovery import dspec_synth as dsp
 
     audit = _audit()
     rng = np.random.default_rng(0)

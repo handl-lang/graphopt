@@ -1,10 +1,10 @@
 # Player-on-board — the two-tier meta-game
 
-**Date:** 2026-10-19 · **Script:** `python -m mlopt_discovery.player_arena` ·
+**Date:** 2026-10-19 · **Script:** `python -m kit_discovery.player_arena` ·
 **Seed:** 0 · **Runner:**
 
 ```bash
-timeout 1800 .venv/bin/python -m mlopt_discovery.player_arena \
+timeout 1800 .venv/bin/python -m kit_discovery.player_arena \
     --objective open --seed 0 --budget 20 --json /tmp/player_headline.json
     # ~11 min wall (one-time oracle memoization dominates; probes then ~40 s each)
 ```
@@ -106,14 +106,14 @@ budget, under the same memoized verdicts.
 
 ## Where it lives
 
-* `mlopt_discovery/player_arena.py` — `PlayerArena`, `PlayerState`,
+* `kit_discovery/player_arena.py` — `PlayerArena`, `PlayerState`,
   `legal_actions`, `OBJECTIVES` (`meta`/`open`), `GreedyEditor`,
   `PLAYER_SPEC`, `gen_cases`, CLI.
-* `mlopt_discovery/players.py` — `PARTS`/`LEGALS`/`RANKS`
+* `kit_discovery/players.py` — `PARTS`/`LEGALS`/`RANKS`
   registries, `DomainSpec.to_record`/`build_from_record`,
   `spec_from_record`; shipped parts register in `meta_player`,
   `open_game`, `play` (`search:*`).
-* `play.DOMAINS["player"]` — `python -m mlopt_discovery.play
+* `play.DOMAINS["player"]` — `python -m kit_discovery.play
   --domain player` works (nested evals make episodes minutes-scale;
   use small `--train-cases`/`--eval-cases`).
 * `tests/test_discovery_player_arena.py` — 24 tests: record

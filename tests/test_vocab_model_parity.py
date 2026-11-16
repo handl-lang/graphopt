@@ -18,13 +18,14 @@ from pathlib import Path
 
 import pytest
 from mlopt_core.cells import spec_from_data
-from mlopt_discovery import handler_synth, modelproj, vocabdir
-from mlopt_discovery.handler_synth import body_from_data
+from kit_discovery import handler_synth, modelproj, vocabdir
+from kit_discovery.handler_synth import body_from_data
 
 pytestmark = pytest.mark.e2e
 
-_REPO = Path(__file__).resolve().parents[1]
-_VOCAB = _REPO / "vocab"
+#: The shipped vocabulary — package data inside the installed
+#: ``kit_discovery`` (handl-lang/kit-discovery, P3 Step D-1d).
+_VOCAB = Path(vocabdir.__file__).resolve().parent / "vocab"
 
 
 def _runner():

@@ -217,7 +217,7 @@ lift (export → IR)  →  e-graph + gauntlet  →  lower (verified module)
 - **E-graph + gauntlet.**  Saturation generates the equivalence class;
   extraction prices it.  Discovery runs *on the library itself*:
   census → propose → verify → measure → rank → emit → admit
-  (`mlopt_discovery`), with per-artifact verification boundaries —
+  (`kit_discovery`), with per-artifact verification boundaries —
   numeric oracle, typed-pay gate, adversarial guard sweep, closure
   bound, certificate replay.
 - **Lower.**  The extracted program lowers through a `Sink` port and is

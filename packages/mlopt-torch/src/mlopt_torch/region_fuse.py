@@ -3,7 +3,7 @@
 The measurement path is ``docs/reports/kokoro_region_fuse.md``: maximal
 weakly-connected components of the elementwise op set (the
 ``genkernel.ELEMENTWISE`` vocabulary, re-spelled locally as
-:data:`ELEMENTWISE_OPS` — ``mlopt_discovery`` is the wrong direction
+:data:`ELEMENTWISE_OPS` — ``kit_discovery`` is the wrong direction
 of the hexagonal boundary) are rewritten, *after* extraction, into
 single ``fused_region`` ops whose boundary leaves become positional
 runtime args.  Each distinct region *shape* (internal structure only —
@@ -80,7 +80,7 @@ __all__ = [
 ]
 
 #: The elementwise vocabulary a region may contain — a local
-#: re-spelling of ``mlopt_discovery.genkernel.ELEMENTWISE`` (28 ops).
+#: re-spelling of ``kit_discovery.genkernel.ELEMENTWISE`` (28 ops).
 #: Kept as a literal: importing the discovery package from the torch
 #: backend would invert the hexagonal boundary.  If the discovery
 #: table changes, this list must be re-synced deliberately.

@@ -1,13 +1,13 @@
 """Mint macro actions from played trajectories — moves the way laws are minted.
 
 The discovery loop ``antiunify`` runs on rules, run on *moves*:
-collect :class:`~mlopt_discovery.meta_arena.Trajectory` objects from
+collect :class:`~kit_discovery.meta_arena.Trajectory` objects from
 played episodes (scripted / greedy / random / trained arms plus the
 claim- and declare-line probes), count canonical action n-grams
 across episodes, rank by ``count x payoff`` (the mean terminal-step
 reward of the episodes the gram rode in — "did the subsequence
 precede a paying certified extract?"), and mint the top grams as
-:data:`mlopt_discovery.macro_moves.Macro` templates — data replayed
+:data:`kit_discovery.macro_moves.Macro` templates — data replayed
 through the refereed ``macro`` handler, sound by construction.
 
 Smoke test: the minted table must surface the known winning line
@@ -42,17 +42,17 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from mlopt_core.cost.basic import count_cost
-from mlopt_discovery import meta_arena as ma
-from mlopt_discovery import meta_player as mp
-from mlopt_discovery.macro_moves import (
+from kit_discovery import meta_arena as ma
+from kit_discovery import meta_player as mp
+from kit_discovery.macro_moves import (
     Macro,
     _sub_parts,
     instantiate,
     legal_with_macros,
     viable,
 )
-from mlopt_discovery.meta_arena import Action
+from kit_discovery.meta_arena import Action
+from mlopt_core.cost.basic import count_cost
 
 __all__ = [
     "MacroScripted",

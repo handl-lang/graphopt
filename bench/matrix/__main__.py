@@ -18,7 +18,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from mlopt_discovery.play import DOMAINS
+from kit_discovery.play import DOMAINS
 
 from bench.benchkit import checkpoint as checkpoint_mod
 from bench.matrix import table

@@ -108,7 +108,7 @@ because conflating them is the failure mode we most want to avoid.
 | Question | What it asks | Who owns it here |
 |---|---|---|
 | **Optimization** | choose a better implementation from *known* transformations | cost-based extraction over the law closure |
-| **Discovery** | find laws/algorithms humans did not encode | `mlopt_discovery` (census → propose → verify → measure → rank → emit) |
+| **Discovery** | find laws/algorithms humans did not encode | `kit_discovery` (census → propose → verify → measure → rank → emit) |
 | **Verification** | establish validity before accepting | the admission gauntlet + certificate replay |
 | **Search** | explore the candidate space efficiently | a `Policy` over an already-structured space |
 
@@ -182,7 +182,7 @@ The loop above runs *inside* a fixed law library.  Two mechanisms operate on
 the library itself.
 
 **Coherence — the 3-cell layer.**  A rewrite is a 2-cell; a law *about*
-rewrites is a 3-cell.  `mlopt_discovery.coherence` enumerates the pair layer
+rewrites is a 3-cell.  `kit_discovery.coherence` enumerates the pair layer
 over the shipped library; `coherence2` measures depth 2 — stratification,
 reach under removal, and the mediator table.  The measured structure is
 honest: the derived layer of `ALL_RULES` is *flat* — zero laws derivable from
@@ -196,7 +196,7 @@ under removal), and **divergence is found and mediated** (`silu_fold`
 shipped to restore confluence where `silu_expand` destroyed the `swiglu_fuse`
 redex).
 
-**Discovery — the closed loop.**  `mlopt_discovery.pipeline` runs
+**Discovery — the closed loop.**  `kit_discovery.pipeline` runs
 census → propose → verify → measure → rank → emit over a corpus of real
 exported models.  Candidates are verified (numeric oracle, `sink.verify` on
 lowered modules, derivability oracle), measured (fires / cost deltas / cert
@@ -220,7 +220,7 @@ way to *say* things is §2.2.
 
 ### 2.2 The substrate beneath the syntax — a presentation, and a bounded search space (ADR 0008)
 
-A prototype combinator presentation (`mlopt_discovery.combinator`) re-expresses
+A prototype combinator presentation (`kit_discovery.combinator`) re-expresses
 the IR as morphisms of a monoidal category with explicit `dup` (Δ, sharing as a
 morphism) and `loop` (bounded trace).  Gates 1–2 pass: 321/321 corpus
 workloads round-trip structurally exact (zero ops refuse translation, mean
@@ -882,9 +882,9 @@ commands live with their artifacts:
 uv run pytest                                   # full suite (serial — no -n auto)
 .venv/bin/ty check && .venv/bin/ruff check && .venv/bin/ruff format --check
 .venv/bin/vulture && .venv/bin/lint-imports
-python -m mlopt_discovery.pipeline             # census → propose → verify → measure → rank → emit
-python -m mlopt_discovery.play --domain gen --probe
-python -m mlopt_discovery.play --zoo
+python -m kit_discovery.pipeline             # census → propose → verify → measure → rank → emit
+python -m kit_discovery.play --domain gen --probe
+python -m kit_discovery.play --zoo
 python -m bench run <suite> --device cpu
 ```
 

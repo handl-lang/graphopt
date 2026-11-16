@@ -55,13 +55,13 @@ from mlopt_core.egraph.terms import _term_instantiate
 from mlopt_core.ir import Const, Op, TensorType, Var, op_repr
 from mlopt_core.laws.serialize import law_to_data, missing_hooks
 from mlopt_core.meta import match_pattern
-from mlopt_discovery import evidence as ev
-from mlopt_discovery import object_synthesis as obs
-from mlopt_discovery import oracle as lvo
-from mlopt_discovery import proposal as lp
-from mlopt_discovery.dspec_synth import synth_dspec_multi
-from mlopt_discovery.impact import _iter_subterms
-from mlopt_discovery.verifier import verify_law
+from kit_discovery import evidence as ev
+from kit_discovery import object_synthesis as obs
+from kit_discovery import oracle as lvo
+from kit_discovery import proposal as lp
+from kit_discovery.dspec_synth import synth_dspec_multi
+from kit_discovery.impact import _iter_subterms
+from kit_discovery.verifier import verify_law
 
 from bench.drivers.screen.exposure_screen import _export, _workloads
 

@@ -201,7 +201,7 @@ def test_root_eliminating_laws_agree_on_satisfying_terms() -> None:
     """
     from mlopt_core.egraph import EGraph
     from mlopt_core.ir import Op, TensorType, Var
-    from mlopt_discovery.handl_engine import term_to_ast
+    from kit_discovery.handl_engine import term_to_ast
 
     fragments_all = _REPO / "tests" / "fixtures" / "handl-spike" / "fragments-all"
     assert fragments_all.is_dir(), "the full bank fragment dir is required"

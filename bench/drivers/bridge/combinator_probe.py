@@ -39,8 +39,8 @@ from typing import Any
 
 import torch
 from mlopt_core.ir import Op
-from mlopt_discovery import combinator as cb
-from mlopt_discovery.impact import _iter_subterms
+from kit_discovery import combinator as cb
+from kit_discovery.impact import _iter_subterms
 
 from bench.drivers.probes import om_shared_state_probe as osp
 from bench.drivers.screen.exposure_screen import _export, _workloads
@@ -290,7 +290,7 @@ def gate2(
     import kit_carriers  # noqa: F401 — carrier op bindings
     from mlopt_core.cost import dag_cost, flops_cost
     from mlopt_core.ir import IR, Const, Param, TensorType, Var
-    from mlopt_discovery.zoo import _ChunkedRetention
+    from kit_discovery.zoo import _ChunkedRetention
     from mlopt_torch.adapters import TorchSink
 
     torch.manual_seed(0)
@@ -369,10 +369,10 @@ def _gate2_projection(
     Reports whether the extracted term round-trips through the bridge,
     and whether its shared-state chain carries the same fold signature
     the spelled ``loop`` expands to.  With ``propose_loop`` it also runs
-    the gate-3 *proposing rule* (``mlopt_discovery.loop_propose``) over the
+    the gate-3 *proposing rule* (``kit_discovery.loop_propose``) over the
     projected winner and over an authored spelled scan (the control).
     With ``abstract_index`` it runs the gate-3 *parametric-abstraction*
-    move (``mlopt_discovery.index_abstract``) — abstraction over the step.
+    move (``kit_discovery.index_abstract``) — abstraction over the step.
     With ``sharing_extract`` the winner is taken from the
     *sharing-aware* coordinated extraction
     (``bench/drivers/bridge/sharing_extract.py``) instead of plain
@@ -434,7 +434,7 @@ def _gate2_projection(
     )
     if propose_loop:
         from mlopt_core.ir import Const
-        from mlopt_discovery import loop_propose as lp
+        from kit_discovery import loop_propose as lp
 
         # Is the presentation's *spelled* scan even a term the search
         # reached?  Add it to the (already-saturated) e-graph; if it
@@ -455,14 +455,14 @@ def _gate2_projection(
         print("-- gate 3: the `loop`-proposing rule --")
         lp.propose_loop_report(morph, control)
     if abstract_index:
-        from mlopt_discovery import index_abstract as ia
+        from kit_discovery import index_abstract as ia
 
         print("-- gate 3: parametric abstraction over the step --")
         ia.abstract_index_report(
             best, control=_expanded_fold_term(t, k)
         )
     if form_propose:
-        from mlopt_discovery import form_propose as fp
+        from kit_discovery import form_propose as fp
 
         print(
             "-- gate 3: form-level proposer (e-graph anti-unification) --"
@@ -484,7 +484,7 @@ def _verify_winner_terms(t: int, a: Any, b: Any) -> float:
     """Lower two winner-shaped terms through TorchSink; return max|Δ|."""
     import kit_carriers  # noqa: F401
     from mlopt_core.ir import IR
-    from mlopt_discovery.zoo import _ChunkedRetention
+    from kit_discovery.zoo import _ChunkedRetention
     from mlopt_torch.adapters import TorchSink
     from mlopt_torch.torch_bridge import export_to_ir
 

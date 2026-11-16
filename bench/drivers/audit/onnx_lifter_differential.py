@@ -94,7 +94,7 @@ from mlopt_core.ir import (  # noqa: E402
     Param,
     Var,
 )
-from mlopt_discovery.hnl_codec import (  # noqa: E402
+from kit_discovery.hnl_codec import (  # noqa: E402
     term_from_json,
     term_to_json,
 )

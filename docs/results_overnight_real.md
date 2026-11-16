@@ -4,7 +4,7 @@ Episodes -> mint -> admit -> classify.  Open-game episodes mint candidate rewrit
 
 - date: 2026-10-22T04:05:54+00:00 · git: `81cf176` (dirty) · device cpu
 - protocol: `{"budget": 48, "compose": 2, "corpus": "zoo-real", "dry": false, "episodes": 8, "mint": "corpus-bind-compose-guarded", "page": 48, "player": "playbook", "referee": "full", "scan": 2048, "seed": 0}`
-- corpus: `zoo-real` — held-out zoo modules (mlopt_discovery.zoo), candidates minted from each module's own op-tuple census (pipeline.propose); real_terms are the corpus's distinct subterms
+- corpus: `zoo-real` — held-out zoo modules (kit_discovery.zoo), candidates minted from each module's own op-tuple census (pipeline.propose); real_terms are the corpus's distinct subterms
 - episodes: 8 · evaluated: 22 · minted: 19 (1 composites, 1 guarded) · admitted: 0 · wall: 16.3s
 - arena verdicts: false=22
 

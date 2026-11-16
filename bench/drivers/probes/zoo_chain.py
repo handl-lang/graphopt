@@ -65,9 +65,9 @@ import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
-from mlopt_discovery import play as play_mod
-from mlopt_discovery import zoo as zoo_mod
-from mlopt_discovery.play import _zoo_case, gen_probe
+from kit_discovery import play as play_mod
+from kit_discovery import zoo as zoo_mod
+from kit_discovery.play import _zoo_case, gen_probe
 
 DEFAULT_ONLY = "GatedAttentionUnit,MLPMixerBlock,BlockSparseAttention,TimeCondConv,FNOBlock"
 DEFAULT_BUDGET = 150.0
@@ -401,7 +401,7 @@ def main(argv: list[str] | None = None) -> int:
         "--pay-gate",
         action="store_true",
         help=(
-            "skip workloads the pay predictor (mlopt_discovery."
+            "skip workloads the pay predictor (kit_discovery."
             "pay_gate) classes as elementwise-bound before the "
             "mint/referee/search spend — scheduling only, default off"
         ),

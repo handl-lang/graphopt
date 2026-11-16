@@ -61,9 +61,9 @@ from mlopt_core.laws import (
     SCAN_DIAG_LAWS,
     SCAN_LAWS,
 )
-from mlopt_discovery import intake as li
-from mlopt_discovery import zoo as zoo_mod
-from mlopt_discovery.impact import (
+from kit_discovery import intake as li
+from kit_discovery import zoo as zoo_mod
+from kit_discovery.impact import (
     TermCase,
     _iter_subterms,
     _relax,
@@ -277,7 +277,7 @@ def _workloads(which: str) -> list[tuple[str, Any]]:
     if which in ("intake", "all"):
         out += [("intake", w) for w in li.candidates()]
     if which in ("models", "all"):
-        from mlopt_discovery.impact import _model_cases
+        from kit_discovery.impact import _model_cases
 
         class _WL:
             def __init__(self, name: str, m: Any, x: Any) -> None:

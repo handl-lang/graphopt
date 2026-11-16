@@ -66,7 +66,7 @@ from pathlib import Path
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import Op, Var
 from mlopt_core.laws import ALL_RULES
-from mlopt_discovery.handl_engine import (
+from kit_discovery.handl_engine import (
     HandlPeer,
     HandlPeerUnavailable,
     ast_result_term,
@@ -238,7 +238,7 @@ def _handl_refused(rule: object) -> bool:
     not an over-fire; it is bucketed ``refused`` rather than counted
     against parity.
     """
-    from mlopt_discovery.handl import law_to_handl
+    from kit_discovery.handl import law_to_handl
 
     row = law_to_handl(rule, rule.name)
     rule_body = row.get("rule") or {}

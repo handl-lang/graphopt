@@ -60,7 +60,7 @@ phase 4.
 Plan 0032 landed the extraction in two steps (lane A in-repo, phase 4
 to the `gamekit` repo): these modules now live in `gamekit`'s
 `packages/gamekit` as `gamekit.*`, and the old
-`mlopt_discovery.{engine,scoring,advantage,players,lawdata.game}`
+`kit_discovery.{engine,scoring,advantage,players,lawdata.game}`
 paths are re-exporting shims (see `TestGamekitCompatShims` in
 `tests/test_public_api.py`).  Canonical paths are `gamekit.*`.
 
@@ -76,8 +76,8 @@ paths are re-exporting shims (see `TestGamekitCompatShims` in
 
 | Contract | Canonical location | Frozen surface |
 |---|---|---|
-| Law verification | `mlopt_discovery.verifier` | **`verify_law(lhs, rhs, rules, *, max_iterations=30, max_nodes=30_000, rule_budgets=None) -> LawResult`**, `LawResult` (`derivable`, `direction`, `witness_rules`, `replayable`, `cert`) — the admission side the phase-2 referees consume; saturation is bounded by default (`rule_budgets=None` applies the EXPANSIVE/non-library per-rule caps — `verifier._EXPANSIVE_BUDGET`) and a bound can only *refuse*, never accept |
-| Domain registry | `mlopt_discovery.play` | `DOMAINS`, `Domain` (`cases`/`board_of`/`legal`/`featurizer`/`features`/`scripted`/`deliver`/`spec`), `play(domain, case, player, *, budget)`, `spec_domain(cases, board_of, spec, *, scripted, deliver) -> Domain` — the `Domain` *shape* is the contract; the `DOMAINS` *contents* are domain data, and downstream repos seat their own (kernelopt's `mlopt_kernel.play` registers `kernel` at import — plan 0032 phase 4) |
+| Law verification | `kit_discovery.verifier` | **`verify_law(lhs, rhs, rules, *, max_iterations=30, max_nodes=30_000, rule_budgets=None) -> LawResult`**, `LawResult` (`derivable`, `direction`, `witness_rules`, `replayable`, `cert`) — the admission side the phase-2 referees consume; saturation is bounded by default (`rule_budgets=None` applies the EXPANSIVE/non-library per-rule caps — `verifier._EXPANSIVE_BUDGET`) and a bound can only *refuse*, never accept |
+| Domain registry | `kit_discovery.play` | `DOMAINS`, `Domain` (`cases`/`board_of`/`legal`/`featurizer`/`features`/`scripted`/`deliver`/`spec`), `play(domain, case, player, *, budget)`, `spec_domain(cases, board_of, spec, *, scripted, deliver) -> Domain` — the `Domain` *shape* is the contract; the `DOMAINS` *contents* are domain data, and downstream repos seat their own (kernelopt's `mlopt_kernel.play` registers `kernel` at import — plan 0032 phase 4) |
 
 ## Torch delivery contracts (→ `graphopt`)
 

@@ -18,7 +18,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from mlopt_discovery.play import DOMAINS
+from kit_discovery.play import DOMAINS
 from gamekit.players import registry
 
 from bench.benchkit import checkpoint as ckpt_mod

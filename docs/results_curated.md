@@ -364,7 +364,7 @@ Macro-action minting over `Trajectory` sequences (2026-10-19):
 scripted+macros beats the base move set +0.19 reward/ep on the
 held-out meta stream. **Shipped:** the 8-macro table is
 `lawdata.MACROS` and `meta_arena.legal_actions` offers it to every
-player (`mlopt_discovery.macro_moves`); the macro-trained prior's
+player (`kit_discovery.macro_moves`); the macro-trained prior's
 bake gate is still unearned — sampled decode +0.007 < +0.088,
 `v2-base` −0.072 < −0.056
 ([`docs/results_macro_bake2.md`](results_macro_bake2.md)).

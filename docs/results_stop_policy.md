@@ -677,10 +677,10 @@ bit-identically).
 Round 5 closed on two missing pieces — *evidence* (no feature
 prices the pending pool) and *delivery* (every weights-table stop
 delivery lands degenerate).  Round 6 prices both new levers:
-**`open:self`** (`mlopt_discovery/open_self` — the policy's own
+**`open:self`** (`kit_discovery/open_self` — the policy's own
 softmax over pending evaluates injected as `x:stop:self_*` /
 `x:self:*` columns via `set_self_scores`) and **per-step
-advantage** (`mlopt_discovery/advantage.AdvantagePlayer` — a
+advantage** (`kit_discovery/advantage.AdvantagePlayer` — a
 learned `V(s)=u·φ_stop` NLMS critic, so `stop`'s credit isolates
 to `−V(s)` instead of the episode total).
 

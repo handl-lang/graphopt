@@ -64,8 +64,8 @@ import stop_gate as sg
 import stop_policy as sp
 from gamekit.gamedata import OPEN_GATED_PAYLOAD
 from gamekit.players import registry
-from mlopt_discovery import open_game as og
-from mlopt_discovery import proposal as lp
+from kit_discovery import open_game as og
+from kit_discovery import proposal as lp
 
 #: The round-10 constants — identical protocol to ``stop_gate.run``.
 SEED = sg.SEED

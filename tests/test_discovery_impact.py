@@ -1,4 +1,4 @@
-"""Tests for ``mlopt_discovery.impact`` — the law-impact probe.
+"""Tests for ``kit_discovery.impact`` — the law-impact probe.
 
 ``impact`` measures whether the 11 ``cand_*`` laws actually pay:
 per-law firing probes (``_probe``/``_set_fires``), the relaxed-shape
@@ -20,8 +20,8 @@ import torch.nn as nn
 from mlopt_core.ir import Const, Op, Param, TensorType, Var
 from mlopt_core.laws import ALL_RULES
 from mlopt_core.laws.base import R
-from mlopt_discovery import impact as im
-from mlopt_discovery.impact import TermCase
+from kit_discovery import impact as im
+from kit_discovery.impact import TermCase
 from mlopt_torch.adapters import TorchSink
 
 
@@ -123,13 +123,17 @@ def mini_result():
 
 
 def test_repo_root_path_shim(monkeypatch):
-    """``impact`` puts the repo root on ``sys.path`` for ``bench``.
+    """``impact`` puts the *consumer* root on ``sys.path`` for ``bench``.
 
-    ``bench`` is a repo-root package, not an installed distribution;
-    when the root is absent the module prepends it at import.  A
-    reload with the root stripped exercises the shim for real.
+    ``bench`` is a repo-root package in the consumer checkout
+    (graphopt), not an installed distribution — post-split the shim
+    resolves it via ``discoverykit.consumer_repo_root()``, with the
+    kit's own ``REPO_ROOT`` only as a fallback.  A reload with the
+    root stripped exercises the shim for real.
     """
-    root = str(im.REPO_ROOT)
+    from discoverykit import consumer_repo_root
+
+    root = str(consumer_repo_root())
     monkeypatch.setattr(sys, "path", [p for p in sys.path if p != root])
     assert root not in sys.path
     importlib.reload(im)

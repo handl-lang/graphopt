@@ -42,7 +42,7 @@ import sys
 
 def _gen_sample(seed: int, n: int, only: list[str]) -> dict:
     """Run the offer cost gate over the gen eval cases; return keep sets."""
-    from mlopt_discovery import play as P
+    from kit_discovery import play as P
 
     cases = P._gen_cases(seed, n)
     out: dict[str, dict] = {}
@@ -63,8 +63,8 @@ def _gen_sample(seed: int, n: int, only: list[str]) -> dict:
 
 def _zoo_sample(names: list[str], d: int, t: int, b: int) -> dict:
     """Build zoo cases; return the post-referee gen-handler sets."""
-    from mlopt_discovery import play as P
-    from mlopt_discovery import zoo
+    from kit_discovery import play as P
+    from kit_discovery import zoo
 
     wls = {w.name: w for w in zoo.zoo(d, t, b)}
     out: dict[str, dict] = {}
@@ -118,7 +118,7 @@ def main(argv: list[str] | None = None) -> int:
 
     result = {"sample": sample}
     if args.log_ratios:
-        from mlopt_discovery import genkernel as gk
+        from kit_discovery import genkernel as gk
 
         result["ratios"] = list(getattr(gk, "PROFITABLE_LOG", ()))
     print(json.dumps(result, sort_keys=True, default=str))

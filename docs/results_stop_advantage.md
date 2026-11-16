@@ -31,7 +31,7 @@ verdict and the report's own forward pointer ("a per-step advantage
 or a real second head is the next arm"):
 
 1. **the policy's own posterior as evidence** — the `open:self` part
-   (`mlopt_discovery.open_self`, registered-but-unshipped).  Round 3
+   (`kit_discovery.open_self`, registered-but-unshipped).  Round 3
    named the blocker: a `RelFeats` part cannot see the weights, so
    `x:stop:rank1_pred` shipped the linear-score proxy.  The part
    lifts that barrier by *injection*: `set_self_scores` binds the
@@ -45,7 +45,7 @@ or a real second head is the next arm"):
    `evaluate` rows (`x:self:post` — this candidate's posterior
    share; `x:self:gap` — its margin over the field): the
    learned-units analogue of `a:score_rank`/`a:score_rel`.
-2. **per-step advantage** — `mlopt_discovery.advantage.
+2. **per-step advantage** — `kit_discovery.advantage.
    AdvantagePlayer`: the REINFORCE EMA-total baseline becomes a
    learned `V(s) = u·φ_stop(s)` fit online by the *normalized* LMS
    rule on the episode's own reward-to-go rows (NLMS — the raw delta

@@ -81,11 +81,11 @@ import stop_verdict as sv
 from gamekit import engine
 from gamekit.calibrate import IsotonicCal
 from gamekit.players import PARTS, DomainSpec, _dot, registry
-from mlopt_discovery import open_game as og
-from mlopt_discovery import open_self as osel
-from mlopt_discovery import open_verdict as ov
-from mlopt_discovery import play
-from mlopt_discovery import proposal as lp
+from kit_discovery import open_game as og
+from kit_discovery import open_self as osel
+from kit_discovery import open_verdict as ov
+from kit_discovery import play
+from kit_discovery import proposal as lp
 
 #: Defaults — identical protocol to ``stop_gate.py``/``stop_verdict.py``.
 SEED = svl.SEED

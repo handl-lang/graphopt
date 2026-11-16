@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-25 · **Script:** `bench/drivers/policy/stop_verdict.py`
 (new — same memoized-verdict protocol as `stop_isolated.py`) ·
-**Part:** `mlopt_discovery.open_verdict` (registered `open:verdict`,
+**Part:** `kit_discovery.open_verdict` (registered `open:verdict`,
 unshipped) · **Seed:** 0 · **Runner:**
 
 ```bash

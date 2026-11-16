@@ -30,8 +30,8 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from mlopt_discovery import evidence as ev  # noqa: E402
-from mlopt_discovery.pipeline import Evidence, Proposal  # noqa: E402
+from kit_discovery import evidence as ev  # noqa: E402
+from kit_discovery.pipeline import Evidence, Proposal  # noqa: E402
 
 from bench.benchkit.checkpoint import (  # noqa: E402
     Checkpoint,

@@ -220,8 +220,8 @@ from mlopt_core.ir import Op  # noqa: E402
 
 def _install_dag_patches() -> dict:
     """Install the r2 DAG-safety patches; return a description row."""
-    import mlopt_discovery.prim_mint as pm
-    import mlopt_discovery.proposal as lp
+    import kit_discovery.prim_mint as pm
+    import kit_discovery.proposal as lp
     import mlopt_torch.meta_eval as me
     from mlopt_core.ir import Const, Param, Var
 
@@ -288,7 +288,7 @@ def _eval_env_bytes(*terms: Any) -> int:
     *without* allocating, so the prim emit gate can skip instances
     whose env alone would not fit (recorded, never silent).
     """
-    import mlopt_discovery.proposal as lp
+    import kit_discovery.proposal as lp
 
     total = 0
     for t in terms:
@@ -308,7 +308,7 @@ class _Domain:
     """Per-module subterm domains with expansion caps + match memo."""
 
     def __init__(self, roots: dict[str, Any], *, cap: int) -> None:
-        from mlopt_discovery.census import (
+        from kit_discovery.census import (
             _iter_subterms,
             term_expansion,
         )
@@ -494,8 +494,8 @@ def _mint_per_module(
     shipped gate cannot finish on DAG-shared terms (docstring).  A
     proposer family exceeding *family_wall* is recorded ``timeout``.
     """
-    from mlopt_discovery import pipeline as pipe
-    from mlopt_discovery.census import CorpusTerm, op_tuple_census
+    from kit_discovery import pipeline as pipe
+    from kit_discovery.census import CorpusTerm, op_tuple_census
 
     stats: dict[str, Any] = {"module": name, "families": {}}
     t0 = time.time()
@@ -546,7 +546,7 @@ def _mint_per_module(
     # binding-first gate.
     from dataclasses import replace
 
-    from mlopt_discovery import proposal as lp
+    from kit_discovery import proposal as lp
 
     by_key: dict = {}
     for p in proposals:
@@ -602,11 +602,11 @@ def _mint_cross(
     """
     from mlopt_core.egraph import EGraph
     from mlopt_core.laws.serialize import alpha_key
-    from mlopt_discovery import pipeline as pipe
-    from mlopt_discovery.antiunify import mine_candidates
-    from mlopt_discovery.census import CorpusTerm, op_tuple_census
-    from mlopt_discovery.evidence import _site_outcome
-    from mlopt_discovery.pipeline import Proposal
+    from kit_discovery import pipeline as pipe
+    from kit_discovery.antiunify import mine_candidates
+    from kit_discovery.census import CorpusTerm, op_tuple_census
+    from kit_discovery.evidence import _site_outcome
+    from kit_discovery.pipeline import Proposal
 
     stats: dict[str, Any] = {"k": k, "wall": wall}
     t0 = time.time()
@@ -734,7 +734,7 @@ def _mint_cross(
 
 def _term_cases(env: dict) -> list:
     """Module-granularity ``TermCase``s — the pay leg's domain."""
-    from mlopt_discovery.impact import TermCase
+    from kit_discovery.impact import TermCase
 
     out = []
     for name, (ir, tensors, feeds) in env.items():
@@ -756,7 +756,7 @@ def _real_terms(
 ) -> tuple:
     """Bounded distinct real subterms — the oracle/sweep domain."""
     from mlopt_core.ir import op_repr
-    from mlopt_discovery.census import _iter_subterms, term_expansion
+    from kit_discovery.census import _iter_subterms, term_expansion
 
     seen: set[str] = set()
     out: list = []
@@ -1017,7 +1017,7 @@ def _resume_rule(cand: dict):
     fold's premise RHS is the *expanded* denotation the record never
     stored → ``None``.
     """
-    from mlopt_discovery import prim_mint as pm
+    from kit_discovery import prim_mint as pm
 
     import bench.drivers.overnight as ov
 
@@ -1141,8 +1141,8 @@ def _seat_prim_denotations(rules: list) -> int:
     """
     import mlopt_torch.torch_bridge as tb
     from mlopt_core.ir import Op, op_def
-    from mlopt_discovery import prim_mint as pm
-    from mlopt_discovery import shipped_primitives as sp
+    from kit_discovery import prim_mint as pm
+    from kit_discovery import shipped_primitives as sp
 
     # Shipped synops first: a depth-N fold's LHS skeleton spells
     # through them (the oracle evals instantiated LHS terms too), and
@@ -1370,7 +1370,7 @@ def main(argv: list[str] | None = None) -> int:
         print("no modules selected", file=sys.stderr)
         return 2
     import kit_carriers  # noqa: F401 — carrier op bindings
-    from mlopt_discovery.model_corpus import export_ir
+    from kit_discovery.model_corpus import export_ir
 
     env: dict[str, tuple] = {}
     models: dict[str, tuple] = {}
@@ -1436,7 +1436,7 @@ def main(argv: list[str] | None = None) -> int:
     # except inside the prim arm, where --prim-eval-env-mb additionally
     # skips instances whose leaf env alone would exceed the cap
     # (recorded ``env-err`` — honest under-approximation).
-    import mlopt_discovery.oracle as _oracle
+    import kit_discovery.oracle as _oracle
 
     eval_guard: dict = {
         "calls": 0,

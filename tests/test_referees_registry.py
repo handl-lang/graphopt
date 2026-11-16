@@ -235,7 +235,7 @@ def test_cert_premise_anchor_closes_a_definitional_gap():
     """
     from mlopt_core.egraph.terms import _term_instantiate
     from mlopt_core.ir import Const, Param
-    from mlopt_discovery import pipeline as pipe
+    from kit_discovery import pipeline as pipe
 
     from bench.referees import components as _c
 
@@ -326,7 +326,7 @@ def test_instances_skip_non_denoting_sites():
     lower *before* the claim is tested: the malformed-case artifact
     behind the ``sdpa_fold_addmul`` ``verify_fail=4`` row.
     """
-    from mlopt_discovery import oracle as lvo
+    from kit_discovery import oracle as lvo
 
     from bench.referees import components as _c
 

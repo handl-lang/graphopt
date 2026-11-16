@@ -61,13 +61,13 @@ saturate/extract.
 
 ## The meta-layer — laws about laws
 
-- **Coherence (3-cells).** `mlopt_discovery.coherence`/`coherence2`
+- **Coherence (3-cells).** `kit_discovery.coherence`/`coherence2`
   measure the pair layer over the shipped library: critical pairs,
   derivability edges, mediators. The derived layer is *flat* — every
   derivation is a self-supporting cycle plus one emergent law — and
   "derivable" is not "disposable": removing a derivable law costs real
   bounded reach.
-- **Discovery (the closed loop).** `mlopt_discovery.pipeline` runs
+- **Discovery (the closed loop).** `kit_discovery.pipeline` runs
   census → propose → verify → measure → rank → emit over a corpus of
   real exported models; adversarial witness generation
   (`gap_gen`) produces bindings the corpus cannot, and an sqlite
@@ -92,7 +92,7 @@ In [`eqsat`](https://github.com/handl-lang/eqsat): `mlopt_core` (IR,
 `EGraph`, laws, `verify_certificate`, cost models) ·
 `mlopt_orchestrator` (`Optimizer`, `search`, `lower`) — pinned here as
 git deps. In this repo: `mlopt_torch` / `kit_onnx` (the
-`Source`/`Sink` ports) · `mlopt_discovery` (the meta-layer) ·
+`Source`/`Sink` ports) · `kit_discovery` (the meta-layer) ·
 `bench/drivers/` (measurement probes).
 
 The Rust side of the same stack is landing in sibling repos under

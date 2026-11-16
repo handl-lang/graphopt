@@ -19,9 +19,9 @@ measures confluence and divergence between laws).  Declared objects
 as *data*, and `opdata` makes a new primitive declarable the same
 way.  Two games are played on this tower: **search** applies 2-cells
 inside one equivalence class (steps 5–6 below); **construction**
-writes new cells (`mlopt_discovery.object_synthesis` + `evidence`,
-played as episodes on `mlopt_discovery.arena` / `meta_arena` boards,
-exposed as an RL environment by `mlopt_discovery.play` — one CLI,
+writes new cells (`kit_discovery.object_synthesis` + `evidence`,
+played as episodes on `kit_discovery.arena` / `meta_arena` boards,
+exposed as an RL environment by `kit_discovery.play` — one CLI,
 nine domains, `--deliver`/`--probe`/`--zoo`).  In the `gen` domain the
 board mints a handler for any unnamed elementwise subterm
 (`genkernel`), `claim` declares the handler's own pattern mid-search,
@@ -137,9 +137,9 @@ The loop above runs *inside* a fixed law library.  Two mechanisms
 operate on the library itself.
 
 **Coherence — the 3-cell layer.**  A rewrite is a 2-cell; a law
-*about* rewrites is a 3-cell.  `mlopt_discovery.coherence` enumerates
+*about* rewrites is a 3-cell.  `kit_discovery.coherence` enumerates
 the pair layer over the shipped library (co-firing critical pairs,
-direct derivability edges); `mlopt_discovery.coherence2` measures
+direct derivability edges); `kit_discovery.coherence2` measures
 depth 2 — stratification, reach under removal, and the mediator
 table ("the coherence of `A × B` requires `C`").  The measured
 structure: the derived layer of `ALL_RULES` is *flat* — zero laws
@@ -156,12 +156,12 @@ load-bearing derivable law under removal); and **divergence is
 found and mediated** — `silu_fold` shipped to restore confluence
 where `silu_expand` destroyed the `swiglu_fuse` redex, and it pays.
 
-**Discovery — the closed loop.**  `mlopt_discovery.pipeline` runs the
+**Discovery — the closed loop.**  `kit_discovery.pipeline` runs the
 whole pipeline on a corpus of real exported models (364 terms /
 725 op-tuples today): **census** the op-shape tuples that occur →
 **propose** candidates (census-naturality, mixed-view,
 pattern-recognition and grammar schemas — and the proposers' op
-alphabet is itself property-derived by `mlopt_discovery.vocab`, not
+alphabet is itself property-derived by `kit_discovery.vocab`, not
 hand-listed) → **verify** each candidate (numeric oracle,
 `sink.verify` on lowered modules, derivability oracle) →
 **measure** (fires / cost deltas / cert replay / closure ratio) →
@@ -171,10 +171,10 @@ bytecode-identical to the hand-written one in the held-out check).
 Two shipped laws came out of this loop (`select_mul`,
 `softmax_fold` — `silu_fold` came out of the coherence layer
 above), and the loop audits itself:
-adversarial witness generation (`mlopt_discovery.gap_gen`)
+adversarial witness generation (`kit_discovery.gap_gen`)
 produces bindings the corpus cannot — it falsified paying-but-false
 candidates and the shipped matmul-family hole; the sqlite evidence
-store (`--evidence-db` / `mlopt_discovery.evidence`) caches verdicts
+store (`--evidence-db` / `kit_discovery.evidence`) caches verdicts
 keyed by corpus × rules × code revision (~19× on a warm run) so
 "what did we measure, and did it change?" is a query, not a
 re-run.  Admission itself has since widened: `admit_prim_record`
@@ -187,13 +187,13 @@ can seat a gauntlet-cleared prim directly into the minted store's
 admits *laws over a fixed vocabulary*; the minting stack makes the
 vocabulary itself a product of measurement, in four layers with one
 admission gauntlet.  **Layer 1 — definitional atoms**
-(`mlopt_discovery.antiunify`): anti-unify recurring subgraphs, mint
+(`kit_discovery.antiunify`): anti-unify recurring subgraphs, mint
 a named atom whose semantics *is* its expansion.  Sound by
 construction; measured **NULL on reach-expansion** — compression is
 real (shorter spellings, provenance) but naming structure did not
 expand reach on any measured workload (recorded in the ADR).
 **Layer 2 — handler-interpreted atoms**
-(`mlopt_discovery.handler_synth`): a structured handler grammar
+(`kit_discovery.handler_synth`): a structured handler grammar
 (`ew`/`contract`/`fold`/`fold_emit`/`fold_zip` — descriptors are
 plain data, interpreted, never `eval`'d) proposes handler bodies and
 verifies each fp64 against the spelled spec; the machine minted a
@@ -239,7 +239,7 @@ exposed class is ~1.5%, and it concentrates where a model's op-tuple
 is itself novel.
 
 **The substrate beneath the syntax (ADR 0008).**  A prototype
-combinator presentation (`mlopt_discovery.combinator`) re-expresses the IR
+combinator presentation (`kit_discovery.combinator`) re-expresses the IR
 as morphisms of a monoidal category with explicit `dup` (Δ, sharing
 as a morphism) and `loop` (bounded trace): 321/321 corpus workloads
 round-trip structurally exact, zero ops refuse translation, and the
@@ -270,7 +270,7 @@ here, and no second type language.
 | **host functions** for tensor ops (a tensor crosses by reference as an opaque `ForeignResource` pointer) | the value channel and the FFI seam |
 | the **domain adapters** (`mlopt-torch`/`onnx`/`cuda`) and the **evaluation** dimension | — |
 
-The seam is **data in, terms out**: `mlopt_discovery.handl` emits
+The seam is **data in, terms out**: `kit_discovery.handl` emits
 handl-shaped rows (every row carrying an authoritative `mlopt:` record,
 which handl's serde ignores, so the bridge is lossless), and handl
 assembles a `Language` from them with `language_from_dir`.  Measured
@@ -341,12 +341,12 @@ record is `project/GOALS.md` §G0 and `packages/mlopt-handl-peer/README.md`.)
 | Extract | `extract_best`, `backend_cost` (measured pricing: `delivered_cost_for(profile, x=…)` / `executor_cost_for`) |
 | Certify | `verify_certificate` |
 | Evaluate | `mlopt_core.features` (`ProgramFeatures`, `StaticProfiler`) · `SearchResult.frontier` · `PredictedCriterion`; `Meter` / `TargetProfile` for measurements (`scripts/calibrate_profile.py`) |
-| Discover (meta) | `mlopt_discovery.pipeline` (census → propose → verify → measure → rank → emit) · `mlopt_discovery.vocab` (property-derived op alphabet) · `mlopt_discovery.gap_gen` (adversarial witnesses) · `mlopt_discovery.emit` (admission patch) |
-| Mint (meta) | `mlopt_discovery.antiunify` (layer 1 — definitional atoms) · `mlopt_discovery.handler_synth` (layer 2 — handler bodies) · `bench/drivers/mint/atom_law_loop.py` (layer 3 — law synthesis per atom) · `bench/drivers/mint/atom_synth_loop.py` (the composed loop) |
+| Discover (meta) | `kit_discovery.pipeline` (census → propose → verify → measure → rank → emit) · `kit_discovery.vocab` (property-derived op alphabet) · `kit_discovery.gap_gen` (adversarial witnesses) · `kit_discovery.emit` (admission patch) |
+| Mint (meta) | `kit_discovery.antiunify` (layer 1 — definitional atoms) · `kit_discovery.handler_synth` (layer 2 — handler bodies) · `bench/drivers/mint/atom_law_loop.py` (layer 3 — law synthesis per atom) · `bench/drivers/mint/atom_synth_loop.py` (the composed loop) |
 | Screen / sweep | `bench/drivers/screen/exposure_screen.py` (law-LHS exposure census) · `bench/drivers/screen/discovery_scale.py` (budgeted corpus sweep + novelty pass) · `bench/drivers/screen/exposed_discovery.py` (per-model discovery driver) |
-| Substrate | `mlopt_discovery.combinator` (`BASIS`, `dag_to_comb` / `comb_to_dag`) · `bench/drivers/bridge/combinator_probe.py` (round-trip + `loop`-spell gates) |
+| Substrate | `kit_discovery.combinator` (`BASIS`, `dag_to_comb` / `comb_to_dag`) · `bench/drivers/bridge/combinator_probe.py` (round-trip + `loop`-spell gates) |
 | Backends | `mlopt_torch` (`TorchSource`/`TorchSink`) · `kit_onnx` (`OnnxSource`/`OnnxSink`, ADR 0006) |
-| Coherence (meta) | `mlopt_discovery.coherence` (`--emit-basis`) · `mlopt_discovery.coherence2` (stratification / reach / mediators) · `mlopt_discovery.evidence` (sqlite verdict store) |
+| Coherence (meta) | `kit_discovery.coherence` (`--emit-basis`) · `kit_discovery.coherence2` (stratification / reach / mediators) · `kit_discovery.evidence` (sqlite verdict store) |
 
 ## See also
 

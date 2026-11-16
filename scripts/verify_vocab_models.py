@@ -21,7 +21,7 @@ The bound-site domain is the mint's recorded ``provenance.domain``
 (``{mvar: shape}`` entries — the shapes the handler was verified
 under); the five handler-refused prims recorded none at mint time,
 so their measured domain + representative-site attr freeze
-backfill from ``mlopt_discovery.model_domains.DOMAIN_PROVENANCE``
+backfill from ``kit_discovery.model_domains.DOMAIN_PROVENANCE``
 (the ``--prim-vocab`` rerun's own records — see that module's
 docstring).  Specs whose attr dicts hold metavariable names bind
 them through ``attr_bindings`` before the gate runs; rows with no
@@ -54,13 +54,13 @@ _REPO = Path(__file__).resolve().parent.parent
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from mlopt_core.cells import spec_from_data  # noqa: E402
-from mlopt_core.laws import minted  # noqa: E402
-from mlopt_discovery import (  # noqa: E402
+from kit_discovery import (  # noqa: E402
     handler_synth,
     modelproj,
     vocabdir,
 )
+from mlopt_core.cells import spec_from_data  # noqa: E402
+from mlopt_core.laws import minted  # noqa: E402
 
 
 def _domains() -> dict[str, dict]:
@@ -73,10 +73,10 @@ def _domains() -> dict[str, dict]:
     (``modelproj.spec_attr_mvars``).  The five handler-refused prims
     recorded no ``provenance.domain`` at mint time — their measured
     domain + attr freeze backfill from
-    ``mlopt_discovery.model_domains.DOMAIN_PROVENANCE`` (the v4
+    ``kit_discovery.model_domains.DOMAIN_PROVENANCE`` (the v4
     ``--prim-vocab`` rerun's own records).
     """
-    from mlopt_discovery import model_domains
+    from kit_discovery import model_domains
 
     out: dict[str, dict] = {}
     for name, rec in minted.prim_records().items():
@@ -99,7 +99,7 @@ def _domains() -> dict[str, dict]:
 
 def _handler_patterns() -> dict[str, Any]:
     """Map ``synop_*`` op → its minted handler's decoded pattern spec."""
-    from mlopt_discovery.handler_synth import body_from_data
+    from kit_discovery.handler_synth import body_from_data
 
     out: dict[str, Any] = {}
     for name, rec in minted.prim_records().items():

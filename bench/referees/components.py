@@ -4,12 +4,12 @@ Each component is one function ``(claim, ctx, evd) -> ComponentVerdict``
 over a claimed equality (a :class:`~mlopt_core.egraph.Rewrite` — a
 pattern claim with optional guard hooks, or a concrete term pair).
 They are *consumers* of the shipped machinery — the numeric oracle
-(:mod:`mlopt_discovery.oracle` tri-state eval over the view-oracle's
+(:mod:`kit_discovery.oracle` tri-state eval over the view-oracle's
 binding enumeration), the typed-pay probe
-(:mod:`mlopt_discovery.impact`), the adversarial sweep
-(:mod:`mlopt_discovery.evidence`'s guarded-region evals over a
+(:mod:`kit_discovery.impact`), the adversarial sweep
+(:mod:`kit_discovery.evidence`'s guarded-region evals over a
 widened binding bank) and the certificate leg
-(:func:`mlopt_discovery.verifier.verify_law`) — never rewrites of it.
+(:func:`kit_discovery.verifier.verify_law`) — never rewrites of it.
 
 :class:`ClaimEvidence` is the memoization seam: the per-claim
 artifacts (the real-match region, the synthesized sweeps, the
@@ -22,7 +22,7 @@ window's: the shipped ``_leaf_bindings`` bank (the ``360``-env
 window auto_cond measured in) provably never produces the
 unequal-rank mid-insert corner — the domain in which the grid-eq
 ``mul_unsq_nat`` guard's 212 bad accepts live.  The sweep feeds the
-same :func:`mlopt_discovery.oracle._binding_envs` enumeration an
+same :func:`kit_discovery.oracle._binding_envs` enumeration an
 adversarial leaf bank (the retro's domain: ranks ≤ 3, extents
 {1, 2, 3}) — same machinery, deeper domain.
 """
@@ -101,7 +101,7 @@ def _is_pattern(claim: Any) -> bool:
 
 def _leaves_of(term: Any) -> list[Any]:
     """Every ``Var`` leaf of *term*, deduped, deterministic order."""
-    from mlopt_discovery.proposal import _leaves
+    from kit_discovery.proposal import _leaves
 
     return sorted(_leaves(term), key=lambda v: v.name)
 
@@ -122,7 +122,7 @@ def _instance_case(name: str, lhs_i: Any) -> Any:
     never a claim result.
     """
     import torch
-    from mlopt_discovery.impact import TermCase
+    from kit_discovery.impact import TermCase
 
     inps = tuple(v for v in _leaves_of(lhs_i) if isinstance(v, Var))
     return TermCase(
@@ -156,13 +156,13 @@ def _adversarial_bank(
 ) -> list[Any]:
     """The sweep's leaf bank — the retro's domain through the same API.
 
-    A drop-in ``source`` for :func:`mlopt_discovery.oracle._binding_envs`:
+    A drop-in ``source`` for :func:`kit_discovery.oracle._binding_envs`:
     the same ``(mv, parents, derived, extra_viewed)`` contract
     :func:`oracle._leaf_bindings` implements, over a wider shape grid
     so the enumeration reaches the unequal-rank mid-insert corner the
     shipped window provably misses.
     """
-    from mlopt_discovery import oracle as lvo
+    from kit_discovery import oracle as lvo
 
     out: list[Any] = []
     if "getitem" in parents:
@@ -185,7 +185,7 @@ def _sites(
     dedup loop with the source forwarded, so the sweep can enumerate
     the adversarial domain through the identical machinery.
     """
-    from mlopt_discovery import oracle as lvo
+    from kit_discovery import oracle as lvo
 
     seen: set = set()
     for full in lvo._binding_envs(lhs_pat, rhs_pat, source):
@@ -251,7 +251,7 @@ class ClaimEvidence:
 
     def real_region(self) -> Any:
         """The guarded-region evals over ``ctx.real_terms``."""
-        from mlopt_discovery import evidence as ev
+        from kit_discovery import evidence as ev
 
         if self._real_region is None:
             if self._real_sites is None:
@@ -269,7 +269,7 @@ class ClaimEvidence:
         ``adversarial`` swaps the leaf bank for the widened grid —
         the same enumeration, a deeper window.
         """
-        from mlopt_discovery import evidence as ev
+        from kit_discovery import evidence as ev
 
         key = (limit, adversarial)
         if key not in self._synth_regions:
@@ -297,7 +297,7 @@ class ClaimEvidence:
 
         if self._instances is not None:
             return self._instances[:cap]
-        from mlopt_discovery import oracle as lvo
+        from kit_discovery import oracle as lvo
 
         out: list[tuple[Any, Any]] = []
         if not self.pattern:
@@ -337,7 +337,7 @@ class ClaimEvidence:
             # Fall back to the generic-instance path for claims the
             # enumeration cannot bind (attr-free leaf spellings).
             if not out:
-                from mlopt_discovery.verifier import generic_instance
+                from kit_discovery.verifier import generic_instance
 
                 inst = generic_instance(self.claim)
                 if inst is not None:
@@ -385,8 +385,8 @@ def _oracle(claim: Any, ctx: RefereeCtx, evd: ClaimEvidence) -> Any:
     measured counterexample and at least one equal site (a vacuous
     acceptance is unproven, not verified).
     """
-    from mlopt_discovery import evidence as ev
-    from mlopt_discovery import oracle as lvo
+    from kit_discovery import evidence as ev
+    from kit_discovery import oracle as lvo
 
     if not evd.pattern:
         outcome, note = lvo.eval_instance(claim.lhs, claim.rhs)
@@ -445,7 +445,7 @@ def _probe_case(
     scoring axis, not just the extraction model's.
     """
     from mlopt_core.egraph import EGraph
-    from mlopt_discovery.impact import _ir_of
+    from kit_discovery.impact import _ir_of
     from mlopt_orchestrator.optimize import _lower_extracted
 
     sink = ctx.sink
@@ -577,8 +577,8 @@ def _sweep(claim: Any, ctx: RefereeCtx, evd: ClaimEvidence) -> Any:
     must exist.
     """
     import torch
-    from mlopt_discovery import evidence as ev
-    from mlopt_discovery import oracle as lvo
+    from kit_discovery import evidence as ev
+    from kit_discovery import oracle as lvo
 
     if not evd.pattern:
         outcomes = []
@@ -643,7 +643,7 @@ def _cert(claim: Any, ctx: RefereeCtx, evd: ClaimEvidence) -> Any:
     excluded — a sibling would self-derive (the novelty sieve's own
     discipline).  The anchor is named in the detail.
     """
-    from mlopt_discovery.verifier import verify_law
+    from kit_discovery.verifier import verify_law
 
     inst = evd.instances(1)
     if not inst:
@@ -662,7 +662,7 @@ def _cert(claim: Any, ctx: RefereeCtx, evd: ClaimEvidence) -> Any:
     declared = getattr(claim, "premises", None) or ()
     if not res.derivable and declared:
         from mlopt_core.laws.serialize import alpha_key
-        from mlopt_discovery.evidence import _premise_steps_verify
+        from kit_discovery.evidence import _premise_steps_verify
 
         key = alpha_key(claim.lhs, claim.rhs)
         base_names = {r.name for r in rules}

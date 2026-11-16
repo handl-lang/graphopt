@@ -42,7 +42,7 @@ from typing import Any
 from gamekit import engine
 from gamekit.players import LinearPolicy
 from mlopt_core.laws import DEFAULT
-from mlopt_discovery import play as P
+from kit_discovery import play as P
 
 PRIM_PREFIX = "prim:synop"
 

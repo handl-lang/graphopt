@@ -11,7 +11,7 @@ Usage::
 
     .venv/bin/python bench/drivers/probes/t5_probe.py bench [dtype]
     .venv/bin/python bench/drivers/probes/t5_probe.py opt <which> [dtype] [max_enodes] [cpuparams]
-    .venv/bin/python -m mlopt_discovery.model_corpus \
+    .venv/bin/python -m kit_discovery.model_corpus \
         --module bench.drivers.probes.t5_probe:corpus_encoder \
         --mutants 4 --corpus bench --reps 3 --gen-reps 3 --dtype fp32 \
         --json /tmp/t5_mc.json

@@ -238,7 +238,7 @@ The collapse diagnosed above was a *recipe* bug, so the recipe was
 fixed: `mlopt_torch.rl.train_reinforce` now carries a cross-episode
 **`EmaBaseline`** (a 0.2-EMA of episode totals; per-step advantage
 `clip(G_t − ema, ±40)` — the `LinearPolicy` machinery from
-`mlopt_discovery.players`) instead of per-episode standardization.
+`kit_discovery.players`) instead of per-episode standardization.
 `_advantage` survives only as the regression control
 (`adv_mode="per-ep"` below); the bare `rl-net*` tags now run the
 shipped recipe, `-ema` is the same baseline inlined as a parity

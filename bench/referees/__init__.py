@@ -20,7 +20,7 @@ certificate replay:
 * ``sweep``  — + the adversarial sweep: the guarded region over the
   widened binding domain, the leg that caught the grid-eq guard's
   212 bad accepts (:mod:`project.retros` — mul-unsq-nat).
-* ``full``   — + the certificate leg: :func:`mlopt_discovery.verifier.
+* ``full``   — + the certificate leg: :func:`kit_discovery.verifier.
   verify_law` must derive the equality and its certificate must
   replay standalone.
 

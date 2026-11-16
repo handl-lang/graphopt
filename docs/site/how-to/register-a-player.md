@@ -5,7 +5,7 @@
 A player is a folder in `gamekit`'s `packages/gamekit/src/gamekit/players/` — a
 docstring carrying the measured record, a `SPECS` tuple of `PlayerSpec`
 rows, and a `make` arm factory. The registry maps name → spec so
-`--player <name>` on `mlopt_discovery.play` and the comparison runner
+`--player <name>` on `kit_discovery.play` and the comparison runner
 (`bench/players`) enumerate arms from one table.
 
 ## 1. Create the player folder
@@ -45,7 +45,7 @@ def make(
     ctx: dict | None = None,
 ) -> Callable[[int], Any]:
     """Return the arm factory for *domain* — ``i -> player``."""
-    from mlopt_discovery.play import DOMAINS
+    from kit_discovery.play import DOMAINS
 
     spec_for_domain = DOMAINS[domain].spec
     return lambda i: MyPlayer(spec_for_domain, seed=seed + i)
@@ -89,7 +89,7 @@ whatever the player needs.
 ## 4. Measure it and record the record
 
 ```sh
-.venv/bin/python -m mlopt_discovery.play --domain meta --player <name>
+.venv/bin/python -m kit_discovery.play --domain meta --player <name>
 ```
 
 `--player` runs eval-only, paired against `random`. Write the result as
