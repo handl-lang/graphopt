@@ -3,11 +3,11 @@
 ADR-0176's verification gate — the spike's recommendation, "two
 producers, one wire contract" (``host/project/reports/
 onnx_lifter_rust_spike.md`` §verification).  The Rust crate
-``source-onnx`` lifts an ``.onnx`` model to the hnl_codec Term-JSON
+``source-onnx`` lifts an ``.onnx`` model to the Term-JSON
 envelope + a safetensors leaf side channel **without Python**; the
 Python ``kit_onnx.OnnxSource`` (``lift_model`` +
-``hnl_codec.term_to_json``) is the oracle.  This driver runs the same
-model through both and compares.
+``mlopt_core.term_json.term_to_json``) is the oracle.  This driver
+runs the same model through both and compares.
 
 The comparison boundary
 -----------------------
@@ -24,10 +24,11 @@ differences the codec itself documents:
   their own sharing analysis (Python: ``Op.make`` interning;
   Rust: arena refcount).  Isomorphic terms can serialize either way;
   canonicalization erases the difference.
-* **attrs channel** — Python ``term_to_json`` emits the legacy
-  ``lit.__mlopt_attrs__`` record; Rust emits the forward ``attrs``
-  field.  ``term_from_json`` accepts exactly one of the two; the
-  canonicalizer merges them.
+* **attrs channel** — Python ``term_to_json`` emits the canonical
+  ``attrs`` field; Rust emits the same field, and older records may
+  carry the legacy ``lit.__mlopt_attrs__`` record.  The
+  canonicalizer merges both spellings (decode accepts exactly one —
+  both present is a decline).
 
 Everything else is compared *spelling-strict*: ``0`` vs ``0.0`` are
 different canonical values (ints tag ``("int", …)``, floats tag
@@ -88,18 +89,18 @@ _SOURCE_ONNX = Path(
     )
 )
 
-from mlopt_core.ir import (  # noqa: E402
+from kit_onnx.arrays import DTYPE_NAMES  # noqa: E402
+from kit_onnx.lift import lift_model  # noqa: E402
+from mlopt_core.term import (  # noqa: E402
     Const,
     Op,
     Param,
     Var,
 )
-from kit_discovery.hnl_codec import (  # noqa: E402
+from mlopt_core.term_json import (  # noqa: E402
     term_from_json,
     term_to_json,
 )
-from kit_onnx.arrays import DTYPE_NAMES  # noqa: E402
-from kit_onnx.lift import lift_model  # noqa: E402
 
 # Deep terms (whisper's 241-node DAG flattens deep) need headroom —
 # set after imports; the limit is checked at call time.

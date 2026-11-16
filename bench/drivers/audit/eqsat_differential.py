@@ -70,7 +70,11 @@ from typing import Any
 
 import numpy as np
 from mlopt_core.egraph import EGraph
-from mlopt_core.ir import (
+from mlopt_core.laws import ALL_RULES
+from mlopt_core.laws.cond import cond_to_data, derive_to_data
+from mlopt_core.laws.priorart import PRIOR_ART_RULES
+from mlopt_core.laws.tensor import POINTWISE_FACTOR_RULES
+from mlopt_core.term import (
     Const,
     Op,
     Param,
@@ -78,10 +82,6 @@ from mlopt_core.ir import (
     Var,
     attr_to_data,
 )
-from mlopt_core.laws import ALL_RULES
-from mlopt_core.laws.cond import cond_to_data, derive_to_data
-from mlopt_core.laws.priorart import PRIOR_ART_RULES
-from mlopt_core.laws.tensor import POINTWISE_FACTOR_RULES
 
 _REPO = Path(__file__).resolve().parents[3]
 _ENGINE_EQSAT = Path.home() / "GitHub" / "handl-lang" / "engine-eqsat"
@@ -295,6 +295,20 @@ def _correspondence(rule: Any, rec: dict | None) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 #  Kernel Term JSON <-> mlopt term (the eqsat-run wire)
 # ---------------------------------------------------------------------------
+#
+#  Deliberate engine-wire exception (stepe_tail_plan §4/§7): this codec
+#  is NOT ``mlopt_core.term_json``.  It must round-trip what the
+#  *deployed* ``eqsat-run`` binary actually emits and accepts — the
+#  transitional ``const-str`` leaf profile plus the legacy
+#  ``__var__:``/``__var__:param:`` untyped-leaf spellings (the
+#  harness's ``Var(name, "f64")`` shorthand carries no ``TensorType``,
+#  so ``term_json``'s typed-leaf emit cannot represent it), and decode
+#  with ``validate=False`` for law-extracted terms.  ``term_json``
+#  decodes ``__mlopt_leaf__:`` but treats ``__var__:`` as an opaque
+#  ``Const`` string — porting would silently lose the Var/Param
+#  leaves.  When the release binary is rebuilt (plan Step 5,
+#  ``leaf="arr"`` flip) and fixtures carry real ``TensorType``s, this
+#  can be re-evaluated; until then it stays hand-rolled on purpose.
 
 _VAR_PREFIX = "__var__:"
 _PARAM_PREFIX = "__var__:param:"
@@ -390,7 +404,7 @@ def _pyterm(j: Any) -> Any:
         if isinstance(v, str) and v.startswith(_VAR_PREFIX):
             name = v[len(_VAR_PREFIX) :]
             if name.startswith("param:"):
-                from mlopt_core.ir import Param, TensorType
+                from mlopt_core.term import Param, TensorType
 
                 return Param(name[7:], TensorType((2, 2)))
             return Var(name, "f64")
@@ -405,7 +419,7 @@ def _leaf_from_payload(value: str) -> Any:
     the declared ``TensorType`` shape (``null`` = wholly unknown —
     *not* a scalar).
     """
-    from mlopt_core.ir import TensorType
+    from mlopt_core.term import TensorType
 
     rec = json.loads(value[len(_LEAF_PREFIX) :])
     s = rec.get("s")
