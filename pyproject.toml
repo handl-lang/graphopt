@@ -129,27 +129,27 @@ exclude = [
 # pinned git deps on ``packages/`` subdirectories at the ``v0.1.0``
 # tag (git-URL-at-tag distribution; see
 # docs/reports/git_url_distribution.md).  Bump the tag on releases.
-mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", tag = "v0.1.9" }
-mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", tag = "v0.1.9" }
-gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.11" }
-benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", tag = "v0.1.11" }
+mlopt-core = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-core", tag = "v0.1.10" }
+mlopt-orchestrator = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-orchestrator", tag = "v0.1.10" }
+gamekit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/gamekit", tag = "v0.1.12" }
+benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "packages/benchkit", tag = "v0.1.12" }
 # discoverykit (plan 0034 phase 1): the domain-free mining core
 # extracted from the discovery engine (mlopt-discovery, now
 # handl-lang/kit-discovery in P3 Step D-1d) — pinned git dep below.
-discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.17" }
+discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.20" }
 mlopt-torch = { workspace = true }
 # kit-carriers (P3 Step D-1b): the semantic carriers, split to
 # handl-lang/kit-carriers — pinned git dep at the v0.1.1 tag.
-kit-carriers = { git = "https://github.com/handl-lang/kit-carriers.git", tag = "v0.1.1" }
+kit-carriers = { git = "https://github.com/handl-lang/kit-carriers.git", tag = "v0.1.3" }
 # kit-cuda (P3 Step D-1c): the CUDA-graph delivery runner, split to
 # handl-lang/kit-cuda — pinned git dep at the v0.1.0 tag.
-kit-cuda = { git = "https://github.com/handl-lang/kit-cuda.git", tag = "v0.1.0" }
-kit-discovery = { git = "https://github.com/handl-lang/kit-discovery.git", tag = "v0.1.0" }
-kit-onnx = { git = "https://github.com/handl-lang/kit-onnx.git", tag = "v0.1.1" }
+kit-cuda = { git = "https://github.com/handl-lang/kit-cuda.git", tag = "v0.1.3" }
+kit-discovery = { git = "https://github.com/handl-lang/kit-discovery.git", tag = "v0.1.2" }
+kit-onnx = { git = "https://github.com/handl-lang/kit-onnx.git", tag = "v0.1.2" }
 # kit-host-tensor (P3 Step D-1f): the host-tensor backend, split to
 # handl-lang/kit-host-tensor — pinned git dep at the v0.1.2 tag.
-kit-host-tensor = { git = "https://github.com/handl-lang/kit-host-tensor.git", tag = "v0.1.2" }
-mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-dtypes", tag = "v0.1.9" }
+kit-host-tensor = { git = "https://github.com/handl-lang/kit-host-tensor.git", tag = "v0.1.3" }
+mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-dtypes", tag = "v0.1.10" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
