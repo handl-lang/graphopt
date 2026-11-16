@@ -9,8 +9,8 @@ the Rust crates) a Rust toolchain — the Python path needs no Rust.
 ## 1. Clone and sync
 
 ```sh
-git clone https://github.com/handl-lang/graphopt
-cd graphopt
+git clone https://github.com/handl-lang/mlopt
+cd mlopt
 uv sync --group bench      # creates .venv/ — dev env + the bench CLI deps
 ```
 

@@ -10,7 +10,7 @@
 
 REPEAT ?= 200
 EXPERIMENTS = packages/mlopt-experiments/Cargo.toml
-MLOPT_RAW = https://raw.githubusercontent.com/handl-lang/graphopt/main
+MLOPT_RAW = https://raw.githubusercontent.com/handl-lang/mlopt/main
 ARTIFACT = packages/mlopt-experiments/.cache/mlopt-kit/hnl/conv_bn.hnl
 
 .PHONY: experiment verify build test artifact

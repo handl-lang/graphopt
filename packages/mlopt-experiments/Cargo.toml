@@ -3,7 +3,7 @@ name = "mlopt-experiments"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-repository = "https://github.com/handl-lang/graphopt"
+repository = "https://github.com/handl-lang/mlopt"
 description = "graphopt evidence generation — the paper's experiments, composed from declared git deps on the handl stack; nothing vendored"
 
 # Deliberately *not* a member of the root workspace (`exclude` in the
@@ -26,7 +26,7 @@ serde_json = "1"
 # mlopt-kit — the composition seam itself (`CatoptKit`), the same
 # repo/git-source + [patch] dev-link pairing `.handl.toml`
 # declares at the `.hnl` level
-mlopt-kit = { git = "https://github.com/handl-lang/graphopt", branch = "main" }
+mlopt-kit = { git = "https://github.com/handl-lang/mlopt", branch = "main" }
 
 # kernel — Language data + the tagged value layer (incl. `TaggedValue::Tensor`)
 handl-language = { git = "https://github.com/handl-lang/kernel", branch = "main" }
@@ -57,5 +57,5 @@ handl-host-tensor = { git = "https://github.com/handl-lang/host-tensor", branch 
 # In this merged tree `packages/mlopt-kit` is always present, so the
 # in-repo checkout wins; in a standalone consumer the patch path is
 # inert and the declared git source resolves `main` HEAD instead.
-[patch."https://github.com/handl-lang/graphopt"]
+[patch."https://github.com/handl-lang/mlopt"]
 mlopt-kit = { path = "../mlopt-kit" }

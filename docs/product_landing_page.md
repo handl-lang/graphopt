@@ -1,7 +1,8 @@
 # mlopt — landing page
 
-*Naming: the repo is `handl-lang/graphopt`, the engine/packages keep
-their `mlopt_*` names, and the product/paper name is **Catopt**.*
+*Naming: the repo is `handl-lang/mlopt` (formerly `handl-lang/graphopt`),
+the engine/packages keep their `mlopt_*` names, and the product/paper
+name is **Catopt**.*
 
 **Catopt is a sound mathematical discovery and optimization engine,
 where search is a game that can be learned.**
@@ -114,7 +115,7 @@ it finds ~2× more useful laws per episode.
 ## Try it
 
 ```bash
-git clone https://github.com/handl-lang/graphopt && cd graphopt
+git clone https://github.com/handl-lang/mlopt && cd mlopt
 uv sync
 python examples/quickstart.py                    # ~15s, no GPU needed
 cd docs/tutorials/course && vp install && vp -C apps/learn dev  # the 28-level course

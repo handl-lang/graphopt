@@ -1,8 +1,8 @@
-# Agent guide — graphopt
+# Agent guide — mlopt (graphopt)
 
-The GitHub repo is `handl-lang/graphopt` (renamed from
-`research-mlopt`; the `mlopt-*` package names and the "mlopt" project
-name below are unchanged).
+The GitHub repo is `handl-lang/mlopt` (renamed from `handl-lang/graphopt`,
+itself renamed from `research-mlopt`; the `mlopt-*` package names and the
+"mlopt" project name below are unchanged).
 
 Categorical optimization of neural-network computation graphs
 (Python 3.13, torch + numpy).  Every shipped *domain* Python package

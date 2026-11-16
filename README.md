@@ -233,7 +233,7 @@ lift (export → IR)  →  e-graph + gauntlet  →  lower (verified module)
 Nothing is on PyPI. Distribution is **git-URL at a tag**: clone this
 repo and `uv sync` (below), or depend on the domain packages directly
 via `git+https://github.com/handl-lang/<repo>@vX.Y.Z` — each repo
-(`graphopt`, `eqsat`, `gamekit`, …) ships annotated semver tags, and
+(`mlopt`, `eqsat`, `gamekit`, …) ships annotated semver tags, and
 `[tool.uv.sources]` pins `tag = "vX.Y.Z"` on the `packages/`
 subdirectories. See [`docs/reports/git_url_distribution.md`](docs/reports/git_url_distribution.md)
 for the scheme and the dep graph.

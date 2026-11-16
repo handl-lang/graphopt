@@ -61,5 +61,5 @@ standalone). The certificate, not the timing, is the claim.
 ## Next
 
 → [Watch a law get minted](./mint-a-law) — or read the full
-walkthrough in [`docs/api.md`](https://github.com/handl-lang/graphopt/blob/main/docs/api.md)
+walkthrough in [`docs/api.md`](https://github.com/handl-lang/mlopt/blob/main/docs/api.md)
 and the contract in [the frozen API reference](../reference/frozen-api).

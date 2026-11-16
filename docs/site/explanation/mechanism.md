@@ -104,6 +104,6 @@ ADR-0174/0175/0176: [`engine-eqsat`](https://github.com/handl-lang/engine-eqsat)
 ONNX→Term-JSON lifter; `kit_onnx.OnnxSource` stays the oracle).
 
 The full account — with the measured asides — is
-[`docs/mechanism.md`](https://github.com/handl-lang/graphopt/blob/main/docs/mechanism.md)
+[`docs/mechanism.md`](https://github.com/handl-lang/mlopt/blob/main/docs/mechanism.md)
 upstream. See also [evaluation](./evaluation) and
 [the three costs](./three-costs).
