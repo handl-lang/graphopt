@@ -18,8 +18,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 GEN = ROOT / "scripts" / "torch_port_gen.py"
 GENERATED = (
-    ROOT
-    / "packages"
+    ROOT.parent
     / "kit-torch"
     / "src"
     / "kit_torch"

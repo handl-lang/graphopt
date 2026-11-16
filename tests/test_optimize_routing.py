@@ -415,7 +415,8 @@ def test_cuda_graph_skipped_when_compiled():
         mod, stats = Optimizer(backend=TorchBackend(), runner=ChainedRunner([TorchCompileRunner(), CudaGraphRunner()])).optimize(m, x, verify=False, verbose=False)
 
     if stats.get("compiled"):
-        assert stats.get("cuda_graph") is None
+        assert stats.get("cuda_graph") is False
+        assert stats.get("cuda_graph_skipped")
 
 
 def test_cuda_graph_tuple_input_noop_on_cpu():
