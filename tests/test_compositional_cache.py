@@ -598,7 +598,7 @@ def test_unservable_entry_falls_back():
 
     model = Stack().eval()
     x = torch.randn(4, 8)
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(
         model,
         x,
         strategy=Compositional(),
@@ -636,7 +636,7 @@ def test_dedup_records_param_sharing():
             return self.net(x)
 
     x = torch.randn(4, 8)
-    _opt, stats = Optimizer(backend=TorchBackend()).optimize(
+    _opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(
         One().eval(), x, strategy=Compositional(), verbose=False,
         cost_fn=param_bytes_cost_for(),
     )
@@ -668,7 +668,7 @@ def test_tied_weights_record_ties():
             return self.net(x)
 
     x = torch.randn(4, 8)
-    _opt, stats = Optimizer(backend=TorchBackend()).optimize(
+    _opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(
         One().eval(), x, strategy=Compositional(), verbose=False
     )
     sharing = stats["blocks"]["net.0"]["stats"].get("param_sharing")

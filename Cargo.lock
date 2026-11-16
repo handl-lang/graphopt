@@ -750,6 +750,10 @@ name = "hnl-engine-lint"
 version = "0.1.0"
 
 [[patch.unused]]
+name = "handl-kit-mlopt"
+version = "0.1.0"
+
+[[patch.unused]]
 name = "handl-kit-prelude"
 version = "0.1.0"
 

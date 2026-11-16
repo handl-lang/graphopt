@@ -113,18 +113,12 @@ def test_guarded_rule_families_now_synthesizable():
     ):
         assert name in syn, name
     # and nothing else is left gated on the full ruleset: every rule's
-    # RHS metavariables are LHS-bound or derive-produced.  The one
-    # honest exception is the prior-art bank's free-attr triple —
-    # ``mm_splitk_rev`` / ``linear_concat_w`` / ``linear_concat_w_rev``
-    # each emit a concat-dim attr metavar (``CD``/``AD``) in the RHS
-    # that the LHS never binds and no ``derive`` produces, so
-    # ``_synthesizable`` excludes them: there is no sound way to
-    # propagate the binding.
-    assert {r.name for r in rules if not meta._synthesizable(r)} == {
-        "mm_splitk_rev",
-        "linear_concat_w",
-        "linear_concat_w_rev",
-    }
+    # RHS metavariables are LHS-bound or derive-produced.  The prior-art
+    # bank's former free-attr triple — ``mm_splitk_rev`` /
+    # ``linear_concat_w`` / ``linear_concat_w_rev`` — was rewritten so
+    # the concat dims bind on the LHS (``dim=-1``/``dim=0`` literals in
+    # the RHS), so the whole ruleset now participates.
+    assert {r.name for r in rules if not meta._synthesizable(r)} == set()
 
 
 # ---------------------------------------------------------------------------

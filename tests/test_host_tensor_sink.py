@@ -1,7 +1,7 @@
 """HostTensorSink — the ``mlopt_core.ports.Sink`` over host-tensor.
 
 Phase 1 of plan 0036 (``docs/reports/host_tensor_sink_phase0.md``).
-The sink lowers the 137 liftable-now IR ops onto the sibling
+The sink lowers the 138 liftable-now IR ops onto the sibling
 ``handl-lang/host-tensor`` repo's ``tensor.*`` registry through its
 PyO3 binding (``handl_host_tensor``).  The extension resolves a
 maturin-installed wheel first, then the sibling-checkout cargo
@@ -50,11 +50,11 @@ def _lower(sink: HostTensorSink, term: Op, *vars_: Var, params=None):
 # ---------------------------------------------------------------------------
 
 
-def test_supported_ops_is_the_liftable_137(
+def test_supported_ops_is_the_liftable_138(
     sink: HostTensorSink,
 ) -> None:
     """The declared surface is exactly the phase-0 liftable set."""
-    assert len(sink.supported_ops) == 137
+    assert len(sink.supported_ops) == 138
     assert "add" in sink.supported_ops
     assert "matmul" in sink.supported_ops
     # needs-work / honest-decline names must NOT be claimed.
@@ -67,7 +67,6 @@ def test_supported_ops_is_the_liftable_137(
         "pack",
         "new_zeros",
         "detach_",
-        "tan",
     ):
         assert op not in sink.supported_ops
 
@@ -131,6 +130,7 @@ def test_binding_unknown_op_raises() -> None:
         ("sin", np.sin),
         ("cos", np.cos),
         ("tanh", np.tanh),
+        ("tan", np.tan),
         ("sigmoid", lambda a: 1 / (1 + np.exp(-a))),
         ("relu", np.maximum),
     ],

@@ -614,7 +614,7 @@ def test_detect_specials_pipeline_flag():
 
     model = Dead().eval().double()
     xv = torch.randn(8, i, dtype=torch.float64)
-    opt = Optimizer(backend=TorchBackend())
+    opt = Optimizer(backend=TorchBackend(), engine="python-egraph")
     res = opt.search(model, xv, detect_specials=True, cost_fn=flops_cost)
     assert res.stats["weight_specials"]
     rec = res.stats["weight_specials"][0]
@@ -642,7 +642,7 @@ def test_detect_specials_identity_pipeline():
 
     model = Eye().eval().double()
     xv = torch.randn(8, d, dtype=torch.float64)
-    opt = Optimizer(backend=TorchBackend())
+    opt = Optimizer(backend=TorchBackend(), engine="python-egraph")
     res = opt.search(model, xv, detect_specials=True)
     kinds = {r["kind"] for r in res.stats["weight_specials"]}
     assert "identity" in kinds
@@ -663,7 +663,7 @@ def test_detect_specials_no_candidates():
         def forward(self, t):
             return self.lin(t)
 
-    res = Optimizer(backend=TorchBackend()).search(
+    res = Optimizer(backend=TorchBackend(), engine="python-egraph").search(
         Full().eval().double(),
         torch.randn(8, 32, dtype=torch.float64),
         detect_specials=True,
@@ -686,7 +686,7 @@ def test_detect_specials_off_by_default():
         def forward(self, t):
             return self.lin(t)
 
-    res = Optimizer(backend=TorchBackend()).search(
+    res = Optimizer(backend=TorchBackend(), engine="python-egraph").search(
         Dead().eval().double(), torch.randn(8, 32, dtype=torch.float64)
     )
     assert "weight_specials" not in res.stats
@@ -713,7 +713,7 @@ def test_detect_specials_and_factors_compose():
         def forward(self, t):
             return self.a(t) + self.b(t)
 
-    res = Optimizer(backend=TorchBackend()).search(
+    res = Optimizer(backend=TorchBackend(), engine="python-egraph").search(
         Both().eval().double(),
         torch.randn(8, i, dtype=torch.float64),
         detect_factors=True,

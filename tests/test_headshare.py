@@ -1148,7 +1148,7 @@ def test_cache_replay_headshare_gate():
 def test_opt_in_flag_gates_the_pass():
     m = _mha()
     x = torch.randn(B, T, I, dtype=torch.float64)
-    opt = Optimizer(backend=TorchBackend())
+    opt = Optimizer(backend=TorchBackend(), engine="python-egraph")
     off = opt.search(m, x)
     assert (off.stats.get("param_sharing") or {}).get(
         "headshare"
@@ -1164,7 +1164,7 @@ def test_opt_in_flag_gates_the_pass():
 def test_optimizer_default_untouched_on_distinct_heads():
     m = _mha(dup=())
     x = torch.randn(B, T, I, dtype=torch.float64)
-    opt = Optimizer(backend=TorchBackend())
+    opt = Optimizer(backend=TorchBackend(), engine="python-egraph")
     res = opt.search(m, x, detect_headshare=True)
     assert (res.stats.get("param_sharing") or {}).get(
         "headshare", []
@@ -1953,8 +1953,10 @@ def test_bare_leaf_enode_and_proj_edge_arms():
     ctx = _Ctx(
         eg, {"p_3d": torch.randn(2, 2, 2, dtype=torch.float64)}
     )
-    # a leaf enode carrying no attrs contributes no site
-    bare = eg.add_enode("leaf", (), {})
+    # a leaf enode contributes no site (built via add_term so the
+    # leaf key is _LeafRegistry-registered — a hand-minted attr-less
+    # "leaf" enode now surfaces as a decode KeyError by design)
+    bare = eg.add_term(x)
     assert _resolve(ctx, bare) == ()
     # matmul is a 2-argument site — a 3-child enode misses both arms
     le = eg.add_term(x)

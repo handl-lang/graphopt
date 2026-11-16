@@ -363,7 +363,7 @@ def test_gqa_materialised_repeat_kv_37pct():
     saves exactly 2*(8-2)*8*64*8 = 49,152 B = 37.5%, fp64-exact."""
     torch.manual_seed(0)
     m = _GQAProj(kv_map=[0, 0, 0, 0, 1, 1, 1, 1])
-    low, _stats, r, rel = _opt(m, torch.randn(4, 3 * _GQAProj.DIM))
+    low, _stats, r, rel = _opt(m, torch.randn(4, 3 * _GQAProj.DIM), engine="python-egraph")
     assert rel < 1e-12
     expect = (
         2
@@ -390,7 +390,7 @@ def test_tied_embedding_classifier_stored_twice_50pct():
     """share_duplicate_params discovers the tie bitwise — one of the two
     512×64 tables drops out of the file: exactly 50%, zero output diff."""
     torch.manual_seed(0)
-    _low, _stats, r, rel = _opt(_TiedTwice(), torch.randint(0, 512, (8,)))
+    _low, _stats, r, rel = _opt(_TiedTwice(), torch.randint(0, 512, (8,)), engine="python-egraph")
     assert rel == 0.0
     assert r["optimized_bytes"] == r["original_bytes"] // 2
     assert len(r["eliminated"]) == 1
@@ -434,7 +434,7 @@ def test_moe_tied_routed_experts_75pct():
     inputs: share_duplicate_params merges all copies — 3 of 4 expert
     weight sets drop out: exactly 75%, zero output diff."""
     torch.manual_seed(0)
-    _low, _stats, r, rel = _opt(_MoERouted(n=4), torch.randn(4, 4, 64))
+    _low, _stats, r, rel = _opt(_MoERouted(n=4), torch.randn(4, 4, 64), engine="python-egraph")
     assert rel == 0.0
     assert (
         r["bytes_saved"] == (4 - 1) * 2 * 64 * 64 * BYTES
@@ -454,7 +454,7 @@ def test_moe_tied_shared_input_75pct():
     drop out, 3·2·64·64·8 = 196,608 B (the (4,) gate param explains the
     32 B over an exact quarter), fp64-exact."""
     torch.manual_seed(0)
-    low, _stats, r, rel = _opt(_MoEShared(n=4), torch.randn(4, 64))
+    low, _stats, r, rel = _opt(_MoEShared(n=4), torch.randn(4, 64), engine="python-egraph")
     assert rel == 0.0
     assert (
         r["bytes_saved"] == (4 - 1) * 2 * 64 * 64 * BYTES

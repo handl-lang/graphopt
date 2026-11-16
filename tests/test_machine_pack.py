@@ -379,7 +379,7 @@ def _search(w_name, rules):
     torch.manual_seed(0)
     model, x = _ZOO[w_name].build()
     model = model.eval().double()
-    opt = Optimizer(backend=TorchBackend())
+    opt = Optimizer(backend=TorchBackend(), engine="python-egraph")
     return opt.search(model, x, rules=rules), x
 
 

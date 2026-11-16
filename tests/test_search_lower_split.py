@@ -85,13 +85,14 @@ def test_search_accepts_a_policy_and_records_it():
     from mlopt_core.policies import GreedyPolicy
 
     m, x = _make()
-    plain = search(m, x, source=TorchSource(), max_iterations=3)
+    plain = search(m, x, source=TorchSource(), max_iterations=3, engine="python-egraph")
     policed = search(
         m,
         x,
         source=TorchSource(),
         max_iterations=3,
         policy=GreedyPolicy(),
+        engine="python-egraph",
     )
     assert plain.stats["policy"] is None
     assert policed.stats["policy"] == "greedy"
@@ -106,7 +107,7 @@ def test_search_result_frontier_is_non_dominated():
     from mlopt_core.pareto import best, dominates
 
     m, x = _make()
-    res = search(m, x, source=TorchSource(), max_iterations=3)
+    res = search(m, x, source=TorchSource(), max_iterations=3, engine="python-egraph")
     front = res.frontier(
         {"flops": flops_cost, "memory": param_bytes_cost}
     )
@@ -184,6 +185,7 @@ def test_search_returns_search_result():
         source=TorchSource(),
         capabilities=TorchSink(),
         max_iterations=3,
+        engine="python-egraph",
     )
     assert isinstance(res, SearchResult)
     assert isinstance(res.ir, IR)
@@ -219,6 +221,7 @@ def test_specialize_causal_opt_out():
         capabilities=TorchSink(),
         rules=CATEGORICAL,
         max_iterations=4,
+        engine="python-egraph",
     )
     assert on.stats.get("causal_specialized") is True
     off = search(
@@ -229,6 +232,7 @@ def test_specialize_causal_opt_out():
         rules=CATEGORICAL,
         max_iterations=4,
         specialize_causal=False,
+        engine="python-egraph",
     )
     assert "causal_specialized" not in off.stats
 
@@ -252,6 +256,7 @@ def test_search_result_alternatives_and_certificate():
         source=TorchSource(),
         capabilities=TorchSink(),
         max_iterations=3,
+        engine="python-egraph",
     )
     alts = res.alternatives(top_k=4)
     assert isinstance(alts, list) and alts

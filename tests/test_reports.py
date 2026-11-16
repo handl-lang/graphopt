@@ -46,7 +46,7 @@ def _small_mlp(seed=0):
 def test_optreport_roundtrips_real_stats():
     m = _small_mlp()
     x = torch.randn(2, 16, dtype=torch.float64)
-    _opt, stats = Optimizer(backend=TorchBackend()).optimize(m, x, max_iterations=3, verify=False, verbose=False)
+    _opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, max_iterations=3, verify=False, verbose=False)
 
 
     rep = OptReport.from_stats(stats)
@@ -77,9 +77,10 @@ def test_optreport_path_dependent_keys():
     assert rep.causal_specialized is None
     assert "paired_extract" not in rep.to_dict()
 
-    # the pairing pass sets pairing_groups / paired_extract
+    # the pairing pass sets pairing_groups / paired_extract —
+    # nonlocal-pass machinery, so pin the reference engine
     pm = ParallelLinear(16, n_experts=2).eval().double()
-    _opt, stats = Optimizer(backend=TorchBackend()).optimize(pm, x, verify=False, verbose=False)
+    _opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(pm, x, verify=False, verbose=False)
 
     rep = OptReport.from_stats(stats)
     assert rep.pairing_groups == stats.get("pairing_groups")

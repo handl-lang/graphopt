@@ -51,7 +51,7 @@ def test_compositional_parallel_block_stack():
     x = torch.randn(2, 16, 64)
 
     t0 = time.time()
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(model, x, strategy=Compositional(), verbose=False)
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(model, x, strategy=Compositional(), verbose=False)
 
     elapsed = time.time() - t0
     assert elapsed < 60, f"compositional pass took {elapsed:.1f}s"
@@ -66,10 +66,12 @@ def test_compositional_parallel_block_stack():
     assert stats["n_failed"] == 0
 
     # Aggregated parameter report: per-block weight diffs prefixed by
-    # block name; fused GEMM weights are derived tensors.
+    # block name.  The cross-pair pass jointly optimizes adjacent
+    # blocks, so the surviving derived tensors are the fused pair's
+    # ``<pair>:inner.p_*`` weights.
     pr = stats["param_report"]
     assert pr["eliminated"]
-    assert any("fused" in n for n in pr["derived"])
+    assert any("inner.p_" in n for n in pr["derived"])
     assert all(n.startswith("blocks.") for n in pr["eliminated"])
 
     # The recomposed model is a real clone sharing tensor storage —
@@ -155,7 +157,7 @@ def test_compositional_fallback_keeps_original():
     model = MixedStack().eval()
     x = torch.randn(64, dim)
 
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(model, x, strategy=Compositional(), verbose=False)
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(model, x, strategy=Compositional(), verbose=False)
 
 
     bad = stats["blocks"]["blocks.1"]

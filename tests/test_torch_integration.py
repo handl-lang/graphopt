@@ -403,7 +403,7 @@ def test_assoc_linear_bias_end_to_end_param_drop():
 
     m = BiasedMLP().eval().double()
     x = torch.randn(4, 32, dtype=torch.float64)
-    low, _stats = Optimizer(backend=TorchBackend()).optimize(m, x, cost_fn=flops_cost)
+    low, _stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, cost_fn=flops_cost)
 
     with torch.no_grad():
         ref = m(x)
@@ -450,7 +450,7 @@ def test_share_duplicate_params_drops_tied_weight():
 
     m = SharedUse().eval().double()
     x = torch.randn(4, 128, dtype=torch.float64)
-    low, _ = Optimizer(backend=TorchBackend()).optimize(m, x, cost_fn=flops_cost)
+    low, _ = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, cost_fn=flops_cost)
 
     with torch.no_grad():
         assert (m(x) - low(x)).abs().max() < 1e-9
@@ -830,7 +830,7 @@ def test_pairing_pass_five_way_parallel_block():
     torch.manual_seed(0)
     m = ParallelBlock(128, n_heads=4, hidden_mult=2).eval()
     x = torch.randn(4, 16, 128)
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(m, x, verify=False, verbose=False)
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, verify=False, verbose=False)
 
     r = op_repr(opt._root)
     assert stats.get("paired_extract")
@@ -949,7 +949,7 @@ def test_dropout_eval_is_identity():
     torch.manual_seed(0)
     m = WithDropout().eval()
     x = torch.randn(8, 16)
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(m, x, verify=False, verbose=False)
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, verify=False, verbose=False)
 
     with torch.no_grad():
         diff = (m(x) - opt(x)).abs().max().item()
@@ -1047,7 +1047,7 @@ def test_conv2d_pairing_asymmetric_and_incompatible():
 
     m = MixedConv().eval()
     x = torch.randn(2, 16, 8, 8)
-    opt, info = Optimizer(backend=TorchBackend()).optimize(m, x, rules=SIMPLIFICATION, max_iterations=2, verify=False, verbose=False)
+    opt, info = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, rules=SIMPLIFICATION, max_iterations=2, verify=False, verbose=False)
 
     # exactly one pairing group: c1/c2 fuse (96-ch conv + 32/64 split),
     # c3 (3x3 kernel) is excluded by the compat cluster key
@@ -1093,7 +1093,7 @@ def test_gqa_absorb_repeat_kv():
     torch.manual_seed(0)
     m = RepeatKVAttention(dim=128, n_heads=8, n_kv_heads=2).eval()
     x = torch.randn(1, 16, 128)
-    opt, _ = Optimizer(backend=TorchBackend()).optimize(m, x, rules=CATEGORICAL, max_iterations=4, verify=False, verbose=False)
+    opt, _ = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, rules=CATEGORICAL, max_iterations=4, verify=False, verbose=False)
 
     with torch.no_grad():
         diff = (m(x) - opt(x)).abs().max().item()
@@ -1113,7 +1113,7 @@ def test_sdpa_fold_masked_fill():
     torch.manual_seed(0)
     m = EagerAttention(dim=128, n_heads=4, block_size=64).eval()
     x = torch.randn(1, 32, 128)
-    opt, info = Optimizer(backend=TorchBackend()).optimize(m, x, rules=CATEGORICAL, max_iterations=4, verify=False, verbose=False)
+    opt, info = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, rules=CATEGORICAL, max_iterations=4, verify=False, verbose=False)
 
     with torch.no_grad():
         diff = (m(x) - opt(x)).abs().max().item()
@@ -1132,7 +1132,7 @@ def test_sdpa_fold_additive_mask():
     torch.manual_seed(0)
     m = AdditiveMaskAttention(dim=128, n_heads=4, block_size=64).eval()
     x = torch.randn(1, 32, 128)
-    opt, _info = Optimizer(backend=TorchBackend()).optimize(m, x, rules=CATEGORICAL, max_iterations=4, verify=False, verbose=False)
+    opt, _info = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, rules=CATEGORICAL, max_iterations=4, verify=False, verbose=False)
 
     with torch.no_grad():
         diff = (m(x) - opt(x)).abs().max().item()

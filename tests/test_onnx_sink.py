@@ -940,7 +940,7 @@ def test_the_search_only_selects_ops_the_sink_can_lower():
     model = _Stack().eval()
     x = torch.randn(3, 8)
     sink = OnnxSink()
-    optimizer = Optimizer(source=TorchSource(), sink=sink)
+    optimizer = Optimizer(source=TorchSource(), sink=sink, engine="python-egraph")
     result = optimizer.search(model, x, max_iterations=4)
     assert _ops_of(result.term) <= sink.supported_ops
     # The saturation really fired: the delivered term is not the

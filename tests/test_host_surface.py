@@ -91,7 +91,7 @@ class TestBindingsDrift:
     def test_binding_count_stable(self) -> None:
         from mlopt_host_tensor.bindings import HOST_BINDINGS
 
-        assert len(HOST_BINDINGS) == 137
+        assert len(HOST_BINDINGS) == 138
 
     def test_import_covered_ops_are_host_ops(self) -> None:
         """``hnl_import.covered_ops`` names real ``tensor.*`` ops —

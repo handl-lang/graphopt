@@ -142,7 +142,13 @@ def test_compositional_verbose_failed_block():
 
     class Weird(nn.Module):
         def forward(self, x):
-            return torch.fft.fft(x).real  # fft_fft: unlowerable
+            # A data-dependent guard export cannot trace — the block
+            # keeps its original (``fft_fft`` itself is bound +
+            # ``opaque``-replayable since fa619ee, so it no longer
+            # fails on its own).
+            if bool(x.flatten()[0] > 0):
+                return torch.fft.fft(x).real
+            return x
 
     class Wrap(nn.Module):
         def __init__(self):
@@ -198,7 +204,7 @@ def test_transformer_block_full_pipeline():
     m = M.TransformerBlock(dim=64)
     x = torch.randn(1, 8, 64)
     ref = m(x)
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(m, x, max_iterations=3, verify=True, verbose=True)
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, max_iterations=3, verify=True, verbose=True)
 
     assert stats["nonlocal_lifts"] >= 1
     assert stats["pairing_groups"] >= 1
@@ -304,9 +310,11 @@ def test_compositional_block_verify_failure(monkeypatch):
     monkeypatch.setattr("mlopt_torch.adapters.verify_module", fake_verify)
     torch.manual_seed(0)
     m = _TwoBlock()
-    _opt, rep = Optimizer(backend=TorchBackend()).optimize(m, torch.randn(2, 8), strategy=Compositional(), max_iterations=1)
+    _opt, rep = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, torch.randn(2, 8), strategy=Compositional(), max_iterations=1)
 
-    assert any(b["status"] == "failed" for b in rep["blocks"].values())
+    # A failed block verify is a verify-gate refusal — the honest
+    # label is "declined" (eqsat@3dd83c7), not "failed".
+    assert any(b["status"] == "declined" for b in rep["blocks"].values())
 
 
 class _BareProto:

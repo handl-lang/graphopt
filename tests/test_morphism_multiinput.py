@@ -47,7 +47,7 @@ def _optimize(
     laws: list | None = None,
     **kw,
 ):
-    return Optimizer(backend=TorchBackend()).optimize(
+    return Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(
         model,
         x,
         strategy=MorphismSearch(

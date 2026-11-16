@@ -558,6 +558,7 @@ def test_search_plumbs_stop_and_patience():
         stop="improving",
         patience=1,
         max_iterations=10,
+        engine="python-egraph",
     )
     assert res.stats["stop"] in ("improving", "fixed_point")
     assert "improved" in res.stats

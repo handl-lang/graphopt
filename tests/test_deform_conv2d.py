@@ -92,8 +92,12 @@ def test_deform_conv2d_torch_fills_absent_mask_and_bias(monkeypatch):
         seen["args"] = args
         return "lowered"
 
+    # ``_deform_conv2d_torch`` resolves the torchvision kernel through
+    # ``torch_bindings``' module globals — patching the ``torch_bridge``
+    # shim's re-export would not reach it.
     monkeypatch.setattr(
-        tb, "_torchvision_deform_conv2d", lambda: _kernel
+        "mlopt_torch.torch_bindings._torchvision_deform_conv2d",
+        lambda: _kernel,
     )
     x = torch.randn(2, 6, 8, 8)
     w = torch.randn(4, 3, 3, 3)
@@ -134,8 +138,12 @@ def test_deform_conv2d_torch_passes_given_mask_and_bias(monkeypatch):
         seen["args"] = args
         return "lowered"
 
+    # ``_deform_conv2d_torch`` resolves the torchvision kernel through
+    # ``torch_bindings``' module globals — patching the ``torch_bridge``
+    # shim's re-export would not reach it.
     monkeypatch.setattr(
-        tb, "_torchvision_deform_conv2d", lambda: _kernel
+        "mlopt_torch.torch_bindings._torchvision_deform_conv2d",
+        lambda: _kernel,
     )
     x = torch.randn(2, 6, 8, 8)
     w = torch.randn(4, 3, 3, 3)

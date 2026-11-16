@@ -49,7 +49,7 @@ from mlopt_torch.export import export_optimized
 
 
 def _opt():
-    return Optimizer(backend=TorchBackend())
+    return Optimizer(backend=TorchBackend(), engine="python-egraph")
 
 
 # ---------------------------------------------------------------------------
@@ -546,7 +546,9 @@ def test_compositional_task_decline_keeps_original():
     )
     assert stats["n_optimized"] == 0
     for rep in stats["blocks"].values():
-        assert rep["status"] == "failed"
+        # verify-gate refusals are labelled "declined" (eqsat@3dd83c7),
+        # not "failed" — the honest-decline taxonomy.
+        assert rep["status"] == "declined"
         assert "task" in rep.get("error", "")
 
 
@@ -612,7 +614,7 @@ def test_compositional_task_cache_hit_decline():
     )
     assert stats["n_optimized"] == 0
     assert all(
-        r["status"] == "failed" for r in stats["blocks"].values()
+        r["status"] == "declined" for r in stats["blocks"].values()
     )
 
 

@@ -485,7 +485,7 @@ def test_detect_factors_pipeline_flag():
 
     model = Dense().eval().double()
     xv = torch.randn(8, i, dtype=torch.float64)
-    opt = Optimizer(backend=TorchBackend())
+    opt = Optimizer(backend=TorchBackend(), engine="python-egraph")
     res = opt.search(model, xv, detect_factors=True, cost_fn=flops_cost)
     assert res.stats["low_rank_factors"]
     term = res.term
@@ -512,7 +512,7 @@ def test_detect_factors_no_candidates():
         def forward(self, t):
             return self.lin(t)
 
-    res = Optimizer(backend=TorchBackend()).search(
+    res = Optimizer(backend=TorchBackend(), engine="python-egraph").search(
         Full().eval().double(),
         torch.randn(8, 32, dtype=torch.float64),
         detect_factors=True,
@@ -538,7 +538,7 @@ def test_detect_factors_off_by_default():
         def forward(self, t):
             return self.lin(t)
 
-    res = Optimizer(backend=TorchBackend()).search(
+    res = Optimizer(backend=TorchBackend(), engine="python-egraph").search(
         Dense().eval().double(), torch.randn(8, i, dtype=torch.float64)
     )
     assert "low_rank_factors" not in res.stats

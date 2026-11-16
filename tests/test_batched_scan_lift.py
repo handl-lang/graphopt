@@ -1151,7 +1151,7 @@ class TestEndToEnd:
         m = _FlatChunkMod(d, B, C).eval()
         x = torch.randn(C, B, d)
         h = torch.randn(B, d)
-        opt, stats = Optimizer(backend=TorchBackend()).optimize(
+        opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(
             m, (x, h), max_iterations=32, verify=False, verbose=False
         )
 
@@ -1183,13 +1183,15 @@ class TestEndToEnd:
         m = _BatchedChunkMod(d, C).eval()
         x = torch.randn(C, B, d)
         h = torch.randn(B, d)
-        opt, stats = Optimizer(backend=TorchBackend()).optimize(
+        opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(
             m, (x, h), max_iterations=32, verify=False, verbose=False
         )
 
         assert stats["lowering"] == "generic"
         assert not getattr(opt, "is_batched", False)
-        root = opt.eval_mod._root
+        # eqsat delivers the transparent IRModule directly; the
+        # python-egraph path wraps it in BatchedScanModule — accept both.
+        root = getattr(opt, "eval_mod", opt)._root
         assert is_scan_apply_term(root)
         assert build_scan_plan(root) is None
         with torch.no_grad():
@@ -1208,7 +1210,7 @@ class TestEndToEnd:
         m = _BatchedChunkMod(d, C).double().eval()
         x = torch.randn(N, B, d, dtype=torch.float64)
         h = torch.randn(B, d, dtype=torch.float64)
-        opt, stats = Optimizer(backend=TorchBackend()).optimize(
+        opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(
             m,
             (x[:C], h),
             max_iterations=32,

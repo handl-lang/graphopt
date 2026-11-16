@@ -494,6 +494,7 @@ class TestDeliver:
             feeds,
             source=TorchSource(),
             max_iterations=20,
+            engine="python-egraph",
         )
         fired = res.stats.get("rule_fires", {})
         assert any(fired.get(f"prim:{n}") for n in sp.SYNOP2_SHIPPED), (
@@ -534,6 +535,7 @@ class TestDeliver:
             feeds,
             source=TorchSource(),
             max_iterations=20,
+            engine="python-egraph",
         )
         fired = res.stats.get("rule_fires", {})
         assert any(fired.get(f"prim:{n}") for n in sp.SYNOP3_SHIPPED), (

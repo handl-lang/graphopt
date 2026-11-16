@@ -28,6 +28,7 @@ import torch.nn.functional as F
 
 from mlopt_core.ir import Const, Op, TensorType, Var
 from mlopt_torch.torch_bridge import (
+    _CORE_TORCH_BINDINGS,
     _IR_TO_TORCH,
     export_to_ir,
     ir_to_torch_module,
@@ -1710,8 +1711,9 @@ def test_instance_norm_uis_false_without_stats_is_loud():
 
 
 class _UnboundWrap(torch.nn.Module):
-    """``fft_fft`` stays unbound — an opaque root over an optimizable
-    matmul chain."""
+    """``fft_fft`` is the opaque root over an optimizable matmul chain —
+    the tests unbind its torch binding explicitly (the fft family is
+    bound since fa619ee, so the boundary is spelled, not ambient)."""
 
     def __init__(self):
         super().__init__()
@@ -1723,14 +1725,16 @@ class _UnboundWrap(torch.nn.Module):
         return torch.fft.fft(y).real
 
 
-def test_unbound_op_is_a_boundary_not_a_failure():
+def test_unbound_op_is_a_boundary_not_a_failure(monkeypatch):
     """``optimize_model`` on a graph containing an unbound op still
     optimizes everything around it: the param chain folds to a fused
-    Param at lowering while the opaque op sits outside, and the
-    delivered module fails loudly ("No torch binding"), never
-    silently."""
-
-
+    Param at lowering while the unbound op mints an ``opaque``
+    aten-replay boundary — the delivered module replays the original
+    callable, never silently wrong."""
+    # ``OpTable.full()`` re-seeds the ambient dict from the core table
+    # on every call — unbind on BOTH or the seat comes straight back.
+    monkeypatch.delitem(_IR_TO_TORCH, "fft_fft", raising=False)
+    monkeypatch.delitem(_CORE_TORCH_BINDINGS, "fft_fft", raising=False)
     m = _UnboundWrap().eval()
     x = _t(4, 8)
     opt, stats = Optimizer(backend=TorchBackend()).optimize(m, x, max_iterations=2, verify=False, verbose=False)
@@ -1741,16 +1745,22 @@ def test_unbound_op_is_a_boundary_not_a_failure():
     assert fused, (
         f"expected a fused param, got {list(opt.state_dict())}"
     )
-    # The opaque op is a loud boundary, not a silent wrong result.
-    with pytest.raises(ValueError, match="No torch binding for op"):
-        opt(x)
+    # The unbound op is an ``opaque`` replay boundary naming its aten
+    # qualname — eval replays ``torch.fft.fft`` faithfully.
+    root = opt._root
+    assert "opaque" in str(root) and "aten::fft_fft" in str(root)
+    with torch.no_grad():
+        torch.testing.assert_close(opt(x), m(x), rtol=1e-4, atol=1e-5)
 
 
-def test_compositional_falls_back_around_unbound_op():
-    """A block whose graph contains an unbound op falls back to the
-    original; a sibling block still optimizes and the recomposed
-    model stays correct."""
+def test_compositional_optimizes_around_unbound_op(monkeypatch):
+    """A block whose graph contains an unbound op optimizes around the
+    ``opaque`` replay boundary (no whole-block fallback); a sibling
+    block optimizes too and the recomposed model stays correct."""
     import torch.nn as nn
+
+    monkeypatch.delitem(_IR_TO_TORCH, "fft_fft", raising=False)
+    monkeypatch.delitem(_CORE_TORCH_BINDINGS, "fft_fft", raising=False)
 
 
     class Outer(nn.Module):
@@ -1766,12 +1776,13 @@ def test_compositional_falls_back_around_unbound_op():
     x = _t(4, 8)
     opt, stats = Optimizer(backend=TorchBackend()).optimize(model, x, strategy=Compositional(), verbose=False)
 
-    # The linear block optimized; the fft block fell back (its eval
-    # failure is a boundary, not a wrong result).
+    # The linear block optimized; the fft block optimized around its
+    # ``opaque`` boundary — the unbound op replays, it does not fail
+    # the block.
     lin = stats["blocks"]["lin"]
     fft = stats["blocks"]["fft"]
     assert lin["status"] == "optimized"
-    assert fft["status"] == "failed"
+    assert fft["status"] == "optimized"
     # End-to-end the recomposed model still reproduces the original.
     with torch.no_grad():
         torch.testing.assert_close(opt(x), model(x))

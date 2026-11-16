@@ -38,7 +38,9 @@ def optimized_stack():
     torch.manual_seed(0)
     model = MiniGPT(dim=32, n_heads=2, depth=2, hidden_mult=2).eval()
     x = torch.randn(1, 8, 32)
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(model, x, strategy=Compositional(), verbose=False)
+    # Compositional's per-block stats (``n_optimized`` graft counts)
+    # encode Python-engine outcomes — pin the reference engine.
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(model, x, strategy=Compositional(), verbose=False)
 
     assert stats["n_optimized"] == 2  # IRModules grafted
     return model, opt, x
@@ -99,11 +101,16 @@ def test_export_module_pt2_roundtrip(optimized_stack, tmp_path):
     assert manifest["artifact_bytes"] == out.stat().st_size
 
     # The manifest names the grafted mlopt executors and what they
-    # replaced — ParallelBlock → mlopt_torch IRModule.
+    # replaced.  The cross-pair pass fuses the two adjacent
+    # ParallelBlocks: blocks.0 becomes a ``_FusedPair`` wrapper whose
+    # ``inner`` is the jointly-optimized IRModule, and blocks.1 is
+    # consumed (replaced by Identity).
     blocks = manifest["mlopt_modules"]
-    assert set(blocks) == {"blocks.0", "blocks.1"}
-    assert "IRModule" in blocks["blocks.0"]["optimized"]
+    assert set(blocks) == {"blocks.0", "blocks.0.inner"}
+    assert "FusedPair" in blocks["blocks.0"]["optimized"]
     assert "ParallelBlock" in blocks["blocks.0"]["original"]
+    assert "IRModule" in blocks["blocks.0.inner"]["optimized"]
+    assert blocks["blocks.0.inner"]["original"] == "<absent>"
     assert any(
         k.startswith("blocks.0.")
         for k in blocks["blocks.0"]["state_keys"]

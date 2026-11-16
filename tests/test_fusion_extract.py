@@ -74,7 +74,7 @@ def test_optimize_model_fusion_epsilon_kwarg():
 
     m = M().eval().double()
     x = torch.randn(4, 8, dtype=torch.float64)
-    mod, stats = Optimizer(backend=TorchBackend()).optimize(m, x, fusion_epsilon=0.05, verify=False, verbose=False)
+    mod, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, fusion_epsilon=0.05, verify=False, verbose=False)
 
     assert stats["fusion_epsilon"] == 0.05
     with torch.no_grad():

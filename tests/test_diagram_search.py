@@ -615,8 +615,8 @@ def test_search_ghost_rep_unit():
             boundary="g",
             reify=ReifySpec(mode="intra", rules="compose"),
         ),
-        {"status": "grafted", "reps": {"no.such.block": object()}},
-        {"status": "grafted"},
+        M.ReifyResult({"status": "grafted", "reps": {"no.such.block": object()}}),
+        M.ReifyResult({"status": "grafted"}),
         cost_fn=launch_aware_cost,
     )
     assert "no.such.block" in succ.reps

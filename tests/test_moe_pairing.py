@@ -140,7 +140,7 @@ def test_moe_stacked_experts_pair_and_verify():
     torch.manual_seed(0)
     m = RoutedMoEFFN().eval()
     x = torch.randn(2, 16, 64)
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(m, x, max_iterations=12, verify=False, verbose=False)
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, max_iterations=12, verify=False, verbose=False)
 
     assert stats.get("pairing_groups", 0) >= 1
     assert stats.get("paired_extract") is True
@@ -185,7 +185,7 @@ def test_partial_tile_decline_is_recorded():
     torch.manual_seed(0)
     m = PartialTile().eval()
     x = torch.randn(4, 16, 64)
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(m, x, verify=False, verbose=False)
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, verify=False, verbose=False)
 
     assert stats.get("pairing_groups") == 1
     assert stats.get("paired_extract") is False
@@ -202,7 +202,7 @@ def test_weight_factor_beats_pairing_decline():
     torch.manual_seed(0)
     m = SumExperts().eval()
     x = torch.randn(4, 16, 64)
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(m, x, verify=False, verbose=False)
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, verify=False, verbose=False)
 
     assert stats.get("pairing_groups", 0) >= 1
     assert stats.get("paired_extract") is False

@@ -115,7 +115,7 @@ def test_gqa_head_dedup_stories15m_layout_end_to_end():
     )
     x = torch.randn(4, 3 * DIM, dtype=torch.float64)
 
-    low, stats = Optimizer(backend=TorchBackend()).optimize(m, x, cost_fn=param_bytes_cost_for(), verify=False, verbose=False)
+    low, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, cost_fn=param_bytes_cost_for(), verify=False, verbose=False)
 
 
     # fp64-equivalent output (other exact rewrites may reassociate
@@ -189,7 +189,7 @@ def test_slice_dedup_all_heads_identical():
         .double()
     )
     x = torch.randn(2, 3 * DIM, dtype=torch.float64)
-    low, _ = Optimizer(backend=TorchBackend()).optimize(m, x, cost_fn=param_bytes_cost_for(), verify=False, verbose=False)
+    low, _ = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, cost_fn=param_bytes_cost_for(), verify=False, verbose=False)
 
     with torch.no_grad():
         assert (low(x) - m(x)).abs().max() < 1e-9
@@ -212,7 +212,7 @@ def test_slice_dedup_no_fire_when_heads_distinct():
         .double()
     )
     x = torch.randn(2, 3 * DIM, dtype=torch.float64)
-    low, _ = Optimizer(backend=TorchBackend()).optimize(m, x, cost_fn=param_bytes_cost_for(), verify=False, verbose=False)
+    low, _ = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, cost_fn=param_bytes_cost_for(), verify=False, verbose=False)
 
     with torch.no_grad():
         assert (low(x) - m(x)).abs().max() < 1e-9
@@ -277,7 +277,7 @@ def test_tied_embedding_classifier_if_stored_twice():
 
     m = TiedLM().eval().double()
     idx = torch.randint(0, vocab, (8,))
-    low, _ = Optimizer(backend=TorchBackend()).optimize(m, idx, verify=False, verbose=False)
+    low, _ = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, idx, verify=False, verbose=False)
 
     with torch.no_grad():
         assert (low(idx) - m(idx)).abs().max() < 1e-9

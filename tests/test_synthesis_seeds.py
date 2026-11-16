@@ -36,6 +36,7 @@ Covered here:
 
 import torch
 
+import mlopt_torch  # noqa: F401 — registers the concrete-eval backend
 from mlopt_core import meta
 from mlopt_carriers import om as OM
 from mlopt_core import laws as R
@@ -375,17 +376,12 @@ def test_seed_witness_rescues_symbolic_guarded_candidate():
 def test_bounded_instantiation_remains_fallback():
     """An unseeded guarded pair whose side conditions ARE reachable in
     the bounded pool still emits — seeds are preferred, not required.
-    Also guards the synthesizable census: the whole ruleset minus the
-    prior-art free-attr triple (``mm_splitk_rev`` /
-    ``linear_concat_w`` / ``linear_concat_w_rev`` — each emits a
-    concat-dim attr metavar in the RHS that the LHS never binds and no
-    ``derive`` produces)."""
+    Also guards the synthesizable census: the whole ruleset
+    participates — the prior-art bank's former free-attr triple
+    (``mm_splitk_rev`` / ``linear_concat_w`` / ``linear_concat_w_rev``)
+    was rewritten so the concat dims bind on the LHS."""
     rules = meta.module_rules(R) + meta.module_rules(OM)
-    assert {r.name for r in rules if not meta._synthesizable(r)} == {
-        "mm_splitk_rev",
-        "linear_concat_w",
-        "linear_concat_w_rev",
-    }
+    assert {r.name for r in rules if not meta._synthesizable(r)} == set()
 
     derived = meta.synthesize_rules(
         [OM.OM_LIFT, OM.OM_UNLIFT], fuel=1000

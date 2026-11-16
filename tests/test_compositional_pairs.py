@@ -127,7 +127,9 @@ def test_cross_pair_residual_wrapped_graft():
     model = _ResidualStack(dim=32, depth=3).eval().double()
     x = torch.randn(8, 32, dtype=torch.float64)
 
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(model, x, strategy=Compositional(), verbose=False)
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph",
+                  composer=C.TorchComposer(engine="python-egraph")).optimize(
+        model, x, strategy=Compositional(), verbose=False)
 
 
     e = stats["cross_pairs"]["blocks.0+blocks.1"]
@@ -177,7 +179,9 @@ def test_cross_pair_residual_plain_graft():
     model = ResidualPlain().eval().double()
     x = torch.randn(8, 32, dtype=torch.float64)
 
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(model, x, strategy=Compositional(), verbose=False)
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph",
+                  composer=C.TorchComposer(engine="python-egraph")).optimize(
+        model, x, strategy=Compositional(), verbose=False)
 
 
     e = stats["cross_pairs"]["blocks.0+blocks.1"]

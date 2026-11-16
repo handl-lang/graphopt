@@ -618,7 +618,9 @@ def test_repeat_chain_dedup_compose():
 
 def test_op_table_scope_limits():
     """The documented limits: the op table has no unique/index_copy,
-    and the scatter family + index_select ARE the write/gather seam."""
+    and the scatter family + index_select ARE the write/gather seam.
+    ``repeat_interleave`` left the absent list when 98fcf84 bound it
+    (the unbind had been minting opaque leaves)."""
     import mlopt_torch.torch_bridge  # noqa: F401 — registers tables
     from mlopt_core.ops import OpTable
 
@@ -633,9 +635,10 @@ def test_op_table_scope_limits():
         "concat",
         "narrow",
         "slice",
+        "repeat_interleave",
     ):
         assert present in names
-    for absent in ("unique", "repeat_interleave", "index_copy"):
+    for absent in ("unique", "index_copy"):
         assert absent not in names
 
 

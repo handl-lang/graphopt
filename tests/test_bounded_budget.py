@@ -31,6 +31,7 @@ from mlopt_core.laws.specials import (
     _m_elide_bounded,
     offer_weight_specials,
 )
+from mlopt_orchestrator import bounds as bounds_mod
 from mlopt_orchestrator import optimize as opt_mod
 from mlopt_orchestrator.optimize import (
     Compositional,
@@ -458,7 +459,7 @@ def test_search_budget_accepts_bounded_member():
     torch.manual_seed(7)
     model = _NearDead().eval()
     xv = torch.randn(8, 32, dtype=torch.float64)
-    res = Optimizer(backend=TorchBackend()).search(
+    res = Optimizer(backend=TorchBackend(), engine="python-egraph").search(
         model,
         xv,
         detect_specials=True,
@@ -482,7 +483,7 @@ def test_search_budget_none_unchanged():
     torch.manual_seed(8)
     model = _NearDead().eval()
     xv = torch.randn(8, 32, dtype=torch.float64)
-    res = Optimizer(backend=TorchBackend()).search(
+    res = Optimizer(backend=TorchBackend(), engine="python-egraph").search(
         model, xv, detect_specials=True, cost_fn=flops_cost
     )
     assert "error_budget" not in res.stats
@@ -500,7 +501,7 @@ def test_search_budget_engine_guards():
     torch.manual_seed(9)
     model = _NearDead().eval()
     xv = torch.randn(8, 32, dtype=torch.float64)
-    opt = Optimizer(backend=TorchBackend())
+    opt = Optimizer(backend=TorchBackend(), engine="python-egraph")
 
     class _StubEngine:
         """Not an ``EGraph`` — satisfies ``_resolve_engine``'s duck."""
@@ -530,7 +531,7 @@ def test_search_budget_over_budget_reextracts_exact():
     torch.manual_seed(10)
     model = _NearDeadSplit().eval()
     xv = torch.randn(8, 64, dtype=torch.float64)
-    opt = Optimizer(backend=TorchBackend())
+    opt = Optimizer(backend=TorchBackend(), engine="python-egraph")
     res = opt.search(
         model,
         xv,
@@ -551,7 +552,7 @@ def test_search_budget_ledger_two_bounded_sites():
     torch.manual_seed(11)
     model = _NearDeadSplit().eval()
     xv = torch.randn(8, 64, dtype=torch.float64)
-    res = Optimizer(backend=TorchBackend()).search(
+    res = Optimizer(backend=TorchBackend(), engine="python-egraph").search(
         model,
         xv,
         detect_specials=True,
@@ -600,7 +601,7 @@ def test_search_budget_no_bounded_offers():
         def forward(self, t):
             return self.lin(t)
 
-    res = Optimizer(backend=TorchBackend()).search(
+    res = Optimizer(backend=TorchBackend(), engine="python-egraph").search(
         Full().eval(),
         torch.randn(8, 32, dtype=torch.float64),
         error_budget=1e-3,
@@ -622,7 +623,7 @@ def test_lower_verify_honored_bound():
     torch.manual_seed(13)
     model = _NearDead(scale=5.0, eps=8e-4).eval()
     xv = torch.randn(8, 32, dtype=torch.float64)
-    opt = Optimizer(backend=TorchBackend())
+    opt = Optimizer(backend=TorchBackend(), engine="python-egraph")
     res = opt.search(
         model,
         xv,
@@ -657,7 +658,7 @@ def test_lower_verify_measured_rel_above_weight_bound_honored():
     torch.manual_seed(14)
     model = _NearDead(scale=1.0, eps=8e-4).eval()
     xv = torch.randn(8, 32, dtype=torch.float64)
-    opt = Optimizer(backend=TorchBackend())
+    opt = Optimizer(backend=TorchBackend(), engine="python-egraph")
     res = opt.search(
         model,
         xv,
@@ -852,9 +853,12 @@ def test_bounded_term_reextracts_and_raises():
         _bounded_term(dead, eid0, src, flops_cost, 1e-3)
 
     # Stall: the ban pass cannot name the bound member to exclude.
+    # ``_bounded_term`` resolves ``_ban_bound_members`` in
+    # ``bounds``' own namespace (it moved there in the optimize.py
+    # split) — patching ``opt_mod``'s re-export name never intercepts.
     eg2, eid2, src2, _t2 = _bounded_site()
     with mock.patch.object(
-        opt_mod, "_ban_bound_members", return_value=False
+        bounds_mod, "_ban_bound_members", return_value=False
     ), pytest.raises(OptimizationResourceError, match="exclude"):
         _bounded_term(eg2, eid2, src2, flops_cost, 5e-4)
 
@@ -935,7 +939,7 @@ def test_compositional_budget_forwards():
 
     model = _BoundStack().eval()
     x = torch.randn(8, 32, dtype=torch.float64)
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(
         model,
         x,
         strategy=Compositional(),
@@ -978,7 +982,7 @@ def test_morphism_search_forwards_budget_kwargs():
     torch.manual_seed(16)
     model = _BoundStack().eval()
     x = torch.randn(8, 32, dtype=torch.float64)
-    _mod, stats = Optimizer(backend=TorchBackend()).optimize(
+    _mod, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(
         model,
         x,
         strategy=MorphismSearch(laws=[], optimize_rest=True),
@@ -1005,7 +1009,7 @@ def test_morphism_search_accepts_budget_without_blocks():
     torch.manual_seed(17)
     model = _BoundStack().eval()
     x = torch.randn(8, 32, dtype=torch.float64)
-    _mod, stats = Optimizer(backend=TorchBackend()).optimize(
+    _mod, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(
         model,
         x,
         strategy=MorphismSearch(laws=[], optimize_rest=False),

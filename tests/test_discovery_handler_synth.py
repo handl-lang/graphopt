@@ -180,7 +180,12 @@ class TestProposal:
             ("mul", "A", "B"),
             ("unsqueeze", "C", {"dim": 1}),
         )
-        bodies = list(hs.propose_bodies(spec))
+        # The family columns enumerate an astronomical-but-finite
+        # product for this spec — only the head is needed (the ew
+        # replay leads), same bound the exclusion test below uses.
+        bodies = [
+            b for _, b in zip(range(40), hs.propose_bodies(spec))
+        ]
         assert bodies[0] == ("ew", spec)
         assert hs._replayable_spec(spec)
         assert hs._replayable_spec(

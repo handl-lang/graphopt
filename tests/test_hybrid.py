@@ -162,6 +162,12 @@ def _verify(m, x, ir, st, term, tol=1e-10):
         input_names=ir.input_names,
         params=ir.params,
     )
+    # Extraction may commit a shipped ``synop_*`` fold — the op's
+    # denotation is the domain-side binding registry, not ambient
+    # (same posture as ``test_discovery_training``).
+    from mlopt_discovery import shipped_primitives as sp
+
+    sp.register()
     mod = ir_to_torch_module(opt_ir, param_values=st)
     mod.eval()
     with torch.no_grad():

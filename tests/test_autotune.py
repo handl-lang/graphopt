@@ -129,7 +129,7 @@ def test_batched_route_on_scan_model():
     torch.manual_seed(0)
     m = LinearRecurrence(dim=4, steps=8).eval()
     x = torch.randn(8, 4)
-    mod, stats = _autotune(m, x, candidates=("generic", "batched"))
+    mod, stats = _autotune(m, x, candidates=("generic", "batched"), engine="python-egraph")
     at = stats["autotune"]
     assert stats["lowering"] == "batched"
     assert at["winner"] in ("generic", "batched")

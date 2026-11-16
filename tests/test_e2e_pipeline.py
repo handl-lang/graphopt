@@ -89,7 +89,7 @@ def test_compositional_pipeline_to_compiled():
     torch.manual_seed(0)
     model = _TinyTransformer().eval()
     x = torch.randn(2, 8, 16)
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(model, x, strategy=Compositional(), verbose=False)
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(model, x, strategy=Compositional(), verbose=False)
 
     assert stats["n_optimized"] >= 1 and stats["n_failed"] == 0
     assert stats["end_to_end"]["max_rel_diff"] < 1e-9
@@ -238,7 +238,7 @@ def test_compositional_fallback_keeps_original_block():
 
     model = M().eval()
     x = torch.randn(4, d)
-    opt, stats = Optimizer(backend=TorchBackend()).optimize(model, x, strategy=Compositional(), verbose=False)
+    opt, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(model, x, strategy=Compositional(), verbose=False)
 
     assert stats["n_optimized"] == 2
     assert stats["n_failed"] == 1

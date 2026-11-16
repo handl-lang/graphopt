@@ -212,7 +212,7 @@ def test_carrier_upgrade_swaps_to_batched_member():
     x = torch.rand(8, 4, dtype=torch.float64)
     with torch.no_grad():
         ref = m(x)
-        mod, stats = Optimizer(backend=TorchBackend()).optimize(m, x, verify=False, verbose=False)
+        mod, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, verify=False, verbose=False)
 
     assert stats["lowering"] == "batched"
     assert getattr(mod, "is_batched", False)
@@ -234,7 +234,7 @@ def test_optimize_model_delivered_module_captures_cuda_graph():
     x = torch.rand(8, 4, dtype=torch.float64, device="cuda")
     with torch.no_grad():
         ref = m(x)
-        mod, stats = Optimizer(backend=TorchBackend()).optimize(m, x, verify=False, verbose=False)
+        mod, stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(m, x, verify=False, verbose=False)
 
     assert stats["lowering"] == "batched"
     assert getattr(mod, "is_batched", False)
@@ -344,6 +344,7 @@ def test_carrier_upgrade_swaps_when_delivered_cheaper(monkeypatch):
     """Carrier member wins when its delivered (batched) price beats
     the incumbent's delivered price."""
     import mlopt_orchestrator.optimize as O
+    import mlopt_orchestrator.pricing as pricing_mod
     from mlopt_core.egraph import EGraph
 
     ir, h, env = _scan_ir()
@@ -357,7 +358,7 @@ def test_carrier_upgrade_swaps_when_delivered_cheaper(monkeypatch):
     # force the incumbent to lose on delivered price
     orig = O._delivered_cost
     monkeypatch.setattr(
-        O,
+        pricing_mod,
         "_delivered_cost",
         lambda t, profile=None, compiled=False, bucket=None: (
             1.0
@@ -566,6 +567,7 @@ def test_search_profile_marker_reaches_carrier_upgrade(monkeypatch):
     is declined once the profile prices the carrier delivery slower.
     """
     import mlopt_orchestrator.optimize as O
+    import mlopt_orchestrator.pricing as pricing_mod
     from mlopt_core.cost import executor_cost_for
     from mlopt_core.profile import shape_bucket
     from mlopt_torch.models import LinearRecurrence
@@ -575,7 +577,7 @@ def test_search_profile_marker_reaches_carrier_upgrade(monkeypatch):
     torch.manual_seed(0)
     m = LinearRecurrence(4, 8).eval().double()
     x = torch.rand(8, 4, dtype=torch.float64)
-    opt = Optimizer(backend=TorchBackend())
+    opt = Optimizer(backend=TorchBackend(), engine="python-egraph")
     plans = O._carrier_plans()
 
     def delivered_aware(profile):
@@ -606,7 +608,7 @@ def test_search_profile_marker_reaches_carrier_upgrade(monkeypatch):
         seen["bucket"] = bucket
         return orig(t, profile, compiled, bucket)
 
-    monkeypatch.setattr(O, "_delivered_cost", spy)
+    monkeypatch.setattr(pricing_mod, "_delivered_cost", spy)
     prof = _profile_with(
         measured_ns={
             "batched": {shape_bucket(x): {"median_ns": 1.0e12}}
@@ -708,7 +710,7 @@ def test_delivered_cost_for_search_keeps_generic_pick():
     torch.manual_seed(0)
     m = LinearRecurrence(4, 8).eval().double()
     x = torch.rand(8, 4, dtype=torch.float64)
-    opt = Optimizer(backend=TorchBackend())
+    opt = Optimizer(backend=TorchBackend(), engine="python-egraph")
     prof = _profile_with(
         measured_ns={
             "batched": {shape_bucket(x): {"median_ns": 1.0e12}}

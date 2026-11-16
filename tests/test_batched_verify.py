@@ -172,7 +172,7 @@ def test_extract_best_never_picks_illtyped_reshape():
     root = eg.add_term(Op.make("mul", x, x))  # a real (costly) member
     # hand-mint the reported failure shape as a sibling member of the
     # root class — a reshape view that halved the wrong axis
-    x_eid = eg.add_leaf(repr(x))
+    x_eid = eg.add_term(x)  # registered leaf — decode needs _LeafRegistry
     bad_eid = eg.add_enode(
         "reshape", (x_eid,), {"shape": (B, T // 2, 12, 64)}
     )
@@ -308,7 +308,7 @@ def test_batched_rope_optimize_model_multi_shape():
         h = torch.randn(B, T, 96)
         cos = torch.randn(T, 12)
         sin = torch.randn(T, 12)
-        opt, _stats = Optimizer(backend=TorchBackend()).optimize(blk, (h, cos, sin), verify=False, verbose=False)
+        opt, _stats = Optimizer(backend=TorchBackend(), engine="python-egraph").optimize(blk, (h, cos, sin), verify=False, verbose=False)
 
         with torch.no_grad():
             ref = blk(h, cos, sin)

@@ -313,6 +313,11 @@ def run_case(
             rules=rules,
             max_iterations=case.max_iterations,
             max_enodes=case.max_enodes,
+            # The bench measures the reference engine's discovery
+            # surface — ``stat:*`` nonlocal passes, ``law:*`` fires and
+            # the replayable ``eg.certificate`` are all Python-EGraph
+            # machinery the eqsat default does not carry.
+            engine="python-egraph",
         )
     except Exception as e:
         res.error = f"search: {e}"

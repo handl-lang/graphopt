@@ -72,6 +72,7 @@ def _joint_optimize(
     *,
     source: Source,
     sink: Sink,
+    engine: Any = None,
     verbose: bool = True,
     **kw: Any,
 ) -> tuple[Any, dict[str, Any]]:
@@ -84,7 +85,7 @@ def _joint_optimize(
     """
     from mlopt_orchestrator.optimize import Optimizer
 
-    lr = Optimizer(source=source, sink=sink).optimize(
+    lr = Optimizer(source=source, sink=sink, engine=engine).optimize(
         joint, x, verify=verbose, verbose=verbose, **kw
     )
     return lr.module, lr.stats
@@ -644,7 +645,19 @@ class TorchComposer:
     the function names stay importable for the historical private
     paths (``mlopt_orchestrator.optimize._select_blocks`` and friends resolve
     through the compatibility delegation too).
+
+    ``engine`` is the opt-out for the cross-pair joint run: the
+    orchestrator's per-block searches ride the ``Optimizer``'s engine,
+    but the joint micro-model is rebuilt inside ``cross_pairs`` — pass
+    ``engine="python-egraph"`` here when the pair boundary needs the
+    reference engine's nonlocal passes (pairing/carrier upgrades,
+    certificates).  ``None`` keeps the eqsat default and cross-pair
+    grafts honestly decline where those passes are required.
     """
+
+    def __init__(self, *, engine: Any = None) -> None:
+        """Store the engine opt-out for :meth:`cross_pairs`."""
+        self.engine = engine
 
     def blocks(
         self, model: Any, *, predicate: Callable | None = None
@@ -789,6 +802,7 @@ class TorchComposer:
                     x,
                     source=source,
                     sink=sink,
+                    engine=self.engine,
                     rules=_joint_rules(rules),
                     max_iterations=max_iterations,
                     max_enodes=max_enodes,
