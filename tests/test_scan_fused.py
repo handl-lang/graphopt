@@ -187,16 +187,19 @@ def test_fused_dense_matches_serial(fused, steps):
 
 
 def test_fused_dag_shared_leaf_diag():
-    """``compose(leaf, leaf)`` dedups to one leaf slot but the product
-    uses it twice — the fused path gathers by occurrence order."""
+    """``compose(compose(l,l), compose(l,l))`` dedups to one leaf slot
+    but the product uses it four times — the fused path gathers by
+    occurrence order.  Two compose levels are required: a single
+    ``*_compose`` node is declined by the ``len(levels) < 2`` gate."""
     torch.manual_seed(0)
     d = 4
     a, bb, h = _p("a", d), _p("bb", d), _p("h", d)
     leaf = Op.make("aff_diag", a, bb)
-    root = Op.make("applyd", Op.make("affd_compose", leaf, leaf), h)
+    inner = Op.make("affd_compose", leaf, leaf)
+    root = Op.make("applyd", Op.make("affd_compose", inner, inner), h)
     ir = IR(root=root, inputs=[], input_names=set(), params={})
     plan = build_scan_plan(ir.root)
-    assert occurrence_slots(plan["f"], plan["leaves"]) == [0, 0]
+    assert occurrence_slots(plan["f"], plan["leaves"]) == [0, 0, 0, 0]
 
     av = torch.rand(d, dtype=torch.float64) * 0.8 + 0.1
     bv = torch.randn(d, dtype=torch.float64)
@@ -205,21 +208,26 @@ def test_fused_dag_shared_leaf_diag():
     gen = ir_to_torch_module(ir, param_values=pv).eval()
     for fused in ("eager", True):
         mod = to_batched_scan_module(ir, param_values=pv, fused=fused)
-        assert mod._fused_occ == [0, 0]
+        assert mod._fused_occ == [0, 0, 0, 0]
         with torch.no_grad():
             out = mod()
         assert (out - gen()).abs().max().item() < 1e-12
-        # explicit reference: (a,b)∘(a,b) applied to h
-        assert torch.allclose(out, av * av * hv + av * bv + bv)
+        # explicit reference: (a,b)∘(a,b)∘(a,b)∘(a,b) applied to h
+        hh = hv.clone()
+        for _ in range(4):
+            hh = av * hh + bv
+        assert torch.allclose(out, hh)
 
 
 def test_fused_dag_shared_leaf_dense():
-    """Dense carrier takes the occurrence gather on the packed mats."""
+    """Dense carrier takes the occurrence gather on the packed mats —
+    same two-level fixture as the diagonal case."""
     torch.manual_seed(0)
     d = 3
     A, b, h = _p("A", d, d), _p("b", d), _p("h", d)
     leaf = Op.make("aff", A, b)
-    root = Op.make("apply", Op.make("aff_compose", leaf, leaf), h)
+    inner = Op.make("aff_compose", leaf, leaf)
+    root = Op.make("apply", Op.make("aff_compose", inner, inner), h)
     ir = IR(root=root, inputs=[], input_names=set(), params={})
     Av = torch.randn(d, d, dtype=torch.float64) * 0.3
     bv = torch.randn(d, dtype=torch.float64)
@@ -228,11 +236,14 @@ def test_fused_dag_shared_leaf_dense():
     gen = ir_to_torch_module(ir, param_values=pv).eval()
     for fused in ("eager", True):
         mod = to_batched_scan_module(ir, param_values=pv, fused=fused)
-        assert mod._fused_occ == [0, 0]
+        assert mod._fused_occ == [0, 0, 0, 0]
         with torch.no_grad():
             out = mod()
         assert (out - gen()).abs().max().item() < 1e-12
-        assert torch.allclose(out, Av @ (Av @ hv + bv) + bv)
+        hh = hv.clone()
+        for _ in range(4):
+            hh = Av @ hh + bv
+        assert torch.allclose(out, hh)
 
 
 def test_fused_declines_on_occurrence_explosion():

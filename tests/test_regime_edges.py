@@ -638,8 +638,12 @@ def test_scan_executor_module_properties():
         ],
     )
     mod = disp.executor_module("parallel")
-    assert mod.is_batched and mod.n_levels >= 1
-    assert disp.frontier["parallel"].engaged
+    # payload-dedup-forfeit gate: the extracted scan spine's shared
+    # select payloads make the batched schedule slower than the
+    # single-tape IRModule, so the scan executor serves its honest
+    # serial fallback — unengaged, still verified correct.
+    assert not mod.is_batched
+    assert not disp.frontier["parallel"].engaged
     assert disp.verification["parallel"]["ok"]
 
 

@@ -58,7 +58,11 @@ from mlopt_core.cost import dag_cost, flops_cost
 from mlopt_core.egraph import EGraph
 from mlopt_core.ir import IR, Op, op_repr
 from mlopt_torch.models.ssm import DiagDenseSSM, DiagonalSSM
-from mlopt_carriers.scan_lower import is_scan_apply_term, to_batched_scan_module
+from mlopt_carriers.scan_lower import (
+    build_scan_plan,
+    is_scan_apply_term,
+    to_batched_scan_module,
+)
 from mlopt_torch.torch_bridge import (
     _IR_TO_TORCH,
     export_to_ir,
@@ -311,7 +315,14 @@ def test_batched_scan_module_handles_applyd():
     """``is_scan_apply_term`` recognises the diagonal ``applyd`` root —
     the batched executor handles aff_diag/affd_compose trees
     elementwise (no homogeneous-matrix trick needed) and stays
-    fp64-exact."""
+    fp64-exact.
+
+    Re-based (payload-dedup-forfeit gate): this spine's 15-leaf
+    select-payload tree forfeits more shared-payload recompute than
+    its compose nodes amortise, so ``build_scan_plan`` declines and
+    ``to_batched_scan_module`` serves the transparent serial
+    ``IRModule`` — ``is_batched`` is honestly False while the module
+    still evaluates the scan term correctly."""
     torch.manual_seed(0)
     T, D = 16, 16
     m = DiagonalSSM(D, D, T).eval().double()
@@ -319,6 +330,7 @@ def test_batched_scan_module_handles_applyd():
     ir, st, best, _ = _scan(m, x)
 
     assert is_scan_apply_term(best)
+    assert build_scan_plan(best) is None
     opt_ir = IR(
         root=best,
         inputs=ir.inputs,
@@ -326,7 +338,7 @@ def test_batched_scan_module_handles_applyd():
         params=ir.params,
     )
     mod = to_batched_scan_module(opt_ir, param_values=st)
-    assert mod.is_batched
+    assert not mod.is_batched
     mod.eval()
     with torch.no_grad():
         diff = (m(x) - mod(x)).abs().max().item()

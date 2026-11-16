@@ -1162,22 +1162,17 @@ class TestEndToEnd:
         rel = (got - want).abs().max() / want.abs().max()
         assert rel.item() < 1e-6
 
-    def test_batched_chunk_lowers_generic_single_leaf(self):
+    def test_batched_chunk_lowers_batched(self):
         """optimize_model on the (T,B,d)-state chunked decode.
 
-        Re-based (T-037 follow-up): saturation now extracts a
-        *single-leaf* ``applyd`` spine for this spelling — the
-        ``decay_state_lift`` factoring nests the remaining scan inside
-        one ``aff_diag`` ``b`` payload, so ``build_scan_plan`` declines
-        under the ``len(levels) < 2`` gate and the delivered
-        ``BatchedScanModule`` is a transparent ``IRModule``.
-        ``lowering == "generic"`` is the honest contract — the
-        level-batched path genuinely no longer applies here (the
-        saturated carrier, not the seq tier, owns the extracted
-        spelling — see ``test_batched_chunk_seq_site_fold_matches``
-        for the raw-IR seq claim).  What must
-        still hold: the term stays scan-shaped, the plan declines,
-        and the delivered module is correct.
+        Re-based (post-fe9c908 substrate): saturation now extracts a
+        *balanced multi-level* ``applyd``/``affd_compose`` tree for
+        this spelling — the ``decay_state_lift`` factoring no longer
+        collapses the spine to a single leaf — so ``build_scan_plan``
+        accepts and the delivered ``BatchedScanModule`` runs the
+        level-batched schedule (``lowering == "batched"``).  What
+        must still hold: the term stays scan-shaped, the plan is
+        accepted, and the delivered module is correct.
         """
         B, d, C = 4, 16, 8
         m = _BatchedChunkMod(d, C).eval()
@@ -1187,13 +1182,13 @@ class TestEndToEnd:
             m, (x, h), max_iterations=32, verify=False, verbose=False
         )
 
-        assert stats["lowering"] == "generic"
-        assert not getattr(opt, "is_batched", False)
+        assert stats["lowering"] == "batched"
+        assert getattr(opt, "is_batched", False)
         # eqsat delivers the transparent IRModule directly; the
         # python-egraph path wraps it in BatchedScanModule — accept both.
         root = getattr(opt, "eval_mod", opt)._root
         assert is_scan_apply_term(root)
-        assert build_scan_plan(root) is None
+        assert build_scan_plan(root) is not None
         with torch.no_grad():
             got, want = opt(x, h), m(x, h)
         rel = (got - want).abs().max() / want.abs().max()
@@ -1203,7 +1198,7 @@ class TestEndToEnd:
         """fp64 whole-decode equivalence — the decode gate standard.
 
         Same re-base as above: the (T,B,d) chunked decode delivers
-        through the generic path now; the fp64 chunked-decode
+        through the level-batched path now; the fp64 chunked-decode
         equivalence it pinned is unchanged and still asserted.
         """
         B, d, C, N = 8, 16, 8, 32
@@ -1218,7 +1213,8 @@ class TestEndToEnd:
             verbose=False,
         )
 
-        assert stats["lowering"] == "generic"
+        assert stats["lowering"] == "batched"
+        assert getattr(opt, "is_batched", False)
         with torch.no_grad():
             href, hgot = h, h
             for t0 in range(0, N, C):

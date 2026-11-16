@@ -216,8 +216,13 @@ class TestDispatchSSM:
         for name, v in disp.verification.items():
             assert v["ok"], f"{name}: {v}"
             assert v["max_abs_diff"] < 1e-9
-        # the parallel form actually engages the batched scan executor
-        assert disp.frontier["parallel"].engaged
+        # the parallel form still extracts the scan carrier, but the
+        # payload-dedup-forfeit gate declines its batched schedule —
+        # the scan executor serves the serial fallback (engaged=False)
+        # and the verification above already proved it correct.
+        par = disp.frontier["parallel"]
+        assert par.executor == "scan"
+        assert not par.engaged
 
     def test_shared_weights(self):
         model, x, *_ = _ssm_fixture()
