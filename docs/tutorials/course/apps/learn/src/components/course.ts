@@ -1148,8 +1148,8 @@ export class Course {
           note: "the Source / Sink protocols",
         },
         {
-          path: "packages/mlopt-onnx/src/mlopt_onnx/sink.py",
-          note: "the ONNX sink that landed with zero core edits",
+          path: "kit-onnx/src/kit_onnx/sink.py",
+          note: "the ONNX sink that landed with zero core edits (handl-lang/kit-onnx since P3 D-1)",
         },
         {
           path: "packages/mlopt-torch/src/mlopt_torch/backend.py",

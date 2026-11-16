@@ -39,7 +39,7 @@
 #     over the torch-free core (curated green subset).
 #   * coverage run + coverage report -m — the full suite under the
 #     pinned 100% coverage floor ([tool.coverage.report] fail_under),
-#     applied to the six shipped packages + mlopt_onnx; mlopt_discovery
+#     applied to the six shipped packages + kit_onnx; mlopt_discovery
 #     is measured under its own 99% ratchet floor (mirrors
 #     scripts/gates.sh's `full` lane).
 #
@@ -102,7 +102,7 @@ jobs:
       - name: coverage run (full suite)
         run: >-
           .venv/bin/coverage run
-          --source=mlopt_torch,mlopt_carriers,mlopt_cuda,mlopt_discovery,mlopt_onnx
+          --source=mlopt_torch,mlopt_carriers,mlopt_cuda,mlopt_discovery,kit_onnx
           -m pytest tests/ -q
 
       - name: coverage report (fail_under=100, shipped packages)

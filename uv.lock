@@ -23,7 +23,6 @@ members = [
     "mlopt-cuda",
     "mlopt-discovery",
     "mlopt-host-tensor",
-    "mlopt-onnx",
     "mlopt-torch",
 ]
 
@@ -1633,6 +1632,19 @@ wheels = [
 ]
 
 [[package]]
+name = "kit-onnx"
+version = "0.1.0"
+source = { git = "https://github.com/handl-lang/kit-onnx.git?tag=v0.1.0#b81572a79b99f4417c1d03ee5f352c4de702f106" }
+dependencies = [
+    { name = "mlopt-core" },
+    { name = "mlopt-dtypes" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "onnx" },
+    { name = "onnxruntime" },
+]
+
+[[package]]
 name = "kiwisolver"
 version = "1.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2142,13 +2154,13 @@ dependencies = [
     { name = "benchkit" },
     { name = "discoverykit" },
     { name = "gamekit" },
+    { name = "kit-onnx" },
     { name = "mlopt-carriers" },
     { name = "mlopt-core" },
     { name = "mlopt-cuda" },
     { name = "mlopt-discovery" },
     { name = "mlopt-dtypes" },
     { name = "mlopt-host-tensor" },
-    { name = "mlopt-onnx" },
     { name = "mlopt-orchestrator" },
     { name = "mlopt-torch" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -2222,13 +2234,13 @@ requires-dist = [
     { name = "gamekit", git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&tag=v0.1.9" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.168.1" },
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.15" },
+    { name = "kit-onnx", git = "https://github.com/handl-lang/kit-onnx.git?tag=v0.1.0" },
     { name = "mlopt-carriers", editable = "packages/mlopt-carriers" },
     { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.8" },
     { name = "mlopt-cuda", editable = "packages/mlopt-cuda" },
     { name = "mlopt-discovery", editable = "packages/mlopt-discovery" },
     { name = "mlopt-dtypes", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-dtypes&tag=v0.1.8" },
     { name = "mlopt-host-tensor", editable = "packages/mlopt-host-tensor" },
-    { name = "mlopt-onnx", editable = "packages/mlopt-onnx" },
     { name = "mlopt-orchestrator", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-orchestrator&tag=v0.1.8" },
     { name = "mlopt-torch", editable = "packages/mlopt-torch" },
     { name = "mutmut", marker = "extra == 'dev'", specifier = ">=3.8.0" },
@@ -2364,28 +2376,6 @@ dependencies = [
 requires-dist = [
     { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.8" },
     { name = "numpy", specifier = ">=1.24" },
-]
-
-[[package]]
-name = "mlopt-onnx"
-version = "0.1.0.dev0"
-source = { editable = "packages/mlopt-onnx" }
-dependencies = [
-    { name = "mlopt-core" },
-    { name = "mlopt-dtypes" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "onnx" },
-    { name = "onnxruntime" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "mlopt-core", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-core&tag=v0.1.8" },
-    { name = "mlopt-dtypes", git = "https://github.com/handl-lang/eqsat.git?subdirectory=packages%2Fmlopt-dtypes&tag=v0.1.8" },
-    { name = "numpy", specifier = ">=1.24" },
-    { name = "onnx", specifier = ">=1.16" },
-    { name = "onnxruntime", specifier = ">=1.17" },
 ]
 
 [[package]]

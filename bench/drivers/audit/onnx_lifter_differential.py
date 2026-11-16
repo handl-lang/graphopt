@@ -5,7 +5,7 @@ producers, one wire contract" (``host/project/reports/
 onnx_lifter_rust_spike.md`` §verification).  The Rust crate
 ``source-onnx`` lifts an ``.onnx`` model to the hnl_codec Term-JSON
 envelope + a safetensors leaf side channel **without Python**; the
-Python ``mlopt_onnx.OnnxSource`` (``lift_model`` +
+Python ``kit_onnx.OnnxSource`` (``lift_model`` +
 ``hnl_codec.term_to_json``) is the oracle.  This driver runs the same
 model through both and compares.
 
@@ -98,8 +98,8 @@ from mlopt_discovery.hnl_codec import (  # noqa: E402
     term_from_json,
     term_to_json,
 )
-from mlopt_onnx.arrays import DTYPE_NAMES  # noqa: E402
-from mlopt_onnx.lift import lift_model  # noqa: E402
+from kit_onnx.arrays import DTYPE_NAMES  # noqa: E402
+from kit_onnx.lift import lift_model  # noqa: E402
 
 # Deep terms (whisper's 241-node DAG flattens deep) need headroom —
 # set after imports; the limit is checked at call time.
@@ -112,7 +112,7 @@ try:
         Path(_onnx.__file__).parent
         / "backend/test/data/light/light_resnet50.onnx"
     )
-except Exception:  # pragma: no cover - onnx is a hard dep of mlopt-onnx
+except Exception:  # pragma: no cover - onnx is a hard dep of kit-onnx
     _RESNET_DEFAULT = Path("/nonexistent/light_resnet50.onnx")
 
 _WHISPER_DEFAULT = (
@@ -181,7 +181,7 @@ _NUMPY_TO_NAME = {
 
 def _py_refusal(e: BaseException) -> dict:
     """Classify a Python lift failure for refusal-parity comparison."""
-    from mlopt_onnx.errors import (
+    from kit_onnx.errors import (
         OnnxImportError,
         UnsupportedOnnxOpError,
     )

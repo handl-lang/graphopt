@@ -10,9 +10,11 @@ live under `packages/` (`mlopt-core` — the torch-free engine;
 `mlopt-torch` — PyTorch adapters; `mlopt-carriers` — carrier
 laws/executors; `mlopt-cuda` — the CUDA-graph runner;
 `mlopt-orchestrator` — the backend-neutral pipeline;
-`mlopt-onnx` — the ONNX backend (ADR 0006: `OnnxSink` lowers IR to
+the ONNX backend `kit-onnx` — ADR 0006: `OnnxSink` lowers IR to
 a checked ONNX artifact, `OnnxSource` lifts ONNX graphs back to IR;
-both verified through onnxruntime);
+both verified through onnxruntime — **split to
+`handl-lang/kit-onnx` in P3 Step D-1** (was `packages/mlopt-onnx`;
+pin `kit-onnx` git dep, import `kit_onnx`);
 `mlopt-discovery` — the law-discovery engine, formerly
 `tools/law_*.py`; invoke as `python -m mlopt_discovery.<mod>`;
 the game layer is extracted to `packages/gamekit/` (plan 0032
@@ -59,8 +61,9 @@ package/import names are unchanged.  The substrate-only test files
 travelled with them — domain-bound test functions carved out live in
 `tests/test_substrate_domain_edges.py`.  Coverage floors now apply
 per-repo: this repo's wall is the domain packages
-(`fail_under=100` on `mlopt_torch`/`mlopt_carriers`/`mlopt_cuda`/
-`mlopt_onnx` + the 99% `mlopt_discovery` ratchet); the substrate and
+(`fail_under=100` on `mlopt_torch`/`mlopt_carriers`/`mlopt_cuda`;
+`mlopt_onnx` split to handl-lang/kit-onnx in P3 Step D-1) + the 99%
+`mlopt_discovery` ratchet); the substrate and
 game floors were re-measured in their own repos (56% / 98%).
 
 **The research/measurement surface is `bench/`** — the dissolved
@@ -300,8 +303,8 @@ uv run pytest                 # 6,867 tests; does NOT finish in 30 min on
                               # either serial or `-n 2` (see the table
                               # below).  Iterate with `-m "not slow"`.
                               # Single-process: see the warning below.
-coverage run -m pytest tests/ -q   # source list includes mlopt_discovery + mlopt_onnx
-coverage report -m --omit="*/mlopt_discovery/*"   # the six: fail_under=100
+coverage run -m pytest tests/ -q   # source list: the four shipped packages + mlopt_discovery
+coverage report -m --omit="*/mlopt_discovery/*"   # the shipped packages: fail_under=100
 coverage report -m --include="*/mlopt_discovery/*" --fail-under=99   # ratchet floor — measured 99%; tighten, never lower
 ```
 
@@ -598,9 +601,10 @@ on `mlopt_cuda`; import `CudaGraphRunner` from `mlopt_cuda`.
 - Line length 72 (ruff). E501/B008/SIM108 intentionally ignored — see
   `[tool.ruff.lint]` for rationale.
 - Coverage floor: `fail_under = 100` in `[tool.coverage.report]` —
-  the suite is pinned at 100% for the original packages plus
-  `mlopt_onnx` (which climbed to the wall in
-  `project/retros/onnx-package.md`); new branches need tests (or a
+  the suite is pinned at 100% for the shipped packages
+  (`mlopt_torch`/`mlopt_carriers`/`mlopt_cuda`; `mlopt_onnx` climbed to
+  the wall here, then split to handl-lang/kit-onnx in P3 Step D-1 —
+  see `project/retros/onnx-package.md`); new branches need tests (or a
   justified `pragma: no cover`).
   `mlopt_discovery` joined the source list after its staged climb
   and sits under a **pinned ratchet floor** (`--fail-under=99` at

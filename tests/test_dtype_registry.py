@@ -2,7 +2,7 @@
 
 ``docs/reports/arch_audit_graphopt_packages.md`` §3 found the dtype
 tables duplicated across ``mlopt_torch.export`` (torch.dtype ↔
-safetensors tag), ``mlopt_onnx.arrays`` (IR name ↔ NumPy ↔ ONNX ↔
+safetensors tag), ``kit_onnx.arrays`` (IR name ↔ NumPy ↔ ONNX ↔
 onnxruntime) and the name-resolution idiom in ``torch_bridge`` /
 ``mlopt_carriers.trace``.  ``mlopt_dtypes`` is the single table; these
 tests pin that every consumer's derived view still agrees with the
@@ -119,14 +119,14 @@ def test_safetensors_container_roundtrip_per_dtype(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-#  consumer: mlopt_onnx.arrays tables
+#  consumer: kit_onnx.arrays tables
 # ---------------------------------------------------------------------------
 
 
 def test_onnx_dtype_names_derive_from_registry():
     pytest.importorskip("onnx")
     pytest.importorskip("onnxruntime")
-    from mlopt_onnx.arrays import (
+    from kit_onnx.arrays import (
         _NUMPY_TO_ONNX,
         _ORT_TO_NUMPY,
         DTYPE_NAMES,

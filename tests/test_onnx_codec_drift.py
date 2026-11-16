@@ -1,7 +1,7 @@
 """ONNX codec-table drift guards — ADR-0178 WP0a.
 
-``mlopt_onnx.opmap`` (IR → ONNX, ~169 entries) and
-``mlopt_onnx.liftmap`` (ONNX → IR, ~107 entries) were the last
+``kit_onnx.opmap`` (IR → ONNX, ~169 entries) and
+``kit_onnx.liftmap`` (ONNX → IR, ~107 entries) were the last
 unguarded codec tables (``host/project/reports/
 p3_codec_consolidation_spike.md`` §1b).  This file guards them the
 way ``test_surface_table_drift.py`` guards the hnl/modelproj/torch
@@ -475,7 +475,7 @@ def _declarative_specs() -> dict[
     → 2; ``_REDUCERS`` → 1 plus a ``dim`` variant exercising the
     axes-as-input spelling; ``_CASTS`` → 1.
     """
-    from mlopt_onnx.opmap import (
+    from kit_onnx.opmap import (
         _BINARY,
         _CASTS,
         _COMPARISON,
@@ -528,8 +528,8 @@ def _emitted_nodes(name: str) -> list[tuple[str, int]]:
     ``getitem`` is exercised against a ``max`` producer emitted in
     the same builder first — the only spelling it lowers.
     """
-    from mlopt_onnx.lower import GraphBuilder
-    from mlopt_onnx.opmap import ONNX_BINDINGS
+    from kit_onnx.lower import GraphBuilder
+    from kit_onnx.opmap import ONNX_BINDINGS
 
     if name in _PROBE_ARGS:
         args, attr_variants = _PROBE_ARGS[name], _PROBE_ATTRS[name]
@@ -561,13 +561,13 @@ def _emitted_nodes(name: str) -> list[tuple[str, int]]:
 class TestOnnxBindingsTable:
     def test_covered_op_set_is_pinned(self) -> None:
         """``supported_ops`` is exactly this set — additions are loud."""
-        from mlopt_onnx.opmap import ONNX_BINDINGS
+        from kit_onnx.opmap import ONNX_BINDINGS
 
         assert frozenset(ONNX_BINDINGS) == _ONNX_BINDINGS_OPS
 
     def test_probe_table_covers_every_binding(self) -> None:
         """Every binding has a probe spec (or a named exception)."""
-        from mlopt_onnx.opmap import (
+        from kit_onnx.opmap import (
             _BINARY,
             _CASTS,
             _COMPARISON,
@@ -585,7 +585,7 @@ class TestOnnxBindingsTable:
             | set(_CASTS)
         )
         probed = declared | set(_PROBE_ARGS) | _NEVER_NODE_EMITS
-        from mlopt_onnx.opmap import ONNX_BINDINGS
+        from kit_onnx.opmap import ONNX_BINDINGS
 
         assert set(ONNX_BINDINGS) == probed, (
             "ONNX_BINDINGS gained/lost ops without a probe spec: "
@@ -594,7 +594,7 @@ class TestOnnxBindingsTable:
 
     def test_every_key_is_a_real_ir_op(self) -> None:
         """Forward guard — each claimed IR op exists in the vocabulary."""
-        from mlopt_onnx.opmap import ONNX_BINDINGS
+        from kit_onnx.opmap import ONNX_BINDINGS
 
         oracle = _ir_op_oracle()
         missing = sorted(set(ONNX_BINDINGS) - oracle)
@@ -613,7 +613,7 @@ class TestOnnxBindingsTable:
         host-tensor surface cannot spell join ``_NON_HOST_OPS`` by
         name, so a typo'd or renamed op fails here.
         """
-        from mlopt_onnx.opmap import ONNX_BINDINGS
+        from kit_onnx.opmap import ONNX_BINDINGS
 
         ops = host_ops()
         assert ops, "host_surface.json loaded empty — dep broke"
@@ -637,8 +637,8 @@ class TestOnnxBindingsTable:
         ``op_type`` fails ``defs.get_schema``, and an input count
         outside ``min_input``/``max_input`` fails the arity assert.
         """
-        from mlopt_onnx.errors import UnsupportedOnnxOpError
-        from mlopt_onnx.opmap import ONNX_BINDINGS
+        from kit_onnx.errors import UnsupportedOnnxOpError
+        from kit_onnx.opmap import ONNX_BINDINGS
 
         for name in sorted(ONNX_BINDINGS):
             if name in _NEVER_NODE_EMITS:
@@ -673,7 +673,7 @@ class TestOnnxBindingsTable:
 
 
 def _declarative_names() -> set[str]:
-    from mlopt_onnx.opmap import (
+    from kit_onnx.opmap import (
         _BINARY,
         _CASTS,
         _COMPARISON,
@@ -820,7 +820,7 @@ def _minted_ir_ops() -> frozenset[str]:
     parallel table — so a new ``g.mint("typo", ...)`` is caught by
     the oracle check below.
     """
-    import mlopt_onnx.liftmap as lm
+    import kit_onnx.liftmap as lm
 
     path = Path(lm.__file__)
     tree = ast.parse(path.read_text())
@@ -882,13 +882,13 @@ def _schema_at(op_type: str, opset: int) -> Any:
 class TestOnnxLiftsTable:
     def test_covered_op_set_is_pinned(self) -> None:
         """``ONNX_LIFTS`` keys are exactly this set — additions loud."""
-        from mlopt_onnx.liftmap import ONNX_LIFTS
+        from kit_onnx.liftmap import ONNX_LIFTS
 
         assert frozenset(ONNX_LIFTS) == _ONNX_LIFTS_OPS
 
     def test_every_key_is_a_real_onnx_op(self) -> None:
         """Forward guard — each lifted ``op_type`` has a real schema."""
-        from mlopt_onnx.liftmap import ONNX_LIFTS
+        from kit_onnx.liftmap import ONNX_LIFTS
 
         missing = sorted(
             k for k in ONNX_LIFTS if not _schema_in_window(k)
@@ -936,7 +936,7 @@ class TestOnnxLiftsTable:
         exact-arity tables and across the whole lift window for the
         reducers (axes moved attribute→input at opset 18).
         """
-        from mlopt_onnx.liftmap import (
+        from kit_onnx.liftmap import (
             _BINARY,
             _REDUCERS,
             _UNARY,

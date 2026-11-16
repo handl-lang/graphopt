@@ -16,7 +16,7 @@ dependencies = [
     "mlopt-cuda",
     "mlopt-discovery",
     "discoverykit",
-    "mlopt-onnx",
+    "kit-onnx",
     "mlopt-host-tensor",
     "mlopt-dtypes",
     "gamekit",
@@ -141,7 +141,7 @@ mlopt-torch = { workspace = true }
 mlopt-carriers = { workspace = true }
 mlopt-cuda = { workspace = true }
 mlopt-discovery = { workspace = true }
-mlopt-onnx = { workspace = true }
+kit-onnx = { git = "https://github.com/handl-lang/kit-onnx.git", tag = "v0.1.0" }
 mlopt-host-tensor = { workspace = true }
 mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory = "packages/mlopt-dtypes", tag = "v0.1.8" }
 
@@ -170,14 +170,14 @@ paths = ["packages", "tests"]
 # "orchestrator imports no backend" moved to handl-lang/eqsat, "the
 # game kernel is substrate-free" to handl-lang/gamekit.  What stays:
 # the domain stack's own layering — discovery sits above the backend
-# family; onnx is a self-contained backend over the (external) core.
+# family.  (kit-onnx — the ONNX backend, formerly mlopt-onnx — split to
+# handl-lang/kit-onnx in P3 Step D-1; its layering contract lives there.)
 [tool.importlinter]
 root_packages = [
     "mlopt_torch",
     "mlopt_carriers",
     "mlopt_cuda",
     "mlopt_discovery",
-    "mlopt_onnx",
     "mlopt_dtypes",
     "mlopt_host_tensor",
 ]
@@ -188,11 +188,8 @@ include_external_packages = true
 # `TORCH_BINDINGS`, and the torch sink builds its executor table from
 # the carrier lowerings), so the two are genuinely bidirectional and
 # must not be split across layers.  `mlopt_cuda` sits above them (it
-# depends on `mlopt_torch`).  `mlopt_onnx` is the second backend (ADR
-# 0006): it implements the `Sink` port over `onnx`/`onnxruntime` and
-# depends on (external) `mlopt_core` alone, so it sits at the bottom.
-# `mlopt_discovery` reads everything and nothing may depend back on
-# it, so it sits above the whole stack.
+# depends on `mlopt_torch`).  `mlopt_discovery` reads everything and
+# nothing may depend back on it, so it sits above the whole stack.
 [[tool.importlinter.contracts]]
 name = "dependency layers"
 type = "layers"
@@ -200,7 +197,6 @@ layers = [
     "mlopt_discovery",
     "mlopt_cuda",
     "mlopt_torch : mlopt_carriers",
-    "mlopt_onnx : mlopt_host_tensor",
     # The dtype registry is a leaf every backend reads — it sits below
     # the whole stack and nothing may depend back on it.
     "mlopt_dtypes",
@@ -221,7 +217,6 @@ source_modules = [
     "mlopt_torch",
     "mlopt_carriers",
     "mlopt_cuda",
-    "mlopt_onnx",
     "mlopt_host_tensor",
     "mlopt_dtypes",
 ]
@@ -264,7 +259,6 @@ extra-paths = [
     "packages/mlopt-carriers/src",
     "packages/mlopt-cuda/src",
     "packages/mlopt-discovery/src",
-    "packages/mlopt-onnx/src",
     "packages/mlopt-host-tensor/src",
     # mlopt-core/-orchestrator (eqsat) and gamekit resolve through the
     # installed git deps — no src path needed.
@@ -283,10 +277,11 @@ error-on-warning = false
 # yet — the move from tools/ staged its coverage climb (see
 # project/retros/discovery-package.md and the ratchet below); the
 # gate runs a second `coverage report` with the pinned discovery floor.
-# mlopt_onnx joined the 100 wall after its own climb (see
-# project/retros/onnx-package.md) — it reports in the main wall, not
-# the discovery ratchet.
-source = ["mlopt_torch", "mlopt_carriers", "mlopt_cuda", "mlopt_discovery", "mlopt_onnx"]
+# mlopt_onnx (the ONNX backend) climbed to the 100 wall in this repo
+# (see project/retros/onnx-package.md), then split to
+# handl-lang/kit-onnx in P3 Step D-1 — its coverage floor lives there
+# now; the remaining packages report in the main wall.
+source = ["mlopt_torch", "mlopt_carriers", "mlopt_cuda", "mlopt_discovery"]
 branch = true
 omit = ["*/tests/*"]
 

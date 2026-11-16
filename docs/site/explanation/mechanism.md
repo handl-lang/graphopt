@@ -91,7 +91,7 @@ representations from drifting silently.
 In [`eqsat`](https://github.com/handl-lang/eqsat): `mlopt_core` (IR,
 `EGraph`, laws, `verify_certificate`, cost models) ·
 `mlopt_orchestrator` (`Optimizer`, `search`, `lower`) — pinned here as
-git deps. In this repo: `mlopt_torch` / `mlopt_onnx` (the
+git deps. In this repo: `mlopt_torch` / `kit_onnx` (the
 `Source`/`Sink` ports) · `mlopt_discovery` (the meta-layer) ·
 `bench/drivers/` (measurement probes).
 
@@ -101,7 +101,7 @@ ADR-0174/0175/0176: [`engine-eqsat`](https://github.com/handl-lang/engine-eqsat)
 [`kit-eqsat`](https://github.com/handl-lang/kit-eqsat) (the canonical
 `LAW_FORMAT = 2` law corpus — kit data, not code), and
 [`source-onnx`](https://github.com/handl-lang/source-onnx) (the Rust
-ONNX→Term-JSON lifter; `mlopt_onnx.OnnxSource` stays the oracle).
+ONNX→Term-JSON lifter; `kit_onnx.OnnxSource` stays the oracle).
 
 The full account — with the measured asides — is
 [`docs/mechanism.md`](https://github.com/handl-lang/graphopt/blob/main/docs/mechanism.md)

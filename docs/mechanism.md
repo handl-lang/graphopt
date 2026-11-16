@@ -345,7 +345,7 @@ record is `project/GOALS.md` §G0 and `packages/mlopt-handl-peer/README.md`.)
 | Mint (meta) | `mlopt_discovery.antiunify` (layer 1 — definitional atoms) · `mlopt_discovery.handler_synth` (layer 2 — handler bodies) · `bench/drivers/mint/atom_law_loop.py` (layer 3 — law synthesis per atom) · `bench/drivers/mint/atom_synth_loop.py` (the composed loop) |
 | Screen / sweep | `bench/drivers/screen/exposure_screen.py` (law-LHS exposure census) · `bench/drivers/screen/discovery_scale.py` (budgeted corpus sweep + novelty pass) · `bench/drivers/screen/exposed_discovery.py` (per-model discovery driver) |
 | Substrate | `mlopt_discovery.combinator` (`BASIS`, `dag_to_comb` / `comb_to_dag`) · `bench/drivers/bridge/combinator_probe.py` (round-trip + `loop`-spell gates) |
-| Backends | `mlopt_torch` (`TorchSource`/`TorchSink`) · `mlopt_onnx` (`OnnxSource`/`OnnxSink`, ADR 0006) |
+| Backends | `mlopt_torch` (`TorchSource`/`TorchSink`) · `kit_onnx` (`OnnxSource`/`OnnxSink`, ADR 0006) |
 | Coherence (meta) | `mlopt_discovery.coherence` (`--emit-basis`) · `mlopt_discovery.coherence2` (stratification / reach / mediators) · `mlopt_discovery.evidence` (sqlite verdict store) |
 
 ## See also

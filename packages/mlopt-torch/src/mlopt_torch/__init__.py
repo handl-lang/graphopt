@@ -86,7 +86,7 @@ def register() -> None:
 
     Explicit seam — importing ``mlopt_torch`` registers nothing; call
     ``mlopt_torch.register()`` at the entry point (the same pattern as
-    ``mlopt_kernel.play.register()`` / ``mlopt_onnx.register()``).
+    ``mlopt_kernel.play.register()`` / ``kit_onnx.register()``).
     Registers ``"torch"`` with :class:`TorchSource` + ``TorchSink``
     (``"torch"`` target), ``TorchComposer`` and ``TorchMeter`` as lazy
     factories — ``build_backend`` assembles the full port set.  A
