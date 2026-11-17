@@ -146,7 +146,7 @@ benchkit = { git = "https://github.com/handl-lang/gamekit.git", subdirectory = "
 # discoverykit (plan 0034 phase 1): the domain-free mining core
 # extracted from the discovery engine (mlopt-discovery, now
 # handl-lang/kit-discovery in P3 Step D-1d) — pinned git dep below.
-discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.26" }
+discoverykit = { git = "https://github.com/handl-lang/discoverykit.git", subdirectory = "packages/discoverykit", tag = "v0.1.28" }
 # kit-torch (P3 Step D-1e): the PyTorch adapters/backend, split to
 # handl-lang/kit-torch — pinned git dep at the v0.1.4 tag.
 kit-torch = { git = "https://github.com/handl-lang/kit-torch.git", tag = "v0.1.8" }
@@ -156,7 +156,7 @@ kit-carriers = { git = "https://github.com/handl-lang/kit-carriers.git", tag = "
 # kit-cuda (P3 Step D-1c): the CUDA-graph delivery runner, split to
 # handl-lang/kit-cuda — pinned git dep at the v0.1.5 tag.
 kit-cuda = { git = "https://github.com/handl-lang/kit-cuda.git", tag = "v0.1.9" }
-kit-discovery = { git = "https://github.com/handl-lang/kit-discovery.git", tag = "v0.1.8" }
+kit-discovery = { git = "https://github.com/handl-lang/kit-discovery.git", tag = "v0.1.10" }
 kit-onnx = { git = "https://github.com/handl-lang/kit-onnx.git", tag = "v0.1.6" }
 # kit-host-tensor (P3 Step D-1f): the host-tensor backend, split to
 # handl-lang/kit-host-tensor — pinned git dep at the v0.1.4 tag.
