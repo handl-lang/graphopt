@@ -32,6 +32,7 @@ Seats (shipped names unioned with the ``deliver`` board):
 
 from __future__ import annotations
 
+import math
 import random
 from typing import Any
 
@@ -63,11 +64,18 @@ _BOARD = "deliver"
 
 
 #: Broadcast state features — progress through the drain, the best
-#: measured speedup so far, the board's eligibility flags, and the
+#: measured speedup so far, the board's eligibility flags, the
 #: workload-shape facts (``DeliveryState``'s ``n_inputs`` /
 #: ``n_enodes`` / ``n_params`` / ``lowprec`` — which config kinds
 #: pay is shape-dependent: cuda-graph wants static CUDA shapes,
-#: compile wants fusible regions, etc.).
+#: compile wants fusible regions, etc.), and the v2 measured
+#: signals: the construction-time eager median (``st:eager_ms`` —
+#: v1 never exposed the absolute timing scale), scored/declined
+#: referee counts, the margin-gated ``committed`` speedup, and the
+#: big-model regime flag.  Action/rel features add the per-kind
+#: measured speedups (``x:meas:*``), tried flags, kind×fusible
+#: interactions, the ``CONFIGS`` preference index (``a:pref``) and
+#: the stop-vs-run mirrors (``x:stop:*`` vs ``x:act:*``).
 def _state_feats(state: Any) -> dict[str, float]:
     return {
         "st:steps": state.steps / 8.0,
@@ -82,7 +90,121 @@ def _state_feats(state: Any) -> dict[str, float]:
         "st:n_enodes": min(state.n_enodes, 8192) / 8192.0,
         "st:n_params": min(state.n_params, 1 << 30) / float(1 << 30),
         "st:lowprec": float(state.lowprec),
+        # v2 measured signals — all observable at decision time.
+        # ``eager_med_ms`` is measured at board construction (the
+        # shipped fallback's own number) but v1 never exposed it;
+        # the absolute scale (0.1 ms hnl kernels vs 250 ms whisper
+        # encoders) is the single strongest eager-win predictor in
+        # the v7 corpus.  ``n_scored``/``n_declined`` count referee
+        # outcomes so far; ``committed`` is the margin-gated
+        # speedup ``committed()`` would ship (``st:speedup`` is the
+        # raw argmin ratio — they differ exactly when the best
+        # config is inside the WIN_MARGIN noise band); ``big``
+        # flags the regime where no runner paid in v7 (huge eager
+        # step or huge term DAG — memory/launch bound).
+        "st:eager_ms": _eager_feat(state),
+        "st:n_scored": _n_scored(state) / 8.0,
+        "st:n_declined": _n_declined(state) / 8.0,
+        "st:committed": min(_committed(state), 4.0),
+        "st:big": _big_model(state),
     }
+
+
+def _eager_feat(state: Any) -> float:
+    """Log-scaled eager median ms — 0.0 when unmeasured.
+
+    ``eager_med_ms`` spans ~0.05 ms (tiny hnl kernels) to ~250 ms
+    (whisper encoder steps); log10/3 maps that to roughly
+    [-0.45, 0.85].  Every read is guarded — a state without the
+    field (tests, foreign boards) contributes 0.0.
+    """
+    raw = getattr(state, "eager_med_ms", None)
+    if raw is None:
+        return 0.0
+    try:
+        emed = float(raw)
+    except (TypeError, ValueError):
+        return 0.0
+    if emed <= 0:
+        return 0.0
+    return math.log10(max(emed, 1e-4)) / 3.0
+
+
+def _n_scored(state: Any) -> int:
+    """Referee records with a measured ``med_ms`` so far."""
+    results = getattr(state, "results", None) or {}
+    return sum(1 for r in results.values() if isinstance(r, dict) and r.get("med_ms") is not None)
+
+
+def _n_declined(state: Any) -> int:
+    """Referee records that produced no measurement (decline/skip)."""
+    results = getattr(state, "results", None) or {}
+    return sum(1 for r in results.values() if isinstance(r, dict) and r.get("med_ms") is None)
+
+
+def _committed(state: Any) -> float:
+    """``committed_speedup`` when the state exposes it, else 1.0."""
+    try:
+        return float(getattr(state, "committed_speedup", 1.0) or 1.0)
+    except Exception:  # noqa: BLE001 — a foreign state never sinks a row
+        return 1.0
+
+
+def _big_model(state: Any) -> float:
+    """1.0 in the regime where v7 measured no runner paying.
+
+    Huge eager steps (>30 ms — whisper/t5 encoder arms) and huge
+    term DAGs (>300 enodes) were uniformly eager-wins in the v7
+    corpus; the flag lets the stop-vs-run interactions price that
+    regime without a hand threshold on the continuous features.
+    """
+    emed = getattr(state, "eager_med_ms", None) or 0.0
+    enodes = getattr(state, "n_enodes", 0) or 0
+    try:
+        if float(emed) > 30.0 or int(enodes) > 300:
+            return 1.0
+    except (TypeError, ValueError):  # noqa: BLE001
+        return 0.0
+    return 0.0
+
+
+def _measured_kinds(state: Any) -> tuple[dict[str, float], set[str]]:
+    """``(kind -> best measured speedup, tried kinds)`` from results.
+
+    The referee records carry ``med_ms`` plus the config's OWN
+    paired-round eager median (``eager_med_ms``) — the drift-matched
+    baseline ``committed_speedup`` compares against.  A kind's
+    measured value is the best speedup any evaluated config of that
+    kind posted (capped at 4.0); a kind is *tried* once any result
+    exists for it, scored or declined.  Both are honest
+    decision-time signals: they only ever read ``state.results``.
+    """
+    best: dict[str, float] = {}
+    tried: set[str] = set()
+    results = getattr(state, "results", None) or {}
+    fallback_eager = getattr(state, "eager_med_ms", None)
+    for name, rec in results.items():
+        if not isinstance(rec, dict):
+            continue
+        kind = _config_kind(str(name))
+        tried.add(kind)
+        med = rec.get("med_ms")
+        if med is None:
+            continue
+        try:
+            med_f = float(med)
+            base = rec.get("eager_med_ms") or fallback_eager
+            if base is None:
+                continue
+            base_f = float(base)
+        except (TypeError, ValueError):
+            continue
+        if med_f <= 0 or base_f <= 0:
+            continue
+        speedup = min(base_f / med_f, 4.0)
+        if kind not in best or speedup > best[kind]:
+            best[kind] = speedup
+    return best, tried
 
 
 def _config_kind(name: str) -> str:
@@ -114,7 +236,13 @@ _KINDS: tuple[str, ...] = (
 
 
 def _act_feats(action: Any, row: dict[str, float]) -> dict[str, float]:
-    """Action features — the config's kind one-hot, alias flag, stop."""
+    """Action features — the config's kind one-hot, alias flag, stop.
+
+    ``a:pref`` is the config's position in ``deliver_game.CONFIGS``
+    preference order (0 = richest composition first, 1 = ``compile``
+    last) — a learned prior can then price "try the expensive
+    composition first" separately from the kind identity itself.
+    """
     if action == "stop":
         return {"a:stop": 1.0, "x:stop:speedup": row.get("st:speedup", 0.0)}
     name = str(action)
@@ -125,20 +253,60 @@ def _act_feats(action: Any, row: dict[str, float]) -> dict[str, float]:
         out["a:fuse"] = 1.0
     if "graph" in name:
         out["a:graph"] = 1.0
+    try:
+        from mlopt.deliver_game import CONFIGS  # lazy: torch-free path
+
+        out["a:pref"] = CONFIGS.index(name) / max(1, len(CONFIGS) - 1)
+    except (ImportError, ValueError):  # noqa: BLE001 — unlisted config
+        out["a:pref"] = 1.0
     return out
 
 
 def _rel_feats(state: Any, action: Any, row: dict[str, float]) -> dict[str, float]:
-    """State-relative action features — is this config still pending?
+    """State-relative action features — pending, measured, stop price.
 
-    ``x:pending`` marks actions still in the unevaluated pool (every
-    legal config is, by construction — the feature exists so a
-    trained prior can learn *which kind* of pending move pays);
-    ``x:stop:improve`` prices stopping against banked speedup.
+    v2 additions, all honest decision-time signals:
+
+    * ``x:meas:<kind>`` — the best measured speedup (paired
+      eager/config medians) posted so far by a config of *this*
+      action's kind; 0.0 when the kind is unmeasured.  Lets the
+      prior learn "this kind already paid/didn't on THIS board"
+      rather than only the cross-case kind prior.
+    * ``x:tried:<kind>`` — any referee record exists for the kind
+      (scored or declined).
+    * ``x:kfus:<kind>`` — the board's fusible flag scoped to the
+      action's kind (fuse-family configs only exist when fusible,
+      but the interaction lets the prior price fuse-vs-graph
+      differently per board).
+    * ``x:act:eager_ms`` / ``x:act:big`` — the board's eager scale
+      and big-model flag emitted on *config* rows only; paired with
+      the ``x:stop:*`` mirrors below they are the stop-vs-run
+      interaction ("drain cheap boards, bail on huge ones").
+    * stop rows carry ``x:stop:committed`` (the margin-gated
+      speedup — not the raw argmin ``st:speedup``), ``n_pending``
+      and the same eager/big mirrors.
     """
     if action == "stop":
-        return {"x:stop:improve": row.get("st:speedup", 0.0)}
-    return {"x:pending": float(str(action) in state.pending)}
+        return {
+            "x:stop:speedup": row.get("st:speedup", 0.0),
+            "x:stop:improve": row.get("st:speedup", 0.0),
+            "x:stop:committed": row.get("st:committed", 0.0),
+            "x:stop:eager_ms": row.get("st:eager_ms", 0.0),
+            "x:stop:big": row.get("st:big", 0.0),
+            "x:stop:n_pending": len(getattr(state, "pending", ()) or ()) / 8.0,
+        }
+    name = str(action)
+    kind = _config_kind(name)
+    meas, tried = _measured_kinds(state)
+    out = {
+        "x:pending": float(name in (getattr(state, "pending", ()) or ())),
+        "x:act:eager_ms": row.get("st:eager_ms", 0.0),
+        "x:act:big": row.get("st:big", 0.0),
+        f"x:meas:{kind}": meas.get(kind, 0.0),
+        f"x:tried:{kind}": float(kind in tried),
+        f"x:kfus:{kind}": float(bool(getattr(state, "fusible", False))),
+    }
+    return out
 
 
 DELIVERY_FEATURES: tuple[str, ...] = (
@@ -155,14 +323,29 @@ DELIVERY_FEATURES: tuple[str, ...] = (
     "st:n_enodes",
     "st:n_params",
     "st:lowprec",
+    "st:eager_ms",
+    "st:n_scored",
+    "st:n_declined",
+    "st:committed",
+    "st:big",
     *(f"a:kind:{k}" for k in _KINDS),
     "a:alias",
     "a:fuse",
     "a:graph",
+    "a:pref",
     "a:stop",
     "x:stop:speedup",
     "x:pending",
     "x:stop:improve",
+    *(f"x:meas:{k}" for k in _KINDS),
+    *(f"x:tried:{k}" for k in _KINDS),
+    *(f"x:kfus:{k}" for k in _KINDS),
+    "x:act:eager_ms",
+    "x:act:big",
+    "x:stop:committed",
+    "x:stop:eager_ms",
+    "x:stop:big",
+    "x:stop:n_pending",
 )
 
 
