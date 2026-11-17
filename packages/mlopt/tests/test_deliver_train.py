@@ -17,6 +17,7 @@ from mlopt.deliver_train import (
     DeliveryCase,
     _block_means,
     _oracle_player,
+    aggregate_rewards,
     baked_table,
     board_of,
     cold_train,
@@ -476,3 +477,80 @@ def test_spec_weights_follow_weights_module(
     assert _spec().weights is None  # {} → honest cold start
     monkeypatch.setattr(mlopt.weights, "DELIVERY_PLAYER_WEIGHTS", {"a:stop": 0.25})
     assert _spec().weights == {"a:stop": 0.25}
+
+
+# ---------------------------------------------------------------------------
+#  aggregate_rewards — the opt-in de-noised collapses (v12)
+# ---------------------------------------------------------------------------
+
+
+def _rows() -> dict[str, list[dict[str, Any]]]:
+    """Two arms x two cases; case "big" dominates raw means."""
+    return {
+        "good": [
+            {"case": "flat", "reward": 1.0},
+            {"case": "big", "reward": 8.0},
+            {"case": "big", "reward": 8.0},  # median 8.0
+        ],
+        "bad": [
+            {"case": "flat", "reward": 0.9},
+            {"case": "big", "reward": 2.0},
+            {"case": "big", "reward": 4.0},  # median 3.0 — noisy draw
+        ],
+    }
+
+
+def test_aggregate_mean_is_the_shipped_default() -> None:
+    out = aggregate_rewards(_rows(), mode="mean")
+    # mean over ALL episode rows — the big case dominates.
+    assert out["good"] == round((1.0 + 8.0 + 8.0) / 3, 3)
+    assert out["bad"] == round((0.9 + 2.0 + 4.0) / 3, 3)
+
+
+def test_aggregate_median_uses_per_case_medians() -> None:
+    out = aggregate_rewards(_rows(), mode="median")
+    # good: flat 1.0, big median 8.0 -> median(1.0, 8.0) = 4.5
+    assert out["good"] == pytest.approx(4.5)
+    # bad: flat 0.9, big median 3.0 -> median(0.9, 3.0) = 1.95
+    assert out["bad"] == pytest.approx(1.95)
+
+
+def test_aggregate_case_norm_normalizes_per_case() -> None:
+    out = aggregate_rewards(_rows(), mode="case-norm")
+    # flat: good/best = 1.0/1.0 = 1.0; bad = 0.9/1.0 = 0.9
+    # big:  best = 8.0; good = 1.0, bad = 3.0/8.0 = 0.375
+    # means: good (1.0+1.0)/2 = 1.0; bad (0.9+0.375)/2 = 0.6375
+    assert out["good"] == pytest.approx(1.0)
+    assert out["bad"] == pytest.approx(0.6375)
+
+
+def test_aggregate_case_norm_flat_case_is_neutral() -> None:
+    """A case where every arm ties contributes ~1.0 to all arms."""
+    rows = {
+        "a": [{"case": "flat", "reward": 1.0}, {"case": "head", "reward": 4.0}],
+        "b": [{"case": "flat", "reward": 1.0}, {"case": "head", "reward": 2.0}],
+    }
+    out = aggregate_rewards(rows, mode="case-norm")
+    # flat: both 1.0; head: a=1.0, b=0.5 -> a=1.0, b=0.75
+    assert out["a"] == pytest.approx(1.0)
+    assert out["b"] == pytest.approx(0.75)
+
+
+def test_aggregate_rejects_unknown_mode() -> None:
+    with pytest.raises(ValueError, match="aggregate"):
+        aggregate_rewards(_rows(), mode="bogus")
+
+
+def test_held_out_accepts_aggregate(game_env) -> None:
+    """``held_out(aggregate=...)`` collapses through the same helper."""
+    script = _all_slow()
+    script["graph"] = (True, (3.0, 3.0))
+    cases = [_case(_FakeOptz(script), name="eval")]
+    player, *_ = train(cases, seed=0, epochs=1, imitate_epochs=0, budget=9)
+    means, errors, done = held_out(player, cases, seed=0, budget=9, aggregate="case-norm")
+    assert not errors
+    assert all(n == 1 for n in done.values())
+    # one case -> every arm is its own best or ties: scores in (0, 1].
+    assert all(0.0 < v <= 1.0 for v in means.values())
+    with pytest.raises(ValueError, match="aggregate"):
+        held_out(player, cases, seed=0, budget=9, aggregate="bogus")

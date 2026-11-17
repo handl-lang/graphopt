@@ -58,6 +58,7 @@ patches, and a :class:`DeliveryCase` can carry explicit eligibility
 
 from __future__ import annotations
 
+import statistics
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -68,7 +69,9 @@ import mlopt.deliver_game as _dg
 from mlopt.play import DELIVERY_SPEC
 
 __all__ = [
+    "AGGREGATE_MODES",
     "DeliveryCase",
+    "aggregate_rewards",
     "board_of",
     "baked_table",
     "cold_train",
@@ -383,6 +386,88 @@ def _block_means(totals: list[float], blocks: int) -> list[float]:
 #  Held-out evaluation — the arms table
 # ---------------------------------------------------------------------------
 
+#: Aggregation modes for :func:`aggregate_rewards` / ``held_out``'s
+#: ``aggregate`` parameter.  ``"mean"`` is the shipped default —
+#: every episode reward counts equally, so one high-reward case can
+#: dominate the whole table (the v11 finding: a single
+#: hyper-variance sub-ms dispatch cell contributed ~60% of every
+#: arm's mean while the other cases sat within noise of each
+#: other).
+AGGREGATE_MODES = ("mean", "median", "case-norm")
+
+
+def aggregate_rewards(
+    rows: dict[str, list[dict[str, Any]]], *, mode: str = "mean"
+) -> dict[str, float]:
+    """Collapse per-(arm, case) episode rows into per-arm scores.
+
+    *rows* maps an arm name to episode dicts carrying ``"reward"``
+    and ``"case"`` — the shape ``gamekit.engine.evaluate`` emits
+    (``"case"`` is the case's position index there; any hashable
+    case key works, and rows without one fall back to list
+    position).  The v12 corpus driver feeds the same shape from its
+    JSONL ledger.
+
+    Modes:
+
+    * ``"mean"`` — mean reward over ALL rows.  The shipped default,
+      unchanged: every episode counts equally.
+    * ``"median"`` — per-(arm, case) median reward (robust to a
+      single noisy episode draw), then the median across cases
+      (robust to a single outlier case).
+    * ``"case-norm"`` — per-(arm, case) median reward divided by the
+      BEST arm's median on that same case, averaged over the cases
+      the arm completed.  Each case contributes equally in
+      ``(0, 1]``; a case where every arm ties contributes ~1.0 to
+      all arms and cannot discriminate — flat/no-headroom cases go
+      neutral instead of diluting the table.  This is the v12
+      metric: reward scale differs by orders of magnitude across
+      cases (a sub-ms dispatch case scores ~16x where a 240 ms
+      encoder scores ~1.0x), and only *within-case* arm ordering
+      carries policy signal, so per-case ratio normalization is the
+      most defensible collapse.  A case whose best arm median is
+      ``<= 0`` cannot be normalized and is skipped for every arm.
+    """
+    if mode not in AGGREGATE_MODES:
+        raise ValueError(f"aggregate must be one of {AGGREGATE_MODES}, got {mode!r}")
+    if mode == "mean":
+        return {
+            name: round(sum(r["reward"] for r in rs) / len(rs), 3) if rs else float("nan")
+            for name, rs in rows.items()
+        }
+    # cells[arm][case_key] = [episode rewards]
+    cells: dict[str, dict[Any, list[float]]] = {}
+    for name, rs in rows.items():
+        for j, r in enumerate(rs):
+            if "reward" not in r:
+                continue
+            key = r.get("case", j)
+            cells.setdefault(name, {}).setdefault(key, []).append(float(r["reward"]))
+    meds: dict[str, dict[Any, float]] = {
+        name: {k: statistics.median(v) for k, v in per_case.items()}
+        for name, per_case in cells.items()
+    }
+    if mode == "median":
+        return {
+            name: round(statistics.median(per_case.values()), 3) if per_case else float("nan")
+            for name, per_case in meds.items()
+        }
+    # case-norm: per case, arm score = arm_median / best_arm_median.
+    case_keys = sorted({k for per_case in meds.values() for k in per_case}, key=repr)
+    best_by_case = {
+        k: max((m for m in (meds[a].get(k) for a in meds) if m is not None), default=None)
+        for k in case_keys
+    }
+    out: dict[str, float] = {}
+    for name, per_case in meds.items():
+        ratios = [
+            per_case[k] / best_by_case[k]
+            for k in per_case
+            if best_by_case.get(k) is not None and best_by_case[k] > 0
+        ]
+        out[name] = round(sum(ratios) / len(ratios), 4) if ratios else float("nan")
+    return out
+
 
 def held_out(
     trained: LearnedPlayer,
@@ -391,8 +476,9 @@ def held_out(
     seed: int = SEED,
     budget: int = BUDGET,
     cold_rl: LearnedPlayer | None = None,
+    aggregate: str = "mean",
 ) -> tuple[dict[str, float], dict[str, str], dict[str, int]]:
-    """Play the arms on held-out cases; mean speedup reward per arm.
+    """Play the arms on held-out cases; aggregate reward per arm.
 
     Arms mirror the kernel baker's table: ``random`` and ``playbook``
     from the registry, ``cold`` (weights={}), the *shipped* prior
@@ -408,12 +494,17 @@ def held_out(
     are attempted in the same arm-major/case order the monolithic
     call used; once a cell raises a poison signature the remaining
     cells are impossible (the context stays dead) and are recorded
-    as skipped, never scored.  Returns ``(means, errors, done)``:
-    per-arm mean reward over *completed* cells (an arm with fewer
+    as skipped, never scored.  ``aggregate`` selects the collapse —
+    see :func:`aggregate_rewards`; ``"mean"`` (default) is the
+    shipped behavior, ``"median"``/``"case-norm"`` are the opt-in
+    de-noised metrics.  Returns ``(means, errors, done)``:
+    per-arm aggregate reward over *completed* cells (an arm with fewer
     completed cells than cases is partial — ``done`` carries the
     count), per-arm first-error text, and per-arm completed-cell
     counts.
     """
+    if aggregate not in AGGREGATE_MODES:
+        raise ValueError(f"aggregate must be one of {AGGREGATE_MODES}, got {aggregate!r}")
     from gamekit.players import registry
 
     import mlopt.play  # noqa: PLC0415 — seats the deliver players
@@ -467,8 +558,5 @@ def held_out(
         for name in arms:
             if done[name] < len(ev) and name not in errors:
                 errors[name] = "skipped: CUDA context poisoned — cells not attempted"
-    means = {
-        name: round(sum(r["reward"] for r in rs) / len(rs), 3) if rs else float("nan")
-        for name, rs in rows.items()
-    }
+    means = aggregate_rewards(rows, mode=aggregate)
     return means, errors, done

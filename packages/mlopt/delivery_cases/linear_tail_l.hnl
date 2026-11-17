@@ -1,0 +1,15 @@
+--- v12 corpus case: stacked linear layers + pointwise tail at 256x512 (linear_tail scaled x4 flops)
+from "host-tensor" import tensor
+do {
+  l1 :: tensor.linear(x, w1, b1)
+  p1 :: tensor.tanh(l1)
+  p2 :: tensor.sigmoid(p1)
+  l2 :: tensor.linear(p2, w2, b2)
+  p3 :: tensor.mul(l2, tensor.sigmoid(l2))
+  p4 :: tensor.exp(tensor.mul(p3, tensor.full([256, 256], 0.02)))
+  p5 :: tensor.log1p(tensor.abs(p4))
+  p6 :: tensor.mul(p5, tensor.reciprocal(tensor.add(tensor.abs(p5), tensor.ones([256, 256]))))
+  p7 :: tensor.sub(p6, l1)
+  p8 :: tensor.add(p7, p1)
+  tensor.mul(p8, tensor.sigmoid(p6))
+}

@@ -1,0 +1,26 @@
+--- v12 corpus case: select-sort profile scaled x2 — shape-op dispatch chain at 128x128 + pointwise tail
+from "host-tensor" import tensor
+do {
+  n1 :: tensor.narrow(x, 0, 0, 64)
+  n2 :: tensor.narrow(x, 0, 64, 64)
+  c1 :: tensor.concat([n1, n2], 0)
+  s1 :: tensor.stack([n1, n2], 0)
+  sel :: tensor.select(s1, 0, 1)
+  sl :: tensor.slice(sel, 0, 0, 32)
+  u1 :: tensor.unsqueeze(sl, 0)
+  q1 :: tensor.squeeze(u1, 0)
+  r1 :: tensor.reshape(q1, [64, 64])
+  t1 :: tensor.transpose(r1, 0, 1)
+  f1 :: tensor.flip(t1, [1])
+  cs :: tensor.cumsum(t1, 1)
+  tr :: tensor.tril(t1, 0)
+  tu :: tensor.triu(t1, -1)
+  m1 :: tensor.add(tr, tu)
+  p1 :: tensor.tanh(m1)
+  p2 :: tensor.mul(p1, tensor.sigmoid(p1))
+  p3 :: tensor.sub(p2, r1)
+  p4 :: tensor.add(p3, cs)
+  p5 :: tensor.mul(p4, 0.5)
+  p6 :: tensor.mul(p5, tensor.reciprocal(tensor.add(tensor.abs(p4), tensor.ones([64, 64]))))
+  tensor.add(p6, f1)
+}

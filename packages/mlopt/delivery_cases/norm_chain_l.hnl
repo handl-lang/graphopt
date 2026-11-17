@@ -1,0 +1,17 @@
+--- v12 corpus case: norm+reduce dispatch at 16x128 — norm_dispatch profile scaled up (moderate eager, real headroom)
+from "host-tensor" import tensor
+do {
+  n1 :: tensor.layer_norm(x, [128])
+  n2 :: tensor.rms_norm(n1, [128])
+  s1 :: tensor.sum(n2, [1], true)
+  m1 :: tensor.mean(n2, [0], true)
+  a1 :: tensor.add(s1, m1)
+  p1 :: tensor.mul(a1, tensor.sigmoid(a1))
+  n3 :: tensor.layer_norm(p1, [128])
+  g1 :: tensor.mul(n3, tensor.sigmoid(n3))
+  g2 :: tensor.tanh(g1)
+  g3 :: tensor.sub(g2, n2)
+  g4 :: tensor.add(g3, p1)
+  g5 :: tensor.mul(g4, tensor.reciprocal(tensor.add(tensor.abs(g3), tensor.ones([16, 128]))))
+  tensor.add(g5, n1)
+}

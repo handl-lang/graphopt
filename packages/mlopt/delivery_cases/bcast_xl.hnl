@@ -1,0 +1,17 @@
+--- v12 corpus case: broadcast-heavy pointwise mix at 1536x1536 (between bcast_mid and broadcast_mix_l)
+from "host-tensor" import tensor
+do {
+  a1 :: tensor.mul(x, y)
+  a2 :: tensor.add(a1, x)
+  a3 :: tensor.tanh(a2)
+  a4 :: tensor.mul(a3, y)
+  a5 :: tensor.sub(a4, x)
+  a6 :: tensor.sigmoid(a5)
+  a7 :: tensor.add(a6, a3)
+  a8 :: tensor.mul(a7, tensor.reciprocal(tensor.add(tensor.abs(a6), tensor.ones([1536, 1536]))))
+  a9 :: tensor.sub(a8, a1)
+  a10 :: tensor.tanh(a9)
+  a11 :: tensor.add(a10, a7)
+  a12 :: tensor.mul(a11, a4)
+  tensor.sub(a12, a10)
+}

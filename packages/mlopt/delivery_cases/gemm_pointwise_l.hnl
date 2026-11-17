@@ -1,0 +1,16 @@
+--- v12 corpus case: GEMM front + interleaved pointwise between matmuls at 256x256 (gemm_pointwise scaled x2)
+from "host-tensor" import tensor
+do {
+  m1 :: tensor.matmul(x, y)
+  p1 :: tensor.tanh(m1)
+  p2 :: tensor.sigmoid(p1)
+  m2 :: tensor.matmul(p2, z)
+  p3 :: tensor.mul(p2, m2)
+  p4 :: tensor.exp(tensor.mul(p3, tensor.full([256, 256], 0.02)))
+  m3 :: tensor.matmul(p4, y)
+  p5 :: tensor.log1p(tensor.abs(m3))
+  p6 :: tensor.mul(p5, tensor.reciprocal(tensor.add(tensor.abs(p5), tensor.ones([256, 256]))))
+  p7 :: tensor.sub(p6, m2)
+  p8 :: tensor.add(p7, m1)
+  tensor.mul(p8, tensor.sigmoid(p6))
+}
