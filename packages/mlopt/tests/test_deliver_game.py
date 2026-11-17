@@ -761,3 +761,107 @@ def test_probe_arm_degrades_to_drain_on_unarmed_board(game_env) -> None:
     actions = [r.action for r in traj.reports]
     assert actions == [*CONFIGS, "stop"]
     assert not board.state.probes
+
+
+# ---------------------------------------------------------------------------
+#  Surrogate-top1 (exp1b) — learned argmin, ONE measurement
+# ---------------------------------------------------------------------------
+
+
+def _surrogate_npz(path: Any, *, feat: str = "a:kind:graph") -> Any:
+    """A minimal ridge artifact ranking one config first (lowest pred).
+
+    ``w`` carries a single -1.0 on *feat*'s column: the config whose
+    one-hot is set gets predicted ln(med_ms) = -1, every other pending
+    config 0 — argmin is exactly the config carrying *feat*.
+    """
+    import numpy as np
+
+    from mlopt.play import DELIVERY_FEATURES
+
+    mu = np.zeros(len(DELIVERY_FEATURES))
+    sd = np.ones(len(DELIVERY_FEATURES))
+    w = np.zeros(len(DELIVERY_FEATURES) + 1)
+    w[DELIVERY_FEATURES.index(feat)] = -1.0
+    np.savez(path, w=w, mu=mu, sd=sd, features=np.array(DELIVERY_FEATURES))
+    return path
+
+
+def test_surrogate_top1_picks_argmin_measures_once(
+    game_env, tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from gamekit.engine import run_episode
+    from gamekit.players import registry
+
+    npz = _surrogate_npz(tmp_path / "s.npz")
+    monkeypatch.setenv("MLOPT_DELIVERY_SURROGATE", str(npz))
+    # ``graph`` is the surrogate's pick AND the fast config (4ms vs
+    # eager 10ms); every other config is slower than eager.
+    optz = _FakeOptz({**{n: (True, (20.0, 20.0)) for n in CONFIGS}, "graph": (True, (4.0, 4.0))})
+    board = DeliveryBoard(_ctx(optz), player_name="t", budget=8)
+    traj = run_episode(board, registry.make("surrogate-top1", "deliver", seed=0)(0), 8)
+    actions = [r.action for r in traj.reports]
+    assert actions == ["graph", "stop"]
+    assert set(board.state.results) == {"graph"}  # ONE measurement
+    term = traj.terminal
+    assert term is not None
+    assert term.detail["best_config"] == "graph"
+    # reward = committed speedup − MOVE_COST·1 step (no probe spend)
+    assert term.reward == pytest.approx(10.0 / 4.0 - dg.MOVE_COST)
+
+
+def test_surrogate_top1_commit_gate_unchanged(
+    game_env, tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A surrogate pick that does NOT beat eager by WIN_MARGIN still
+    ships eager — the arm changes WHO gets measured, never the gate."""
+    from gamekit.engine import run_episode
+    from gamekit.players import registry
+
+    npz = _surrogate_npz(tmp_path / "s.npz")
+    monkeypatch.setenv("MLOPT_DELIVERY_SURROGATE", str(npz))
+    optz = _FakeOptz({n: (True, (20.0, 20.0)) for n in CONFIGS})  # all slow
+    board = DeliveryBoard(_ctx(optz), player_name="t", budget=8)
+    traj = run_episode(board, registry.make("surrogate-top1", "deliver", seed=0)(0), 8)
+    assert [r.action for r in traj.reports] == ["graph", "stop"]
+    term = traj.terminal
+    assert term is not None
+    assert term.detail["best_config"] is None
+    assert term.reward == pytest.approx(1.0 - dg.MOVE_COST)
+    assert board.committed().runner_name is None
+
+
+def test_surrogate_top1_requires_artifact(game_env, monkeypatch: pytest.MonkeyPatch) -> None:
+    """No env var and no variant path → honest error at make time —
+    the arm cannot fabricate a scorer."""
+    from gamekit.players import registry
+
+    monkeypatch.delenv("MLOPT_DELIVERY_SURROGATE", raising=False)
+    with pytest.raises(ValueError, match="surrogate artifact"):
+        registry.make("surrogate-top1", "deliver", seed=0)
+
+
+def test_surrogate_top1_variant_path_and_state_machine(tmp_path) -> None:
+    """``spec.variant['path']`` binds the artifact directly; the player
+    stops once a result exists and returns None when done."""
+    from gamekit.players.registry import PlayerSpec
+
+    npz = _surrogate_npz(tmp_path / "s.npz")
+    spec = PlayerSpec(
+        name="surrogate-top1", kind="scripted", boards=("deliver",), variant={"path": str(npz)}
+    )
+    mk = mlopt.play._make_surrogate("deliver", spec=spec, seed=0)
+    player = mk(0)
+    st = DeliveryState(
+        pending=("compile", "graph"),
+        cuda=True,
+        fusible=True,
+        compile_ok=True,
+        alias_spec=True,
+        eager_med_ms=10.0,
+    )
+    assert player(st) == "graph"  # lowest predicted ln(med_ms)
+    st.results = {"graph": {"med_ms": 4.0}}
+    assert player(st) == "stop"
+    st.done = True
+    assert player(st) is None

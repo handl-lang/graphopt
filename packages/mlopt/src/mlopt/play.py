@@ -47,11 +47,21 @@ Seats (shipped names unioned with the ``deliver`` board):
   Learned arms are deliberately NOT offered probe moves: the
   ``DELIVERY_SPEC`` featurizer was never trained on them, so
   ``register_legal`` keeps masking to ``pending + stop``.
+* ``surrogate-top1`` — the exp1b learned arm: an EXTERNAL ridge
+  surrogate (``.npz`` via ``MLOPT_DELIVERY_SURROGATE`` or
+  ``spec.variant["path"]`` — report-only experiment data, never a
+  shipped weight table) scores every pending config's
+  ``DELIVERY_SPEC`` row at move 0, the predicted argmin gets ONE
+  full referee evaluation, then ``stop``.  The ``WIN_MARGIN``-vs-
+  eager commit gate is unchanged, so a wrong pick costs one move
+  and ships eager.  ``registry.make`` raises ``ValueError`` when
+  no artifact is configured — the arm cannot fabricate a scorer.
 """
 
 from __future__ import annotations
 
 import math
+import os
 import random
 from typing import Any
 
@@ -575,6 +585,115 @@ def _make_probe_arm(domain: str, *, spec: PlayerSpec, seed: int = 0, ctx: Any = 
 
 
 # ---------------------------------------------------------------------------
+#  Surrogate arm (exp1b) — learned config scorer, ONE measurement
+# ---------------------------------------------------------------------------
+
+#: Env override naming the surrogate artifact — a ``.npz`` carrying
+#: ridge weights ``w`` (``n_features + 1``, intercept LAST), feature
+#: standardization ``mu``/``sd`` (``n_features`` each), and optionally
+#: a ``features`` name list (the ``DELIVERY_FEATURES`` order when the
+#: key is absent).  The artifact is REPORT-ONLY experiment data —
+#: the exp1 ridge lives in ``/home/luis/tmp/exp1`` and is deliberately
+#: NOT a shipped weight table: ``mlopt.weights`` stays ``{}``.
+SURROGATE_ENV = "MLOPT_DELIVERY_SURROGATE"
+
+
+def _surrogate_model(spec: PlayerSpec) -> tuple[Any, ...]:
+    """Load the surrogate artifact — ``ValueError`` when unconfigured.
+
+    Resolution order: ``spec.variant["path"]`` (an explicit per-arm
+    binding, how eval drivers seat held-out-clean variants), then
+    :data:`SURROGATE_ENV`.  Neither set is an honest error at
+    ``make`` time — the arm cannot fabricate a scorer.
+    """
+    path = spec.variant.get("path") or os.environ.get(SURROGATE_ENV)
+    if not path:
+        raise ValueError(
+            f"player 'surrogate-top1' needs a surrogate artifact — set "
+            f"{SURROGATE_ENV}=<weights.npz> or spec.variant['path']"
+        )
+    import numpy as np
+
+    z = np.load(path)
+    w = np.asarray(z["w"], dtype=np.float64)
+    mu = np.asarray(z["mu"], dtype=np.float64)
+    sd = np.asarray(z["sd"], dtype=np.float64)
+    feats = (
+        [str(f) for f in z["features"]]
+        if "features" in getattr(z, "files", ())
+        else list(DELIVERY_FEATURES)
+    )
+    if len(w) != len(feats) + 1 or len(mu) != len(feats) or len(sd) != len(feats):
+        raise ValueError(
+            f"surrogate artifact {path}: shape mismatch — "
+            f"w={w.shape} mu={mu.shape} sd={sd.shape} feats={len(feats)}"
+        )
+    sd = np.where(sd > 0, sd, 1.0)  # constant columns standardize to 0
+    return w, mu, sd, feats
+
+
+def _surrogate_pred(model: tuple[Any, ...], state: Any, name: str) -> float:
+    """Predicted ``ln(med_ms)`` for config *name* — lower is faster."""
+    import numpy as np
+
+    w, mu, sd, feats = model
+    row = DELIVERY_SPEC.featurize(state, name, None)
+    x = np.array([float(row.get(k, 0.0) or 0.0) for k in feats], dtype=np.float64)
+    return float(((x - mu) / sd) @ w[:-1] + w[-1])
+
+
+def _make_surrogate(domain: str, *, spec: PlayerSpec, seed: int = 0, ctx: Any = None) -> Any:
+    """Surrogate-top1: score pending configs once, measure ONLY the argmin.
+
+    The exp1b arm the surrogate report proposed: at move 0 the
+    learned ridge scores every pending config on its
+    ``DELIVERY_SPEC`` feature row (the same move-0 view the training
+    dataset featurized), the predicted-argmin config gets ONE full
+    referee evaluation (lower + verify + paired bench — the standard
+    gate, unchanged), and the next move is ``stop``.  The commit
+    decision is untouched: ``committed()``/``committed_speedup``
+    still apply the ``WIN_MARGIN``-vs-eager gate, so a wrong pick
+    costs one ``MOVE_COST`` and ships eager — it can never ship a
+    slowdown.  A declined pick ends the episode the same way.
+
+    Bench cost is ~1/N of ``drain`` (one paired-round evaluation
+    instead of the whole pool) at zero probe spend — the surrogate
+    replaces probe-scan's screen *and* its confirms with a single
+    measurement.
+    """
+    _check_domain(domain)
+    del seed, ctx
+    model = _surrogate_model(spec)
+
+    def mk(_i: int) -> Any:
+        def player(state: Any) -> Any | None:
+            if getattr(state, "done", False):
+                return None
+            # The one measurement is banked — stop paying for moves.
+            # (Also covers the declined-pick case: results holds a
+            # record with no med_ms and the commit gate ships eager.)
+            if getattr(state, "results", None):
+                return "stop"
+            pending = getattr(state, "pending", ()) or ()
+            if not pending:
+                return "stop"
+            best: str | None = None
+            best_pred = math.inf
+            for name in pending:
+                try:
+                    pred = _surrogate_pred(model, state, name)
+                except Exception:  # noqa: BLE001 — an unscoreable config is never picked
+                    continue
+                if pred < best_pred:
+                    best, best_pred = name, pred
+            return best if best is not None else "stop"
+
+        return player
+
+    return mk
+
+
+# ---------------------------------------------------------------------------
 #  Registration — explicit, idempotent, import-mutates-nothing
 # ---------------------------------------------------------------------------
 
@@ -671,4 +790,15 @@ def register() -> None:
             variant={"max_confirms": 3},
         ),
         make=_make_probe_arm,
+    )
+    register_player(
+        _spec(
+            "surrogate-top1",
+            "scripted",
+            "exp1b: external ridge surrogate (MLOPT_DELIVERY_SURROGATE "
+            "or variant.path) scores pending configs at move 0; ONE "
+            "full referee eval of the predicted argmin, then stop — "
+            "the WIN_MARGIN-vs-eager commit gate is unchanged",
+        ),
+        make=_make_surrogate,
     )
