@@ -39,6 +39,31 @@ decimals is fine; timing two *modules* at different moments is not — an
 unrelated process on the box moved one workload's ratio from 0.42x to 1.44x
 without touching a line of code.  Run this on an idle machine.
 
+**Straddles buy confirmation rounds.**  When a claim-bearing row's
+delivered speedups cross 1.0x, the keep/drop call at parity is decided
+by noise — historically 17/68 claim rows flipped sides run to run
+(``sweep_straddle``).  ``--straddle-rounds`` (default 3) lets such a
+row buy that many extra samples so its median rests on more than
+three timings; the row is flagged ``straddles_parity`` (the samples
+still cross 1.0x — extra rounds cannot uncross them) and is *not*
+counted in the summary's win tally — its keep/drop call is
+noise-decided, not a verdict.
+
+**``delivered`` is verify-gated, not speed-gated.**  A row reports
+``delivered`` when a module lowered and passed numeric verification;
+whether it beats eager is the ``speedup`` measurement, not a keep/drop
+input.  The keep/drop referee (``genkernel.profitable`` in
+discoverykit) prices each minted claim's kernel against its *spelled
+site* — per-site marginal pay does not compose to module-level parity:
+the delivered module still runs the unclaimed remainder through the
+IR/hybrid-sink lowering, and seq-scan deliveries replace parallel eager
+ops with a sequential carrier.  Verified-but-slower rows are therefore
+expected on launch-bound shapes (53/68 claim rows measured below 1.0x
+eager in the fp32 sweep — ``sweep_delivered_loser``) and carry an
+explicit ``note`` saying so.  ``vs_compiled`` (median of the per-round
+compiled/gen pairs) is the regime check ``speedup`` alone cannot give:
+a module below eager parity may still beat ``torch.compile``.
+
 Run::
 
     .venv/bin/python -m bench.drivers.probes.zoo_chain \\
@@ -107,11 +132,15 @@ def measure(
     budget: float = DEFAULT_BUDGET,
     dtype: str = "fp32",
     pay_gate: bool = False,
+    straddle_rounds: int = 0,
 ) -> list[dict]:
     """Run the shipped gen path over the named zoo workloads.
 
     Each workload is measured ``rounds`` times and reported by the
-    **median** ratio plus its spread.  One round is not evidence: the
+    **median** ratio plus its spread; claim-bearing rows whose
+    speedups straddle parity buy up to ``straddle_rounds`` extra
+    confirmation rounds (see :func:`_parity_straddles`).  One round
+    is not evidence: the
     two arms are timed at different moments, so a clock or load
     excursion during either arm moves the ratio by tens of percent with
     no code change (measured: one workload read 0.42x and 1.44x across
@@ -153,7 +182,11 @@ def measure(
         try:
             with _budget(budget):
                 row = _measure_one(
-                    wl, reps=reps, rounds=rounds, dtype=dtype
+                    wl,
+                    reps=reps,
+                    rounds=rounds,
+                    dtype=dtype,
+                    straddle_rounds=straddle_rounds,
                 )
         except _OverBudget:
             rows.append(
@@ -187,12 +220,53 @@ def measure(
     return rows
 
 
+def _parity_straddles(got: list[dict]) -> bool:
+    """True when a claim-bearing row's delivered speedups cross 1.0x.
+
+    A row straddles when at least two delivered rounds report a
+    ``speedup`` and those samples land on both sides of parity — the
+    same definition the agenda miner's ``sweep_straddle`` signal
+    uses, so the driver's own confirmation loop and the miner agree
+    on what "noise-decided" means.  Claim-less rows measure timing
+    noise, not a keep/drop call, and never straddle.
+    """
+    ok = [r for r in got if r.get("delivered")]
+    if not any(r.get("claims") for r in ok):
+        return False
+    speeds = [
+        float(r["speedup"]) for r in ok if r.get("speedup") is not None
+    ]
+    return len(speeds) >= 2 and min(speeds) < 1.0 <= max(speeds)
+
+
 def _measure_one(
-    wl, *, reps: int, rounds: int, dtype: str = "fp32"
+    wl,
+    *,
+    reps: int,
+    rounds: int,
+    dtype: str = "fp32",
+    straddle_rounds: int = 0,
 ) -> dict:
-    """Time one workload ``rounds`` times; the row is the median ratio."""
+    """Time one workload; the row is the median ratio over its rounds.
+
+    ``rounds`` samples are always taken.  When the row is
+    claim-bearing and the delivered speedups *straddle parity* (some
+    rounds above 1.0x, some below — the keep/drop call is then decided
+    by which side of 1.0 the noise happened to land), up to
+    ``straddle_rounds`` extra confirmation rounds are run.  The
+    straddle is cumulative — once the samples cross 1.0 they always
+    do — so the extras cannot "resolve" it; they tighten the median
+    the row reports and the ``straddles_parity`` flag then discloses
+    that the keep/drop call remains noise-decided.  The cap keeps
+    the worst case bounded (each round is a full claim→deliver→time
+    probe).
+    """
     case = _zoo_case(wl, dtype=dtype)
     got = [gen_probe(case, reps=reps) for _ in range(rounds)]
+    if straddle_rounds > 0 and _parity_straddles(got):
+        got.extend(
+            gen_probe(case, reps=reps) for _ in range(straddle_rounds)
+        )
     ok = [r for r in got if r.get("delivered")]
     if not ok:
         return dict(got[0], dtype=dtype)
@@ -208,6 +282,14 @@ def _measure_one(
             "eager_us": round(r["baseline_us"], 1),
             "compiled_us": round(r["compiled_us"], 1),
             "gen_us": round(r["gen_us"], 1),
+            # per-round compiled/gen ratio — the row-level
+            # ``vs_compiled`` below is the median of THESE pairs,
+            # never ok[0]'s single-shot figure.
+            "vs_compiled": (
+                round(r["compiled_us"] / r["gen_us"], 3)
+                if r.get("compiled_us") and r.get("gen_us")
+                else None
+            ),
             # T-037: the CUDA-graph arm is per-round too — a row-level
             # ``gen_graph_us`` copied from ``ok[0]`` would pair one
             # round's graph timing with another round's eager/compile
@@ -222,16 +304,48 @@ def _measure_one(
     ]
     row["speedup"] = round(statistics.median(speeds), 3)
     row["spread"] = [speeds[0], speeds[-1]]
+    row["rounds_used"] = len(got)
+    # The keep/drop call at parity is noise-decided when the rounds
+    # cross 1.0x — flag it instead of letting the median pose as a
+    # verdict (the ``sweep_straddle`` signal reads exactly this).
+    row["straddles_parity"] = _parity_straddles(got)
+    # ``vs_compiled`` is a *paired* per-round ratio (compiled/gen on
+    # the same timing window); the row value is the median of those
+    # pairs — the same convention ``speedup`` follows.  It answers
+    # the regime question ``speedup`` alone cannot: a delivered
+    # module below eager parity may still beat ``torch.compile``.
+    vcs = [
+        float(run["vs_compiled"])
+        for run in row["runs"]
+        if run.get("vs_compiled") is not None
+    ]
+    if vcs:
+        row["vs_compiled"] = round(statistics.median(vcs), 3)
     for stale in (
         "baseline_us",
         "compiled_us",
         "gen_us",
-        "vs_compiled",
     ):
         row.pop(stale, None)
     row["dtype"] = dtype
     row["verified"] = all(r.get("verified") for r in ok)
     row["max_abs"] = max(r.get("max_abs") or 0 for r in ok)
+    if (
+        row["verified"]
+        and row["speedup"] is not None
+        and row["speedup"] < 1.0
+    ):
+        # ``delivered`` is verify-gated, not speed-gated: the
+        # keep/drop referee (``genkernel.profitable``) prices each
+        # minted claim's kernel against its *spelled site* — module
+        # parity vs eager is a reported measurement, not a verdict
+        # input.  Say so on the row rather than letting a verified
+        # loser read as a kept win.
+        row["note"] = (
+            "verified delivery runs below eager parity "
+            f"({row['speedup']}x); keep/drop was decided per-site "
+            "by genkernel.profitable, not at module level"
+        )
     # Row-level graph arm: medians over the rounds that captured —
     # same median convention as ``speedup``.  ``graph_max_abs`` stays
     # a worst-case (max), matching ``max_abs``.
@@ -277,6 +391,7 @@ def _measure_isolated(
     budget: float,
     dtype: str = "fp32",
     pay_gate: bool = False,
+    straddle_rounds: int = 0,
 ) -> list[dict]:
     """Measure each workload in its own process, killing it if it overruns.
 
@@ -310,6 +425,8 @@ def _measure_isolated(
             str(reps),
             "--rounds",
             str(rounds),
+            "--straddle-rounds",
+            str(straddle_rounds),
             "--dtype",
             dtype,
             "--only",
@@ -373,6 +490,18 @@ def main(argv: list[str] | None = None) -> int:
         help="timing rounds per workload; the row reports the median ratio",
     )
     ap.add_argument(
+        "--straddle-rounds",
+        type=int,
+        default=3,
+        help=(
+            "extra confirmation rounds for claim-bearing rows whose "
+            "delivered speedups straddle parity (min < 1.0x <= max) — "
+            "the keep/drop call is noise-decided there, so the row "
+            "reports its median over rounds+N samples and is flagged "
+            "``straddles_parity`` (0 disables)"
+        ),
+    )
+    ap.add_argument(
         "--only",
         default=DEFAULT_ONLY,
         help="comma-separated workload names; empty string = every workload",
@@ -425,6 +554,7 @@ def main(argv: list[str] | None = None) -> int:
             budget=args.budget,
             dtype=args.dtype,
             pay_gate=args.pay_gate,
+            straddle_rounds=args.straddle_rounds,
         )
     else:
         rows = measure(
@@ -437,18 +567,23 @@ def main(argv: list[str] | None = None) -> int:
             budget=args.budget,
             dtype=args.dtype,
             pay_gate=args.pay_gate,
+            straddle_rounds=args.straddle_rounds,
         )
     won = [
         r
         for r in rows
-        if r.get("delivered") and (r.get("speedup") or 0) > 1.0
+        if r.get("delivered")
+        and (r.get("speedup") or 0) > 1.0
+        and not r.get("straddles_parity")
     ]
+    straddling = sum(1 for r in rows if r.get("straddles_parity"))
     over = sum(
         1 for r in rows if "over budget" in str(r.get("note", ""))
     )
     print(
         f"\n{len(rows)} workloads: {len(won)} faster than eager, "
         f"{sum(1 for r in rows if not r.get('delivered'))} undeliverable"
+        + (f" ({straddling} straddle parity)" if straddling else "")
         + (f" ({over} over budget)" if over else "")
     )
     if args.out:
