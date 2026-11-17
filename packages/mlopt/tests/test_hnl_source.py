@@ -279,3 +279,51 @@ def test_cli_doctor_hnl(tmp_path, capsys) -> None:  # noqa: ANN001
     assert main(["doctor", f"hnl:{path}"]) == 0
     out = capsys.readouterr().out
     assert "adapter:   hnl" in out
+
+
+# --- device placement + delivery metadata -----------------------------------
+
+
+def test_device_opt_moves_inputs_and_params(adapter, tiny_hnl) -> None:
+    """``device=cpu`` is explicit probe placement; ``device=cuda``
+    follows torch availability — both move inputs AND bound leaf
+    values together so they never disagree."""
+    spec = adapter.load(
+        f"hnl:{tiny_hnl}",
+        leaves='{"x": [4, 2]}',
+        device="cpu",
+    )
+    import torch
+
+    assert spec.inputs[0].device == torch.device("cpu")
+    assert spec.source._param_values["w"].device == torch.device("cpu")
+    assert spec.meta["device"] == "cpu"
+
+
+def test_device_default_matches_torch_probe(adapter, tiny_hnl) -> None:
+    """No ``device`` opt: cuda when available, else cpu — the same
+    convention whisper/kokoro use.  This is probe placement for the
+    torch lowering only; ``hnl-run`` stays CPU-only."""
+    import torch
+
+    spec = adapter.load(f"hnl:{tiny_hnl}", leaves='{"x": [4, 2]}')
+    expected = "cuda" if torch.cuda.is_available() else "cpu"
+    assert spec.meta["device"] == expected
+    assert spec.inputs[0].device.type == expected
+
+
+def test_unknown_device_declines(adapter, tiny_hnl) -> None:
+    with pytest.raises(ValueError, match="unknown device"):
+        adapter.load(f"hnl:{tiny_hnl}", leaves='{"x": [4, 2]}', device="tpu")
+
+
+def test_meta_declares_alias_inputs(adapter, tiny_hnl) -> None:
+    """``tensor.*`` ops are functional — positional inputs are
+    caller-owned read-only buffers, so alias-aware CUDA capture may
+    bind them by reference (fresh tensors per call fall back to the
+    copy path).  This is about the torch lowering delivery path,
+    NOT ``hnl-run``."""
+    spec = adapter.load(f"hnl:{tiny_hnl}", leaves='{"x": [4, 2]}')
+    assert spec.meta["alias_inputs"] is True
+    # No in-place schemas in the codec surface → nothing is mutable.
+    assert "mutable_inputs" not in spec.meta

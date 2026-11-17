@@ -34,6 +34,20 @@ Honest bounds, stated up front:
   directives but not ``export``), so :func:`_unwrap_export` reduces it
   to the ``do`` body before parsing — the declared parameters become
   the term's free ``Var`` leaves, exactly as the signature meant.
+* ``--adapter-opt device=cpu|cuda|...`` places the bound probe
+  tensors (inputs AND param values) — default ``cuda`` when
+  ``torch.cuda.is_available()``, else ``cpu``, the same convention
+  the ``whisper``/``kokoro`` adapters use.  This is probe placement
+  for the torch lowering the optimizer/search/verify pipeline
+  consumes; it says NOTHING about ``hnl-run`` itself, which is a
+  CPU-only f64 host-tensor evaluator (``Device`` schema args are
+  dropped — ``host-tensor/src/ops/aten_kernels.rs``).  The meta also
+  declares ``alias_inputs: True``: every ``tensor.*`` op in the
+  codec surface is functional (no ``foo_``/in-place schemas — the
+  host-tensor port filters them), so positional inputs are
+  caller-owned read-only buffers the CUDA-graph runner may bind by
+  reference; a caller that passes fresh tensors each call simply
+  falls back to the copy path, which is always correct.
 """
 
 from __future__ import annotations
@@ -186,6 +200,28 @@ def _load_feed(raw: Any) -> dict[str, Any]:
     return data
 
 
+def _resolve_device(raw: Any) -> Any:
+    """``device`` opt → ``torch.device`` (default cuda-if-available).
+
+    Probe placement for the torch-lowered pipeline — the same
+    convention ``whisper``/``kokoro`` use.  ``hnl-run`` itself stays
+    CPU-only; this never claims GPU execution of the ``.hnl``
+    artifact.
+    """
+    import torch
+
+    name = raw if raw is not None else ("cuda" if torch.cuda.is_available() else "cpu")
+    try:
+        return torch.device(name)
+    except Exception as e:  # noqa: BLE001 — report the opt value
+        raise ValueError(f"hnl: unknown device {name!r} ({e})") from e
+
+
+def _move(t: Any, device: Any) -> Any:
+    """``t.to(device)`` for tensors; anything else passes through."""
+    return t.to(device) if hasattr(t, "to") and not isinstance(t, (str, bytes)) else t
+
+
 def _truthy(raw: Any, default: bool) -> bool:
     if raw is None:
         return default
@@ -275,6 +311,7 @@ def _lift(
     feed: Any,
     synthetic: bool,
     seed: int,
+    device: Any = None,
 ) -> tuple[Any, IR, tuple[Any, ...], dict[str, Any], dict[str, Any]]:
     """Source text → ``(term, ir, inputs, param_values, census)``."""
     from kit_discovery.hnl_import import hnl_to_term
@@ -337,7 +374,13 @@ def _lift(
         )
 
     # ``unbound`` raises above, so every Var bound — inputs stay in
-    # first-use order, matching ``ir.inputs``.
+    # first-use order, matching ``ir.inputs``.  ``device`` is probe
+    # placement for the torch-lowered pipeline (hnl-run stays
+    # CPU-only): bound leaf tensors move together so inputs and
+    # param values never disagree on device.
+    dev = _resolve_device(device)
+    inputs = [_move(t, dev) for t in inputs]
+    param_values = {k: _move(v, dev) for k, v in param_values.items()}
     ir = IR(
         root=term,
         inputs=list(vars_),
@@ -349,6 +392,7 @@ def _lift(
         "params": {n: list(_concrete_shape(p.typ) or ()) for n, p in params.items()},
         "input_values": input_prov,
         "param_values": param_prov,
+        "device": str(dev),
     }
     return term, ir, tuple(inputs), param_values, census
 
@@ -386,6 +430,7 @@ class _HnlAdapter:
             "feed": opts.get("feed"),
             "synthetic": _truthy(opts.get("synthetic"), True),
             "seed": opts.get("seed", 0),
+            "device": opts.get("device"),
         }
 
     def probe(self, ref: str) -> dict[str, Any]:
@@ -435,6 +480,14 @@ class _HnlAdapter:
                 "path": str(path),
                 "leaf_source": leaf_source,
                 "leaves": census,
+                "device": census["device"],
+                # Every ``tensor.*`` op in the codec surface is
+                # functional (the host-tensor port filters ``foo_``/
+                # in-place schemas), so positional inputs are
+                # caller-owned read-only buffers — alias-aware CUDA
+                # capture may bind them by reference.  Fresh tensors
+                # per call just fall back to the copy path.
+                "alias_inputs": True,
             },
             source=HnlSource(ir, param_values),
         )
