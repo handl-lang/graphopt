@@ -28,6 +28,25 @@ Seats (shipped names unioned with the ``deliver`` board):
   bakes the literal that warms them (kernelopt's
   ``KERNEL_PLAYER_WEIGHTS`` convention).  ``linear-cold`` stays the
   untrained control either way.
+* ``drain`` — the measure-everything-then-commit line: evaluates
+  every pending config in ``CONFIGS`` order, then ``stop``.  The
+  commit is the true argmin over the whole eligible pool — the
+  honest ceiling of "measure, then pick" (v9 structural arm).
+* ``probe-commit`` / ``probe-scan`` — the probe-then-commit arms
+  (v9): on a probe-armed board (``deliver_game(..., probe=True)`` /
+  ``deliver_train.board_of(case, probe=True)``) they first spend
+  ``probe:<config>`` screening moves — same lower + mandatory
+  verify gate, ~5x cheaper 1-round bench, priced at
+  ``PROBE_MOVE_COST`` and NEVER committable — then spend at most
+  ``max_confirms`` full evaluations on the probe-argmin candidates
+  whose screen predicts a win (``PROBE_CONFIRM_MARGIN``), and
+  ``stop``.  ``probe-commit`` confirms once; ``probe-scan`` keeps
+  confirming down the probe ranking (cap 3) until a config clears
+  the commit margin.  On a standard (unarmed) board they degrade
+  to ``drain`` — still honest, just without the cheap screen.
+  Learned arms are deliberately NOT offered probe moves: the
+  ``DELIVERY_SPEC`` featurizer was never trained on them, so
+  ``register_legal`` keeps masking to ``pending + stop``.
 """
 
 from __future__ import annotations
@@ -433,6 +452,129 @@ def _make_linear(domain: str, *, spec: PlayerSpec, seed: int = 0, ctx: Any = Non
 
 
 # ---------------------------------------------------------------------------
+#  Structural arms (v9) — measure-then-commit, probe-then-commit
+# ---------------------------------------------------------------------------
+
+
+def _config_order(state: Any) -> list[str]:
+    """Pending configs in ``deliver_game.CONFIGS`` preference order."""
+    from mlopt.deliver_game import CONFIGS  # lazy: torch-free path
+
+    pending = set(getattr(state, "pending", ()) or ())
+    ordered = [name for name in CONFIGS if name in pending]
+    ordered.extend(name for name in (getattr(state, "pending", ()) or ()) if name not in CONFIGS)
+    return ordered
+
+
+def _make_drain(domain: str, *, spec: PlayerSpec, seed: int = 0, ctx: Any = None) -> Any:
+    """Measure EVERY pending config, then ``stop`` — the argmin line.
+
+    No early stop: the commit is the argmin over the full eligible
+    pool, which is the best pick any measure-then-commit policy can
+    make — it pays ``MOVE_COST`` per eval for that certainty.  This
+    is the structural baseline the probe arms must beat on cost.
+    """
+    _check_domain(domain)
+    del spec, seed, ctx
+
+    def mk(_i: int) -> Any:
+        def player(state: Any) -> Any | None:
+            if getattr(state, "done", False):
+                return None
+            pending = getattr(state, "pending", ()) or ()
+            if pending:
+                return pending[0]  # eligibility order == CONFIGS order
+            return "stop"
+
+        return player
+
+    return mk
+
+
+def _probe_scored(state: Any) -> list[tuple[float, str]]:
+    """``(probe med_ms, config)`` pairs, argmin-first — scored probes only."""
+    probes = getattr(state, "probes", None) or {}
+    out: list[tuple[float, str]] = []
+    for name, rec in probes.items():
+        med = rec.get("med_ms") if isinstance(rec, dict) else None
+        if med is not None:
+            try:
+                out.append((float(med), str(name)))
+            except (TypeError, ValueError):  # noqa: BLE001
+                continue
+    out.sort()
+    return out
+
+
+def _probe_speedup(rec: Any) -> float | None:
+    """A probe record's own paired-eager/med ratio, or ``None``."""
+    if not isinstance(rec, dict):
+        return None
+    med, base = rec.get("med_ms"), rec.get("eager_med_ms")
+    if med is None or base is None:
+        return None
+    try:
+        med_f, base_f = float(med), float(base)
+    except (TypeError, ValueError):
+        return None
+    if med_f <= 0 or base_f <= 0:
+        return None
+    return base_f / med_f
+
+
+def _make_probe_arm(domain: str, *, spec: PlayerSpec, seed: int = 0, ctx: Any = None) -> Any:
+    """Probe-then-commit: screen every config cheap, confirm the argmin.
+
+    Phase 1 spends one ``probe:<config>`` move per pending config
+    (CONFIGS order) — the cheap screen with the same lower+verify
+    gate.  Phase 2 confirms (full-evaluates) probe-scored candidates
+    in argmin-``med_ms`` order, but only those whose screen predicts
+    a win past ``PROBE_CONFIRM_MARGIN`` — a board whose best probe
+    reads ~eager skips the confirm entirely and ships eager at
+    probe-cost only.  ``variant["max_confirms"]`` caps the full
+    evaluations: 1 = ``probe-commit`` (single best guess), 3 =
+    ``probe-scan`` (keep confirming down the ranking until a config
+    clears the commit margin).  On an unarmed board the arm degrades
+    to ``drain`` — honest, just without the screen.
+    """
+    _check_domain(domain)
+    del seed, ctx
+    from mlopt.deliver_game import PROBE_CONFIRM_MARGIN
+
+    max_confirms = int(spec.variant.get("max_confirms", 1))
+
+    def mk(_i: int) -> Any:
+        def player(state: Any) -> Any | None:
+            if getattr(state, "done", False):
+                return None
+            if not getattr(state, "probe_armed", False):
+                pending = getattr(state, "pending", ()) or ()
+                return pending[0] if pending else "stop"
+            # Phase 1 — probe every pending config once.
+            probes = getattr(state, "probes", None) or {}
+            for name in _config_order(state):
+                if name not in probes:
+                    return f"probe:{name}"
+            # A confirmed winner is banked — stop paying for moves.
+            if float(getattr(state, "committed_speedup", 1.0) or 1.0) > 1.0:
+                return "stop"
+            # Phase 2 — confirm probe-scored candidates, argmin med
+            # first, gated on the screen predicting a real win.
+            results = getattr(state, "results", None) or {}
+            for _med, name in _probe_scored(state):
+                if name in results or len(results) >= max_confirms:
+                    continue
+                sp = _probe_speedup(probes[name])
+                if sp is not None and sp >= PROBE_CONFIRM_MARGIN:
+                    return name
+            return "stop"
+
+        return player
+
+    return mk
+
+
+# ---------------------------------------------------------------------------
 #  Registration — explicit, idempotent, import-mutates-nothing
 # ---------------------------------------------------------------------------
 
@@ -500,4 +642,33 @@ def register() -> None:
             variant={"cold": True},
         ),
         make=_make_linear,
+    )
+    register_player(
+        _spec(
+            "drain",
+            "scripted",
+            "measure every pending config in CONFIGS order, then stop — "
+            "the measure-then-commit argmin ceiling",
+        ),
+        make=_make_drain,
+    )
+    register_player(
+        _spec(
+            "probe-commit",
+            "scripted",
+            "probe-armed board: screen all configs cheap, confirm the "
+            "probe-argmin once if the screen predicts a win, stop",
+            variant={"max_confirms": 1},
+        ),
+        make=_make_probe_arm,
+    )
+    register_player(
+        _spec(
+            "probe-scan",
+            "scripted",
+            "probe-armed board: screen all configs cheap, confirm down "
+            "the probe ranking (cap 3) until the commit margin clears",
+            variant={"max_confirms": 3},
+        ),
+        make=_make_probe_arm,
     )

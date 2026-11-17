@@ -122,8 +122,14 @@ class DeliveryCase:
     call_kwargs: dict[str, Any] = field(default_factory=dict)
 
 
-def board_of(case: DeliveryCase) -> _dg.DeliveryBoard:
-    """Build a fresh board for *case* — new context, new measurements."""
+def board_of(case: DeliveryCase, *, probe: bool = False) -> _dg.DeliveryBoard:
+    """Build a fresh board for *case* — new context, new measurements.
+
+    ``probe=True`` arms the board's ``probe:<config>`` screening
+    moves (see :mod:`mlopt.deliver_game`) — required for the
+    probe-then-commit arms; every other arm plays the standard
+    board.
+    """
     ctx = _dg._Context(
         optz=case.optz,
         res=case.res,
@@ -139,7 +145,9 @@ def board_of(case: DeliveryCase) -> _dg.DeliveryBoard:
     else:
         for key, value in case.flags.items():
             setattr(ctx, key, value)
-    return _dg.DeliveryBoard(ctx, player_name="deliver-train", budget=case.budget)
+    return _dg.DeliveryBoard(
+        ctx, player_name="deliver-train", budget=case.budget, probe_armed=probe
+    )
 
 
 # ---------------------------------------------------------------------------
