@@ -399,6 +399,38 @@ def test_paired_eager_baseline_gates_commit(game_env, monkeypatch) -> None:
     assert out.eager_med_ms == 8.0  # reported baseline is the paired one
 
 
+def test_construction_eager_baseline_gates_commit(game_env, monkeypatch) -> None:
+    """``eager_baseline="construction"`` scores every config against
+    the ONE board-construction eager median — the de-noised referee
+    metric.  Same drifted-paired setup as the paired-mode test, but
+    here the config DOES ship: 9ms beats the shared 10ms baseline
+    even though its own paired eager read 8ms."""
+
+    def drifted_paired(eager_mod, config_mod, inputs, iters, **kw):
+        out = _fake_bench_paired(eager_mod, config_mod, inputs, iters, **kw)
+        out["eager"] = {"min_ms": 8.0, "med_ms": 8.0, "rounds": out["eager"]["rounds"]}
+        return out
+
+    monkeypatch.setattr(dg, "_bench_paired", drifted_paired)
+    optz = _FakeOptz({"graph": (True, (9.0, 9.0))})
+    board = DeliveryBoard(_ctx(optz), player_name="t", budget=4, eager_baseline="construction")
+    board.step("graph")
+    st = board.state
+    # paired record still carries its own eager for audit …
+    assert st.results["graph"]["eager_med_ms"] == 8.0
+    # … but the gate/reward read the shared construction baseline.
+    assert st.eager_baseline == "construction"
+    assert st.committed_speedup == pytest.approx(10.0 / 9.0)
+    out = board.committed()
+    assert out.runner_name == "graph"
+    assert out.eager_med_ms == 10.0  # reported baseline is the shared one
+
+
+def test_eager_baseline_validation(game_env) -> None:
+    with pytest.raises(ValueError, match="eager_baseline"):
+        DeliveryBoard(_ctx(_FakeOptz({})), player_name="t", budget=1, eager_baseline="bogus")
+
+
 def test_lowered_by_config_bounded_to_argmin(game_env) -> None:
     """Only the current argmin's lowered module is retained — each
     LowerResult pins weights, so the pool can't grow unbounded."""

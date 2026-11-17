@@ -20,6 +20,20 @@ benches need; the episode reward is that same committed speedup
 minus ``MOVE_COST`` per spent move, never the raw (possibly
 sub-1.0) ratio.
 
+``eager_baseline`` selects WHICH eager the win gate and the reward
+compare against.  ``"paired"`` (default) is the per-config
+paired-round median described above — drift-robust per evaluation,
+but on sub-ms boards the paired eager itself drifts enough that two
+configurations are judged against different baselines (the v9/v10
+measurement finding: the committed-speedup label, not the policy,
+was the noise).  ``"construction"`` scores every config against the
+ONE eager median measured at board construction — a single shared
+baseline, so the argmin comparison no longer depends on which
+config happened to bench inside a lucky window.  The paired eager
+is still measured and recorded on every referee record either way
+(audit trail); only the gate's baseline changes.  Probe screens are
+unaffected — they rank configs cheaply and never commit.
+
 Why a custom scorer instead of ``gamekit.scoring``: the value spec's
 ``ScoreGate``/``ScoringSpec`` prices a measurement against absolute
 ``{axis, threshold}`` bars — pass/fail ceilings.  Delivery is a
@@ -219,6 +233,12 @@ class DeliveryState:
     probe_armed: bool = False
     eager_min_ms: float | None = None
     eager_med_ms: float | None = None
+    #: Which eager baseline ``_eager_for``/``committed_speedup``/
+    #: ``committed()`` score against: ``"paired"`` (each record's own
+    #: paired-round eager median — the default) or ``"construction"``
+    #: (the single board-construction ``_bench`` median shared by
+    #: every config — the de-noised referee metric).
+    eager_baseline: str = "paired"
     cuda: bool = False
     fusible: bool = False
     compile_ok: bool = False
@@ -235,12 +255,17 @@ class DeliveryState:
     def _eager_for(self, name: str | None) -> tuple[float | None, float | None]:
         """``(min_ms, med_ms)`` eager baseline for scoring *name*.
 
-        A config measured under the paired protocol carries the
-        eager median from ITS OWN rounds (``rec["eager_*_ms"]``) —
-        the drift-robust comparison the autopsy asked for.  Records
-        without one (or ``name=None``) fall back to the
-        board-construction baseline.
+        ``"construction"`` mode returns the board-construction
+        baseline for EVERY config — one shared eager median, so the
+        win gate and reward stop depending on which config's paired
+        rounds happened to measure a lucky (or unlucky) eager draw.
+        ``"paired"`` mode prefers the config's OWN paired-round
+        eager median when the record carries one.  Records without
+        one (or ``name=None``) fall back to the construction
+        baseline either way.
         """
+        if getattr(self, "eager_baseline", "paired") == "construction":
+            return self.eager_min_ms, self.eager_med_ms
         rec = self.results.get(name) if name is not None else None
         if rec is not None and rec.get("eager_med_ms") is not None:
             return rec.get("eager_min_ms"), rec["eager_med_ms"]
@@ -333,7 +358,12 @@ class DeliveryBoard:
         player_name: str = "?",
         budget: int = 0,
         probe_armed: bool = False,
+        eager_baseline: str = "paired",
     ) -> None:
+        if eager_baseline not in ("paired", "construction"):
+            raise ValueError(
+                f"eager_baseline must be 'paired' or 'construction', got {eager_baseline!r}"
+            )
         self._ctx = ctx
         self._player_name = player_name
         self._budget = budget
@@ -344,6 +374,7 @@ class DeliveryBoard:
             compile_ok=ctx.compile_ok,
             alias_spec=ctx.alias is not None or ctx.mutable is not None,
             probe_armed=probe_armed,
+            eager_baseline=eager_baseline,
         )
         # The eager baseline is measured once at board construction —
         # it is the shipped fallback's number anyway, and every
@@ -520,10 +551,13 @@ class DeliveryBoard:
         best_med = st.best_med_ms
         # Eager is always a candidate: a config must beat it by the
         # WIN_MARGIN noise floor — sub-margin "wins" are bench noise
-        # on shared GPUs, not delivery.  The baseline is the winning
-        # config's OWN paired-round eager median when the record
-        # carries one (drift can't favor a config measured in a
-        # luckier window); the construction baseline is the fallback.
+        # on shared GPUs, not delivery.  The baseline is the state's
+        # ``eager_baseline`` mode: the winning config's OWN
+        # paired-round eager median under ``"paired"`` (drift can't
+        # favor a config measured in a luckier window), or the single
+        # board-construction median shared by every config under
+        # ``"construction"``; the construction baseline is also the
+        # fallback for records that carry no paired eager.
         eager_min, eager_med = st._eager_for(best_name)
         if (
             best_name is None
@@ -856,6 +890,7 @@ def deliver_game(
     seed: int = 0,
     call_kwargs: dict[str, Any] | None = None,
     probe: bool = False,
+    eager_baseline: str = "paired",
 ) -> Delivery:
     """Run the delivery game and return the committed :class:`Delivery`.
 
@@ -865,7 +900,11 @@ def deliver_game(
     ``probe=True`` arms the board's ``probe:<config>`` screening
     moves (cheap 1-round bench, same lower+verify gate, never
     committable) for the probe-then-commit arms — off by default so
-    the shipped game is unchanged.
+    the shipped game is unchanged.  ``eager_baseline`` selects the
+    win-gate/reward baseline: ``"paired"`` (default — each config's
+    own paired-round eager median) or ``"construction"`` (the single
+    board-construction eager median shared by every config — the
+    de-noised referee metric).
     Raises :class:`GameUnavailable` when gamekit is absent or the
     player is not seated on the ``deliver`` board; the caller falls
     back to the heuristic path with a note.
@@ -889,7 +928,13 @@ def deliver_game(
         call_kwargs=dict(call_kwargs or {}),
     )
     _probe(ctx)
-    board = DeliveryBoard(ctx, player_name=player, budget=budget, probe_armed=probe)
+    board = DeliveryBoard(
+        ctx,
+        player_name=player,
+        budget=budget,
+        probe_armed=probe,
+        eager_baseline=eager_baseline,
+    )
     try:
         arm = registry.make(player, "deliver", seed=seed)
     except Exception as e:  # noqa: BLE001 — unknown/unseated player
