@@ -757,7 +757,7 @@ wheels = [
 [[package]]
 name = "discoverykit"
 version = "0.1.0.dev0"
-source = { git = "https://github.com/handl-lang/discoverykit.git?subdirectory=packages%2Fdiscoverykit&tag=v0.1.28#d444bf0b153c41a6ba8d4470300b38ce84a5bb17" }
+source = { git = "https://github.com/handl-lang/discoverykit.git?subdirectory=packages%2Fdiscoverykit&tag=v0.1.31#9f005599abb88ccc7bd8df5d346feb98b56444f7" }
 dependencies = [
     { name = "gamekit" },
     { name = "mlopt-core" },
@@ -1431,7 +1431,7 @@ dependencies = [
 [[package]]
 name = "kit-discovery"
 version = "0.1.0"
-source = { git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.10#e359b176f1902723ec0ce34540c52dcffdc5f0ee" }
+source = { git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.11#481c291b58e32beb786984b37c7a29f528313e4f" }
 dependencies = [
     { name = "discoverykit" },
     { name = "gamekit" },
@@ -1925,12 +1925,12 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "attrs", marker = "extra == 'kokoro'" },
-    { name = "discoverykit", git = "https://github.com/handl-lang/discoverykit.git?subdirectory=packages%2Fdiscoverykit&tag=v0.1.28" },
+    { name = "discoverykit", git = "https://github.com/handl-lang/discoverykit.git?subdirectory=packages%2Fdiscoverykit&tag=v0.1.31" },
     { name = "gamekit", git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&tag=v0.1.16" },
     { name = "huggingface-hub", marker = "extra == 'kokoro'" },
     { name = "kit-carriers", git = "https://github.com/handl-lang/kit-carriers.git?tag=v0.1.8" },
     { name = "kit-cuda", git = "https://github.com/handl-lang/kit-cuda.git?tag=v0.1.9" },
-    { name = "kit-discovery", git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.10" },
+    { name = "kit-discovery", git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.11" },
     { name = "kit-host-tensor", git = "https://github.com/handl-lang/kit-host-tensor.git?tag=v0.1.6" },
     { name = "kit-torch", git = "https://github.com/handl-lang/kit-torch.git?tag=v0.1.8" },
     { name = "loguru", marker = "extra == 'kokoro'" },
@@ -2055,14 +2055,14 @@ requires-dist = [
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.9.4" },
     { name = "benchkit", git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fbenchkit&tag=v0.1.16" },
     { name = "coverage", marker = "extra == 'dev'", specifier = ">=7.0" },
-    { name = "discoverykit", git = "https://github.com/handl-lang/discoverykit.git?subdirectory=packages%2Fdiscoverykit&tag=v0.1.28" },
+    { name = "discoverykit", git = "https://github.com/handl-lang/discoverykit.git?subdirectory=packages%2Fdiscoverykit&tag=v0.1.31" },
     { name = "gamekit", git = "https://github.com/handl-lang/gamekit.git?subdirectory=packages%2Fgamekit&tag=v0.1.16" },
     { name = "huggingface-hub", marker = "extra == 'kokoro'" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.168.1" },
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.15" },
     { name = "kit-carriers", git = "https://github.com/handl-lang/kit-carriers.git?tag=v0.1.8" },
     { name = "kit-cuda", git = "https://github.com/handl-lang/kit-cuda.git?tag=v0.1.9" },
-    { name = "kit-discovery", git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.10" },
+    { name = "kit-discovery", git = "https://github.com/handl-lang/kit-discovery.git?tag=v0.1.11" },
     { name = "kit-host-tensor", git = "https://github.com/handl-lang/kit-host-tensor.git?tag=v0.1.6" },
     { name = "kit-onnx", git = "https://github.com/handl-lang/kit-onnx.git?tag=v0.1.6" },
     { name = "kit-torch", git = "https://github.com/handl-lang/kit-torch.git?tag=v0.1.8" },
