@@ -1,0 +1,16 @@
+--- v12 corpus case: reduce/fold at 384x384 — matmul, dim-reduce keepdim, broadcast-back residual, pointwise tail (reduce_fold scaled up)
+from "host-tensor" import tensor
+do {
+  m1 :: tensor.matmul(x, y)
+  m2 :: tensor.add(m1, z)
+  s1 :: tensor.sum(m2, [1], true)
+  m3 :: tensor.mean(m1, [0], true)
+  b1 :: tensor.add(s1, m3)
+  p1 :: tensor.mul(b1, tensor.sigmoid(b1))
+  p2 :: tensor.tanh(p1)
+  r1 :: tensor.sub(m2, b1)
+  p3 :: tensor.mul(r1, tensor.reciprocal(tensor.add(tensor.abs(p2), tensor.ones([384, 384]))))
+  p4 :: tensor.add(p3, p2)
+  p5 :: tensor.sub(p4, m1)
+  tensor.mul(p5, tensor.sigmoid(p4))
+}

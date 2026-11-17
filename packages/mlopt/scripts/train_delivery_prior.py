@@ -369,6 +369,15 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="also train a cold-REINFORCE-only control arm",
     )
+    ap.add_argument(
+        "--aggregate",
+        choices=("mean", "median", "case-norm"),
+        default="mean",
+        help="held-out table collapse — 'mean' (shipped default), "
+        "'median' (per-case median then median across cases), or "
+        "'case-norm' (per-case ratio to the best arm's median, then "
+        "mean — the de-noised v12 metric)",
+    )
     ap.add_argument("--json", type=str, default=None)
     args = ap.parse_args(argv)
 
@@ -512,6 +521,7 @@ def main(argv: list[str] | None = None) -> int:
                 seed=args.seed,
                 budget=args.budget,
                 cold_rl=cold_rl,
+                aggregate=args.aggregate,
             )
         except Exception as e:  # noqa: BLE001 — never lose the weights to eval
             held = {}
@@ -532,6 +542,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         payload: dict[str, Any] = {
             "corpus": args.corpus,
+            "aggregate": args.aggregate,
             "held_out": sorted(eval_set) if args.corpus else [c.name for c in eval_cases],
             "skipped": sorted(args.skip_name),
             "weights": table,

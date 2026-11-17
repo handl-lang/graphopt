@@ -1,0 +1,23 @@
+--- v12 corpus case: stacked softmax+layer_norm blocks at [32,256] x [256,256] (softmax_wide scaled up for moderate eager)
+from "host-tensor" import tensor
+do {
+  s1 :: tensor.matmul(x, y)
+  p1 :: tensor.softmax(s1, -1)
+  o1 :: tensor.matmul(p1, y)
+  n1 :: tensor.layer_norm(o1, [256])
+  a1 :: tensor.mul(n1, tensor.sigmoid(n1))
+  s2 :: tensor.matmul(a1, y)
+  p2 :: tensor.softmax(s2, -1)
+  o2 :: tensor.matmul(p2, y)
+  n2 :: tensor.layer_norm(o2, [256])
+  a2 :: tensor.mul(n2, tensor.sigmoid(n2))
+  s3 :: tensor.matmul(a2, y)
+  p3 :: tensor.softmax(s3, -1)
+  o3 :: tensor.matmul(p3, y)
+  n3 :: tensor.layer_norm(o3, [256])
+  a3 :: tensor.tanh(n3)
+  a4 :: tensor.sub(a3, a2)
+  a5 :: tensor.add(a4, o1)
+  a6 :: tensor.mul(a5, tensor.reciprocal(tensor.add(tensor.abs(a4), tensor.ones([32, 256]))))
+  tensor.add(a6, n2)
+}
