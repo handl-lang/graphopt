@@ -2849,7 +2849,6 @@ def _hnl_run_candidates() -> list[Path]:
     for base in (
         _REPO / "target",
         sibling / ".ci-target" / _REPO.name,
-        sibling / ".ci-target" / "graphopt",
     ):
         cands += [base / "debug" / "hnl-run", base / "release" / "hnl-run"]
     which = shutil.which("hnl-run")
@@ -2910,7 +2909,7 @@ class KitRunner:
     """Run ``.hnl`` programs through a compiled ``hnl-run`` binary.
 
     Resolution: ``$MLOPT_HNL_RUN``, then sibling-repo cargo target
-    dirs (``graphopt/target``, ``.ci-target/graphopt``), then ``PATH``.
+    dirs (``target``, ``.ci-target/<repo>``), then ``PATH``.
     ``--project`` is opt-in (``project=``): stdin snippets evaluate
     through ambient ``tensor.*`` dispatch — the emitted
     ``from "host-tensor" import tensor`` header is stripped for eval
