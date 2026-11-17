@@ -34,8 +34,10 @@ module is the trainer that fills that seat — the kernelopt
 * REINFORCE then runs ``gamekit.engine.train_policy`` over the same
   case stream — reward is the terminal *committed* speedup minus
   ``deliver_game.MOVE_COST`` per spent move
-  (``DeliveryState.committed_speedup``: the paired-eager/best ratio
-  only when a verified config clears the noise margin, else 1.0),
+  (``DeliveryState.committed_speedup``: the eager/best ratio —
+  paired-round or construction baseline per the board's
+  ``eager_baseline`` — only when a verified config clears the noise
+  margin, else 1.0),
   so the prior learns *which pending config kinds pay on which
   boards* (cuda/fusible/compile/alias flags are broadcast state
   features), *when* to stop paying for measurements, and exploring
@@ -122,8 +124,20 @@ class DeliveryCase:
     call_kwargs: dict[str, Any] = field(default_factory=dict)
 
 
-def board_of(case: DeliveryCase) -> _dg.DeliveryBoard:
-    """Build a fresh board for *case* — new context, new measurements."""
+def board_of(
+    case: DeliveryCase, *, probe: bool = False, eager_baseline: str = "paired"
+) -> _dg.DeliveryBoard:
+    """Build a fresh board for *case* — new context, new measurements.
+
+    ``probe=True`` arms the board's ``probe:<config>`` screening
+    moves (see :mod:`mlopt.deliver_game`) — required for the
+    probe-then-commit arms; every other arm plays the standard
+    board.  ``eager_baseline`` selects the referee's win-gate/reward
+    baseline — ``"paired"`` (each config's own paired-round eager
+    median, the default) or ``"construction"`` (the single
+    board-construction eager median shared by every config — the
+    de-noised metric).
+    """
     ctx = _dg._Context(
         optz=case.optz,
         res=case.res,
@@ -139,7 +153,13 @@ def board_of(case: DeliveryCase) -> _dg.DeliveryBoard:
     else:
         for key, value in case.flags.items():
             setattr(ctx, key, value)
-    return _dg.DeliveryBoard(ctx, player_name="deliver-train", budget=case.budget)
+    return _dg.DeliveryBoard(
+        ctx,
+        player_name="deliver-train",
+        budget=case.budget,
+        probe_armed=probe,
+        eager_baseline=eager_baseline,
+    )
 
 
 # ---------------------------------------------------------------------------

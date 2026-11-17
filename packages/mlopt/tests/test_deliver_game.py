@@ -399,6 +399,38 @@ def test_paired_eager_baseline_gates_commit(game_env, monkeypatch) -> None:
     assert out.eager_med_ms == 8.0  # reported baseline is the paired one
 
 
+def test_construction_eager_baseline_gates_commit(game_env, monkeypatch) -> None:
+    """``eager_baseline="construction"`` scores every config against
+    the ONE board-construction eager median — the de-noised referee
+    metric.  Same drifted-paired setup as the paired-mode test, but
+    here the config DOES ship: 9ms beats the shared 10ms baseline
+    even though its own paired eager read 8ms."""
+
+    def drifted_paired(eager_mod, config_mod, inputs, iters, **kw):
+        out = _fake_bench_paired(eager_mod, config_mod, inputs, iters, **kw)
+        out["eager"] = {"min_ms": 8.0, "med_ms": 8.0, "rounds": out["eager"]["rounds"]}
+        return out
+
+    monkeypatch.setattr(dg, "_bench_paired", drifted_paired)
+    optz = _FakeOptz({"graph": (True, (9.0, 9.0))})
+    board = DeliveryBoard(_ctx(optz), player_name="t", budget=4, eager_baseline="construction")
+    board.step("graph")
+    st = board.state
+    # paired record still carries its own eager for audit …
+    assert st.results["graph"]["eager_med_ms"] == 8.0
+    # … but the gate/reward read the shared construction baseline.
+    assert st.eager_baseline == "construction"
+    assert st.committed_speedup == pytest.approx(10.0 / 9.0)
+    out = board.committed()
+    assert out.runner_name == "graph"
+    assert out.eager_med_ms == 10.0  # reported baseline is the shared one
+
+
+def test_eager_baseline_validation(game_env) -> None:
+    with pytest.raises(ValueError, match="eager_baseline"):
+        DeliveryBoard(_ctx(_FakeOptz({})), player_name="t", budget=1, eager_baseline="bogus")
+
+
 def test_lowered_by_config_bounded_to_argmin(game_env) -> None:
     """Only the current argmin's lowered module is retained — each
     LowerResult pins weights, so the pool can't grow unbounded."""
@@ -622,3 +654,110 @@ def test_parser_deliver_game_flags() -> None:
     assert args.deliver_budget == 6
     assert args.deliver_player == "random"
     assert args.deliver_heuristic is True
+
+
+# ---------------------------------------------------------------------------
+#  Probe-then-commit (v9) — screening moves, never committable
+# ---------------------------------------------------------------------------
+
+
+def test_probe_armed_legal_actions(game_env) -> None:
+    board = DeliveryBoard(_ctx(_FakeOptz({})), player_name="t", budget=9, probe_armed=True)
+    acts = legal_actions(board.state)
+    assert "probe:fuse+graph-alias" in acts
+    assert "probe:compile" in acts
+    assert acts[-1] == "stop"
+    # Unarmed board offers no probes.
+    board2 = DeliveryBoard(_ctx(_FakeOptz({})), player_name="t", budget=9)
+    assert not any(str(a).startswith("probe:") for a in legal_actions(board2.state))
+
+
+def test_probe_move_screens_but_never_commits(game_env) -> None:
+    from gamekit.engine import run_episode
+    from gamekit.players import registry
+
+    # ``graph`` is the fast config; everything else is slower than eager.
+    optz = _FakeOptz({**{n: (True, (20.0, 20.0)) for n in CONFIGS}, "graph": (True, (4.0, 4.0))})
+    board = DeliveryBoard(_ctx(optz), player_name="t", budget=12, probe_armed=True)
+    traj = run_episode(board, registry.make("probe-scan", "deliver")(0), 12)
+    st = board.state
+    # Every pending config was probed; only the winner was confirmed.
+    assert set(st.probes) == set(st.pending) | set(st.results)
+    assert "graph" in st.results
+    assert st.probe_steps == len(st.probes)
+    # Probes are screening records — they never enter ``results``
+    # unless confirmed, and the commit came from the full eval.
+    term = traj.terminal
+    assert term is not None
+    assert term.detail["best_config"] == "graph"
+    # Reward = speedup − MOVE_COST·steps − PROBE_MOVE_COST·probe_steps.
+    expected = 2.5 - dg.MOVE_COST * 1 - dg.PROBE_MOVE_COST * len(st.probes)
+    assert term.reward == pytest.approx(expected)
+
+
+def test_probe_illegal_on_unarmed_board(game_env) -> None:
+    board = DeliveryBoard(_ctx(_FakeOptz({})), player_name="t", budget=4)
+    st, rep = board.step("probe:graph")
+    assert rep.applied is False
+    assert st.probe_steps == 1  # the wasted move is still priced
+    assert not st.probes
+
+
+def test_probe_double_probe_illegal(game_env) -> None:
+    board = DeliveryBoard(_ctx(_FakeOptz({})), player_name="t", budget=9, probe_armed=True)
+    board.step("probe:graph")
+    st, rep = board.step("probe:graph")
+    assert rep.applied is False
+    assert list(st.probes) == ["graph"]
+
+
+def test_probe_verify_failure_is_decline(game_env) -> None:
+    optz = _FakeOptz({"graph": (False, (4.0, 4.0))})
+    board = DeliveryBoard(_ctx(optz), player_name="t", budget=9, probe_armed=True)
+    board.step("probe:graph")
+    rec = board.state.probes["graph"]
+    assert rec.get("med_ms") is None
+    assert "verify" in rec["reason"].lower() or "FAILED" in rec["reason"]
+    # A declined probe can never be confirmed into a win.
+    assert board.state.best_config is None
+
+
+def test_probe_arm_skips_confirm_when_screen_predicts_eager(game_env) -> None:
+    from gamekit.engine import run_episode
+    from gamekit.players import registry
+
+    # Everything slower than eager → best probe speedup < margin.
+    optz = _FakeOptz({n: (True, (20.0, 20.0)) for n in CONFIGS})
+    board = DeliveryBoard(_ctx(optz), player_name="t", budget=12, probe_armed=True)
+    traj = run_episode(board, registry.make("probe-commit", "deliver")(0), 12)
+    st = board.state
+    assert st.probe_steps == len(CONFIGS)
+    assert not st.results  # no confirm was ever spent
+    term = traj.terminal
+    assert term is not None
+    assert term.detail["best_config"] is None
+    assert term.reward == pytest.approx(1.0 - dg.PROBE_MOVE_COST * len(CONFIGS))
+
+
+def test_drain_arm_measures_all_then_stops(game_env) -> None:
+    from gamekit.engine import run_episode
+    from gamekit.players import registry
+
+    optz = _FakeOptz({})  # default script: 2ms vs eager 10ms — all win
+    board = DeliveryBoard(_ctx(optz), player_name="t", budget=9)
+    traj = run_episode(board, registry.make("drain", "deliver")(0), 9)
+    actions = [r.action for r in traj.reports]
+    assert actions == [*CONFIGS, "stop"]
+    assert set(board.state.results) == set(CONFIGS)
+
+
+def test_probe_arm_degrades_to_drain_on_unarmed_board(game_env) -> None:
+    from gamekit.engine import run_episode
+    from gamekit.players import registry
+
+    optz = _FakeOptz({})
+    board = DeliveryBoard(_ctx(optz), player_name="t", budget=9)  # NOT probe_armed
+    traj = run_episode(board, registry.make("probe-commit", "deliver")(0), 9)
+    actions = [r.action for r in traj.reports]
+    assert actions == [*CONFIGS, "stop"]
+    assert not board.state.probes

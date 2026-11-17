@@ -20,6 +20,20 @@ benches need; the episode reward is that same committed speedup
 minus ``MOVE_COST`` per spent move, never the raw (possibly
 sub-1.0) ratio.
 
+``eager_baseline`` selects WHICH eager the win gate and the reward
+compare against.  ``"paired"`` (default) is the per-config
+paired-round median described above — drift-robust per evaluation,
+but on sub-ms boards the paired eager itself drifts enough that two
+configurations are judged against different baselines (the v9/v10
+measurement finding: the committed-speedup label, not the policy,
+was the noise).  ``"construction"`` scores every config against the
+ONE eager median measured at board construction — a single shared
+baseline, so the argmin comparison no longer depends on which
+config happened to bench inside a lucky window.  The paired eager
+is still measured and recorded on every referee record either way
+(audit trail); only the gate's baseline changes.  Probe screens are
+unaffected — they rank configs cheaply and never commit.
+
 Why a custom scorer instead of ``gamekit.scoring``: the value spec's
 ``ScoreGate``/``ScoringSpec`` prices a measurement against absolute
 ``{axis, threshold}`` bars — pass/fail ceilings.  Delivery is a
@@ -76,6 +90,8 @@ __all__ = [
     "GameUnavailable",
     "MOVE_COST",
     "PAIRED_ROUNDS",
+    "PROBE_CONFIRM_MARGIN",
+    "PROBE_MOVE_COST",
     "WIN_MARGIN",
     "deliver_game",
     "legal_actions",
@@ -105,6 +121,29 @@ PAIRED_ROUNDS = 5
 #: next to any real speedup (≥ WIN_MARGIN ≈ 1.02) but compounds over
 #: a full drain (~0.03), so wasted moves are priced honestly.
 MOVE_COST = 0.005
+
+#: Per-probe-move cost subtracted from the episode reward, priced
+#: honestly off the instrument's real work: a ``probe:<config>`` move
+#: runs the SAME lower + mandatory verify gate as a full evaluation
+#: but benches with ``paired_rounds=1`` and ``bench_iters //
+#: PAIRED_ROUNDS`` timed calls per side — 20 timed calls against the
+#: full protocol's 100, i.e. ~5x cheaper wall-clock.  ``PROBE_MOVE_COST
+#: = MOVE_COST / 5`` prices that difference instead of pretending a
+#: screen costs a measurement.  Probes are *screening only*: their
+#: records live in ``DeliveryState.probes``, never in ``results``,
+#: and can never be committed — the shipped artifact always comes
+#: from a full paired-round evaluation (the "confirm" move) or eager.
+PROBE_MOVE_COST = MOVE_COST / 5.0
+
+#: Probe-screen win threshold: a probe arm confirms (full-evaluates)
+#: the probe-argmin config only when its own paired-eager/config
+#: speedup clears this bar.  1.10 sits well above the WIN_MARGIN
+#: noise floor (1.02) and the ~±10% noise of a 1-round/10-iter
+#: screen, while every real winner in the v7 corpus is ≥1.7x — so
+#: predicted-eager boards skip the confirm entirely and ship eager
+#: at probe-cost only.  A true sub-1.10 "win" is inside the same
+#: noise band WIN_MARGIN already refuses to count.
+PROBE_CONFIRM_MARGIN = 1.10
 
 #: Runner configurations in playbook preference order — the scripted
 #: line tries the richest honest composition first.  ``eager`` is
@@ -181,8 +220,25 @@ class DeliveryState:
     steps: int = 0
     pending: tuple[str, ...] = ()
     results: dict[str, dict[str, Any]] = field(default_factory=dict)
+    #: Probe-screen records — ``probe:<config>`` moves only, keyed by
+    #: config name.  Screening evidence, NEVER committable: the
+    #: commit path reads ``results`` alone.  Empty on boards built
+    #: without ``probe_armed``.
+    probes: dict[str, dict[str, Any]] = field(default_factory=dict)
+    #: Probe moves spent — priced at ``PROBE_MOVE_COST`` each, not
+    #: ``MOVE_COST`` (the screen is ~5x cheaper than a full eval).
+    probe_steps: int = 0
+    #: Whether this board offers ``probe:<config>`` actions — set at
+    #: construction; ``legal_actions`` reads it.
+    probe_armed: bool = False
     eager_min_ms: float | None = None
     eager_med_ms: float | None = None
+    #: Which eager baseline ``_eager_for``/``committed_speedup``/
+    #: ``committed()`` score against: ``"paired"`` (each record's own
+    #: paired-round eager median — the default) or ``"construction"``
+    #: (the single board-construction ``_bench`` median shared by
+    #: every config — the de-noised referee metric).
+    eager_baseline: str = "paired"
     cuda: bool = False
     fusible: bool = False
     compile_ok: bool = False
@@ -199,12 +255,17 @@ class DeliveryState:
     def _eager_for(self, name: str | None) -> tuple[float | None, float | None]:
         """``(min_ms, med_ms)`` eager baseline for scoring *name*.
 
-        A config measured under the paired protocol carries the
-        eager median from ITS OWN rounds (``rec["eager_*_ms"]``) —
-        the drift-robust comparison the autopsy asked for.  Records
-        without one (or ``name=None``) fall back to the
-        board-construction baseline.
+        ``"construction"`` mode returns the board-construction
+        baseline for EVERY config — one shared eager median, so the
+        win gate and reward stop depending on which config's paired
+        rounds happened to measure a lucky (or unlucky) eager draw.
+        ``"paired"`` mode prefers the config's OWN paired-round
+        eager median when the record carries one.  Records without
+        one (or ``name=None``) fall back to the construction
+        baseline either way.
         """
+        if getattr(self, "eager_baseline", "paired") == "construction":
+            return self.eager_min_ms, self.eager_med_ms
         rec = self.results.get(name) if name is not None else None
         if rec is not None and rec.get("eager_med_ms") is not None:
             return rec.get("eager_min_ms"), rec["eager_med_ms"]
@@ -266,8 +327,18 @@ class DeliveryState:
 
 
 def legal_actions(state: DeliveryState) -> tuple[str, ...]:
-    """The legal set — every pending config plus ``stop``."""
-    return (*state.pending, "stop")
+    """The legal set — pending configs, probes, and ``stop``.
+
+    ``probe:<config>`` actions appear only on probe-armed boards
+    (``state.probe_armed``) and only for configs still pending and
+    not yet probed — each config probes at most once, and a full
+    evaluation (the confirm) removes it from ``pending``.
+    """
+    acts = list(state.pending)
+    if getattr(state, "probe_armed", False):
+        acts.extend(f"probe:{name}" for name in state.pending if name not in state.probes)
+    acts.append("stop")
+    return tuple(acts)
 
 
 class DeliveryBoard:
@@ -280,7 +351,19 @@ class DeliveryBoard:
     pool, or the budget ran out mid-search.
     """
 
-    def __init__(self, ctx: _Context, *, player_name: str = "?", budget: int = 0) -> None:
+    def __init__(
+        self,
+        ctx: _Context,
+        *,
+        player_name: str = "?",
+        budget: int = 0,
+        probe_armed: bool = False,
+        eager_baseline: str = "paired",
+    ) -> None:
+        if eager_baseline not in ("paired", "construction"):
+            raise ValueError(
+                f"eager_baseline must be 'paired' or 'construction', got {eager_baseline!r}"
+            )
         self._ctx = ctx
         self._player_name = player_name
         self._budget = budget
@@ -290,6 +373,8 @@ class DeliveryBoard:
             fusible=ctx.fusible,
             compile_ok=ctx.compile_ok,
             alias_spec=ctx.alias is not None or ctx.mutable is not None,
+            probe_armed=probe_armed,
+            eager_baseline=eager_baseline,
         )
         # The eager baseline is measured once at board construction —
         # it is the shipped fallback's number anyway, and every
@@ -324,9 +409,11 @@ class DeliveryBoard:
             speedup = st.committed_speedup
             best = st.best_config if speedup > 1.0 else None
             # Move cost: reward = committed speedup − MOVE_COST·steps
-            # — a full drain must not score like an instant stop, or
-            # the prior learns argmax but never efficient stopping.
-            reward = speedup - MOVE_COST * st.steps
+            # − PROBE_MOVE_COST·probe_steps — a full drain must not
+            # score like an instant stop, or the prior learns argmax
+            # but never efficient stopping.  Probe screens are priced
+            # at their real ~5x-cheaper instrument cost.
+            reward = speedup - MOVE_COST * st.steps - PROBE_MOVE_COST * st.probe_steps
             note = (
                 f"deliver-game: committed {best} (speedup {speedup:.3f}x vs eager)"
                 if best is not None
@@ -341,8 +428,41 @@ class DeliveryBoard:
                     "best_config": best,
                     "speedup": speedup,
                     "steps": st.steps,
-                    "move_cost": MOVE_COST * st.steps,
+                    "probe_steps": st.probe_steps,
+                    "move_cost": MOVE_COST * st.steps + PROBE_MOVE_COST * st.probe_steps,
                 },
+            )
+        # ``probe:<config>`` — the screening move: same lower +
+        # mandatory verify gate, ~5x cheaper bench, record lands in
+        # ``state.probes`` and can NEVER be committed.  Only legal on
+        # probe-armed boards for still-pending, not-yet-probed
+        # configs.
+        if isinstance(action, str) and action.startswith("probe:"):
+            name = action[len("probe:") :]
+            if not st.probe_armed or name not in st.pending or name in st.probes:
+                st.probe_steps += 1
+                return st, Report(
+                    action=action,
+                    reward=0.0,
+                    applied=False,
+                    note=f"deliver-game: {action!r} not a legal probe — ignored",
+                )
+            st.probe_steps += 1
+            rec = _evaluate(ctx, name, probe=True)
+            st.probes[name] = rec
+            # A probe's lowered module is screening scaffolding —
+            # never retained for commit (the confirm re-lowers).
+            ctx.lowered_by_config.pop(name, None)
+            status = (
+                f"probe med={rec['med_ms']:.3f}ms"
+                if rec.get("med_ms") is not None
+                else f"probe declined ({rec.get('reason', '?')})"
+            )
+            return st, Report(
+                action=action,
+                reward=0.0,
+                note=f"deliver-game: {action} — {status}",
+                detail={"config": name, "record": rec, "probe": True},
             )
         if action not in st.pending:
             st.steps += 1
@@ -408,6 +528,22 @@ class DeliveryBoard:
                 )
             else:
                 notes.append(f"deliver-game: {name} — declined: {rec.get('reason')}")
+        if st.probes:
+            # Screening evidence, reported for audit — probes never
+            # commit; only their confirm (a full eval in ``results``)
+            # can ship.
+            notes.append(
+                "deliver-game: probes (screening only, never committed): "
+                + ", ".join(
+                    f"{name} "
+                    + (
+                        f"med={rec['med_ms']:.3f}ms"
+                        if rec.get("med_ms") is not None
+                        else f"declined ({rec.get('reason', '?')})"
+                    )
+                    for name, rec in st.probes.items()
+                )
+            )
         if not st.results:
             notes.append("deliver-game: no config evaluated — eager ships")
 
@@ -415,10 +551,13 @@ class DeliveryBoard:
         best_med = st.best_med_ms
         # Eager is always a candidate: a config must beat it by the
         # WIN_MARGIN noise floor — sub-margin "wins" are bench noise
-        # on shared GPUs, not delivery.  The baseline is the winning
-        # config's OWN paired-round eager median when the record
-        # carries one (drift can't favor a config measured in a
-        # luckier window); the construction baseline is the fallback.
+        # on shared GPUs, not delivery.  The baseline is the state's
+        # ``eager_baseline`` mode: the winning config's OWN
+        # paired-round eager median under ``"paired"`` (drift can't
+        # favor a config measured in a luckier window), or the single
+        # board-construction median shared by every config under
+        # ``"construction"``; the construction baseline is also the
+        # fallback for records that carry no paired eager.
         eager_min, eager_med = st._eager_for(best_name)
         if (
             best_name is None
@@ -604,7 +743,7 @@ def _is_context_poison(exc: BaseException) -> bool:
     return any(m in text for m in _POISON_MARKERS)
 
 
-def _evaluate(ctx: _Context, name: str) -> dict[str, Any]:
+def _evaluate(ctx: _Context, name: str, *, probe: bool = False) -> dict[str, Any]:
     """The referee: lower under the config's runner, verify, bench.
 
     A config that fails to lower, fails verify, or raises is a
@@ -614,6 +753,14 @@ def _evaluate(ctx: _Context, name: str) -> dict[str, Any]:
     evaluated AFTER a context-poisoning failure is a recorded
     *skip* — the measurement would inherit the dead context and its
     ``lower failed`` record would be a lie about the config itself.
+
+    ``probe=True`` runs the screening protocol: the SAME lower +
+    verify gate, but ``paired_rounds=1`` with ``bench_iters //
+    PAIRED_ROUNDS`` timed calls per side (~5x cheaper than the full
+    ``paired_rounds`` x ``bench_iters // paired_rounds`` protocol).
+    The record is marked ``"probe": True`` and is screening evidence
+    only — it never enters ``state.results`` and can never be
+    committed.
     """
     if ctx.poisoned_by is not None:
         return {
@@ -663,13 +810,20 @@ def _evaluate(ctx: _Context, name: str) -> dict[str, Any]:
         # config's min-over-round-mins score AND the eager median
         # measured in the same rounds, so ``committed_speedup`` and
         # the oracle compare against a drift-matched baseline rather
-        # than the construction-time one.
-        rounds = max(1, int(ctx.paired_rounds))
+        # than the construction-time one.  A probe runs ONE round at
+        # the same per-round iter count — ~5x fewer timed calls, a
+        # screening measurement, never a commit candidate.
+        if probe:
+            rounds = 1
+            iters_per_round = max(4, int(ctx.bench_iters) // PAIRED_ROUNDS)
+        else:
+            rounds = max(1, int(ctx.paired_rounds))
+            iters_per_round = max(1, int(ctx.bench_iters) // rounds)
         paired = _bench_paired(
             ctx.lowered_eager.module,
             lowered.module,
             ctx.inputs,
-            max(1, int(ctx.bench_iters) // rounds),
+            iters_per_round,
             rounds=rounds,
             call_kwargs=ctx.call_kwargs,
             seed=zlib.crc32(name.encode()),
@@ -695,10 +849,12 @@ def _evaluate(ctx: _Context, name: str) -> dict[str, Any]:
             {"eager": [float(e[0]), float(e[1])], "config": [float(c[0]), float(c[1])]}
             for e, c in zip(eager_side["rounds"], config_side["rounds"], strict=True)
         ],
-        "bench": {"rounds": rounds, "iters_per_round": max(1, int(ctx.bench_iters) // rounds)},
+        "bench": {"rounds": rounds, "iters_per_round": iters_per_round},
         "verified": passed,
         "stats": stats,
     }
+    if probe:
+        rec["probe"] = True
     if not ctx.verify:
         rec["unverified"] = True
     return rec
@@ -733,12 +889,22 @@ def deliver_game(
     player: str = "playbook",
     seed: int = 0,
     call_kwargs: dict[str, Any] | None = None,
+    probe: bool = False,
+    eager_baseline: str = "paired",
 ) -> Delivery:
     """Run the delivery game and return the committed :class:`Delivery`.
 
     One episode on one :class:`DeliveryBoard`: the named registry
     player spends up to *budget* moves evaluating runner configs; the
     commit is the fastest verified measurement — eager included.
+    ``probe=True`` arms the board's ``probe:<config>`` screening
+    moves (cheap 1-round bench, same lower+verify gate, never
+    committable) for the probe-then-commit arms — off by default so
+    the shipped game is unchanged.  ``eager_baseline`` selects the
+    win-gate/reward baseline: ``"paired"`` (default — each config's
+    own paired-round eager median) or ``"construction"`` (the single
+    board-construction eager median shared by every config — the
+    de-noised referee metric).
     Raises :class:`GameUnavailable` when gamekit is absent or the
     player is not seated on the ``deliver`` board; the caller falls
     back to the heuristic path with a note.
@@ -762,7 +928,13 @@ def deliver_game(
         call_kwargs=dict(call_kwargs or {}),
     )
     _probe(ctx)
-    board = DeliveryBoard(ctx, player_name=player, budget=budget)
+    board = DeliveryBoard(
+        ctx,
+        player_name=player,
+        budget=budget,
+        probe_armed=probe,
+        eager_baseline=eager_baseline,
+    )
     try:
         arm = registry.make(player, "deliver", seed=seed)
     except Exception as e:  # noqa: BLE001 — unknown/unseated player
