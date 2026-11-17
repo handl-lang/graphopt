@@ -156,7 +156,7 @@ kit-carriers = { git = "https://github.com/handl-lang/kit-carriers.git", tag = "
 # kit-cuda (P3 Step D-1c): the CUDA-graph delivery runner, split to
 # handl-lang/kit-cuda — pinned git dep at the v0.1.5 tag.
 kit-cuda = { git = "https://github.com/handl-lang/kit-cuda.git", tag = "v0.1.8" }
-kit-discovery = { git = "https://github.com/handl-lang/kit-discovery.git", tag = "v0.1.4" }
+kit-discovery = { git = "https://github.com/handl-lang/kit-discovery.git", tag = "v0.1.5" }
 kit-onnx = { git = "https://github.com/handl-lang/kit-onnx.git", tag = "v0.1.5" }
 # kit-host-tensor (P3 Step D-1f): the host-tensor backend, split to
 # handl-lang/kit-host-tensor — pinned git dep at the v0.1.4 tag.
@@ -166,19 +166,6 @@ mlopt-dtypes = { git = "https://github.com/handl-lang/eqsat.git", subdirectory =
 # `uv sync` installs it and its `mlopt` console script lands in
 # .venv/bin.
 mlopt = { workspace = true }
-
-# kit-discovery v0.1.4's own [tool.uv.sources] still pins
-# discoverykit@v0.1.23 (no v0.1.5 tag yet); uv honours dep sources
-# transitively, so the root pin needs an override to unify on v0.1.24.
-[tool.uv]
-override-dependencies = [
-    "discoverykit @ git+https://github.com/handl-lang/discoverykit.git@v0.1.24#subdirectory=packages/discoverykit",
-    "gamekit @ git+https://github.com/handl-lang/gamekit.git@v0.1.15#subdirectory=packages/gamekit",
-    "kit-carriers @ git+https://github.com/handl-lang/kit-carriers.git@v0.1.7",
-    "mlopt-core @ git+https://github.com/handl-lang/eqsat.git@v0.1.13#subdirectory=packages/mlopt-core",
-    "mlopt-orchestrator @ git+https://github.com/handl-lang/eqsat.git@v0.1.13#subdirectory=packages/mlopt-orchestrator",
-    "mlopt-dtypes @ git+https://github.com/handl-lang/eqsat.git@v0.1.13#subdirectory=packages/mlopt-dtypes",
-]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
