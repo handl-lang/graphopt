@@ -10,7 +10,7 @@ set -euo pipefail
 # packages/mlopt-handl-peer/Cargo.toml (`../../../kernel`,
 # `../../../kit-prelude-lang`, `../../../engine-transform*`) resolve
 # against the worktree's PARENT, not this repo's parent. Recreate the
-# sibling layout there before cargo runs: ../graphopt -> this worktree
+# sibling layout there before cargo runs: ../mlopt -> this worktree
 # (the sha under test), every other ~/GitHub/handl-lang/* -> its real
 # checkout. Same model as kernel/scripts/ci.sh and lib-base64/ci.sh.
 #
@@ -36,39 +36,39 @@ IN_WORKTREE=0
 
 # Shared target dir - a detached worktree's own target/ would cold-build
 # every sha. The watcher serializes runs, so sharing is safe.
-export CARGO_TARGET_DIR="${CI_TARGET_DIR:-$WORKSPACE_ROOT/.ci-target/graphopt}"
+export CARGO_TARGET_DIR="${CI_TARGET_DIR:-$WORKSPACE_ROOT/.ci-target/mlopt}"
 
 ensure_siblings() {
   [ "$IN_WORKTREE" = 1 ] || return 0
   local parent; parent="$(cd .. && pwd)"
   if [ "$parent" = "$WORKSPACE_ROOT" ]; then
-    echo "ci.sh: CI worktree sits inside $WORKSPACE_ROOT - ../graphopt" >&2
+    echo "ci.sh: CI worktree sits inside $WORKSPACE_ROOT - ../mlopt" >&2
     echo "       would resolve to the dev checkout instead of this sha." >&2
     echo "       Move the worktree base outside the workspace root." >&2
     return 1
   fi
-  # Self: ../graphopt must name THIS tree (the sha under test). Only ever
+  # Self: ../mlopt must name THIS tree (the sha under test). Only ever
   # (re)point a symlink; refuse to clobber a real directory.
-  if [ -e "$parent/graphopt" ] && [ ! -L "$parent/graphopt" ]; then
-    echo "ci.sh: $parent/graphopt is a real directory - refusing to clobber" >&2
+  if [ -e "$parent/mlopt" ] && [ ! -L "$parent/mlopt" ]; then
+    echo "ci.sh: $parent/mlopt is a real directory - refusing to clobber" >&2
     return 1
   fi
-  ln -sfn "$PWD" "$parent/graphopt"
+  ln -sfn "$PWD" "$parent/mlopt"
   local d name
   for d in "$WORKSPACE_ROOT"/*/; do
     name="$(basename "$d")"
-    [ "$name" = "graphopt" ] && continue
+    [ "$name" = "mlopt" ] && continue
     # refresh symlinks (a previous run's links may be stale); never clobber
     # a real directory that happens to sit in the parent.
     if [ -L "$parent/$name" ] || [ ! -e "$parent/$name" ]; then
       ln -sfn "$d" "$parent/$name"
     fi
   done
-  # Second-spelling hazard: a self-patch `path = "../graphopt"` would
+  # Second-spelling hazard: a self-patch `path = "../mlopt"` would
   # spell this tree two ways and the lockfile write collides; rewrite it
   # to this worktree's absolute path - the worktree is throwaway so
   # editing Cargo.toml here is safe.
-  [ -f Cargo.toml ] && sed -i "s|\.\./graphopt|$PWD|g" Cargo.toml
+  [ -f Cargo.toml ] && sed -i "s|\.\./mlopt|$PWD|g" Cargo.toml
 }
 
 ensure_siblings
