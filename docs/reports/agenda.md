@@ -1,6 +1,6 @@
 # Research agenda — self-mined proposals
 
-Mined 2026-11-17 from 21 overnight ledgers, 72 frontier rows, 271 sweep rows, 14 pay_measured rows, and a 800-case coverage census.
+Mined 2026-11-18 from 21 overnight ledgers, 72 frontier rows, 271 sweep rows, 14 pay_measured rows, and a 800-case coverage census.
 
 **Proposals only — nothing here auto-executes.**  Each item carries measured evidence and a suggested lever; humans approve by ingesting into `project/TODO.md` (commands below) before any work starts.
 
@@ -24,10 +24,10 @@ Mined 2026-11-17 from 21 overnight ledgers, 72 frontier rows, 271 sweep rows, 14
 | 14 | 0.400 | 0.40 | high | `ledger_verify_decline` | Verify-declined law: syn_mixed:mul_reshape_r_id__mixed:pow_reshape_l_w_10@RMSNormPerHead (changed=5, vfail=4) |
 | 15 | 0.400 | 0.40 | high | `ledger_verify_decline` | Verify-declined law: syn_naturality_scalar_rev__slice_mul_0@DilatedBlockAttention (changed=4, vfail=4) |
 | 16 | 0.400 | 0.40 | high | `ledger_verify_decline` | Verify-declined law: syn_naturality_scalar_rev__slice_mul_1@DilatedBlockAttention (changed=5, vfail=4) |
-| 17 | 0.383 | 0.64 | medium | `coverage_rules` | 114/156 shipped rules never arm under the stream's rulesets |
-| 18 | 0.346 | 0.58 | medium | `coverage_ops` | 106 expressible ops never occur in the 800-case stream |
-| 19 | 0.270 | 0.45 | medium | `coverage_attrs` | 38 declared (op, attr) pairs never occur in the stream |
-| 20 | 0.225 | 0.75 | low | `ledger_pay_decline` | Pay-declined law near the bar: reshape_reshape (changed=4, exec=0.5x) |
+| 17 | 0.227 | 0.38 | medium | `coverage_attrs` | 27 declared (op, attr) pairs never occur in the stream |
+| 18 | 0.225 | 0.75 | low | `ledger_pay_decline` | Pay-declined law near the bar: reshape_reshape (changed=4, exec=0.5x) |
+| 19 | 0.195 | 0.32 | medium | `coverage_ops` | 35 expressible ops never occur in the 800-case stream |
+| 20 | 0.120 | 0.20 | medium | `coverage_rules` | 0/156 shipped rules never arm under the stream's rulesets |
 
 ## Evidence per proposal
 
@@ -305,43 +305,19 @@ Mined 2026-11-17 from 21 overnight ledgers, 72 frontier rows, 271 sweep rows, 14
   - corpus: "zoo-real"
   - arena: {"verdict": "false", "relation": "new", "num_true": null, "base_cost": Infinity, "cand_cost": Infinity}
 
-### 17. 114/156 shipped rules never arm under the stream's rulesets
-
-- **signal:** `coverage_rules` · **target:** `{"domain": "meta-arena", "tier": "corpus"}`
-- **lever:** Unarmed rules need boards whose rulesets carry them AND terms matching their LHS — the fire/saturate payoff dimension stays unmeasured until then.
-- **evidence:**
-  - source: `corpus_cov.coverage_gaps (live census)`
-  - cases: 800
-  - missing: 114
-  - total: 156
-  - covered: 42
-  - missing_sample: ["aff_assoc", "aff_assoc_rev", "aff_compose_unfold", "aff_lift_step", "affd_assoc", "affd_assoc_rev", "affd_compose_unfold", "affd_lift", "affd_lift_post", "affd_lift_post_swap", "affd_lift_step", "affd_lift_step_post", "affd_lift_step_post_swap", "affd_lift_step_swap", "affd_lift_swap", "affd_lift_…
-
-### 18. 106 expressible ops never occur in the 800-case stream
-
-- **signal:** `coverage_ops` · **target:** `{"domain": "meta-arena", "tier": "corpus"}`
-- **lever:** Extend coverage_builders' templates to the missing op classes (synop*/new classes need new templates — the honest extension seam named in corpus_cov).
-- **evidence:**
-  - source: `corpus_cov.coverage_gaps (live census)`
-  - cases: 800
-  - missing: 106
-  - total: 169
-  - covered: 63
-  - missing_sample: ["addcdiv", "addcmul", "aff_compose", "aff_diag", "affd_compose", "argmin", "atan2", "batch_norm", "bitwise_and", "bitwise_or", "contiguous", "conv2d", "count_nonzero", "detach_", "dropout", "eq", "fmax", "fmin", "fmod", "ge"]
-
-### 19. 38 declared (op, attr) pairs never occur in the stream
+### 17. 27 declared (op, attr) pairs never occur in the stream
 
 - **signal:** `coverage_attrs` · **target:** `{"domain": "meta-arena", "tier": "corpus"}`
 - **lever:** Attr-carrying case kinds: the zoo census found zero attr elementwise ops — decide whether attrs need synthetic boards or real-workload intake first.
 - **evidence:**
   - source: `corpus_cov.coverage_gaps (live census)`
   - cases: 800
-  - missing: 38
+  - missing: 27
   - total: 91
-  - covered: 53
-  - missing_sample: ["argmin.dim", "argmin.keepdim", "batch_norm.cudnn_enabled", "batch_norm.eps", "batch_norm.momentum", "batch_norm.training", "conv2d.dilation", "conv2d.groups", "conv2d.padding", "conv2d.stride", "count_nonzero.dim", "dropout.p", "dropout.train", "glu.dim", "isclose.atol", "isclose.equal_nan", "iscl…
+  - covered: 64
+  - missing_sample: ["argmax.dim", "argmax.keepdim", "conv2d.dilation", "conv2d.groups", "isclose.atol", "isclose.equal_nan", "isclose.rtol", "linalg_vector_norm.ord", "max.dim", "max.keepdim", "nanmean.dim", "nanmean.keepdim", "prod.dim", "prod.keepdim", "sdpa.attn_mask", "sdpa.enable_gqa", "sdpa.scale", "softplus.bet…
 
-### 20. Pay-declined law near the bar: reshape_reshape (changed=4, exec=0.5x)
+### 18. Pay-declined law near the bar: reshape_reshape (changed=4, exec=0.5x)
 
 - **signal:** `ledger_pay_decline` · **target:** `{"domain": "discovery", "op": "reshape_reshape"}`
 - **lever:** Re-price or re-codegen this law's payoff: it fires and rewrites the graph but the measured kernel doesn't clear the keep bar — check the cost model's exec term against a hand-tuned kernel for the same site.
@@ -357,6 +333,30 @@ Mined 2026-11-17 from 21 overnight ledgers, 72 frontier rows, 271 sweep rows, 14
   - cases: 40
   - corpus: "zoo-real"
   - arena: {"verdict": "false", "relation": "new", "num_true": null, "base_cost": 0.0, "cand_cost": 0.0}
+
+### 19. 35 expressible ops never occur in the 800-case stream
+
+- **signal:** `coverage_ops` · **target:** `{"domain": "meta-arena", "tier": "corpus"}`
+- **lever:** Extend coverage_builders' templates to the missing op classes (synop*/new classes need new templates — the honest extension seam named in corpus_cov).
+- **evidence:**
+  - source: `corpus_cov.coverage_gaps (live census)`
+  - cases: 800
+  - missing: 35
+  - total: 169
+  - covered: 74
+  - missing_sample: ["addcdiv", "addcmul", "argmax", "atan2", "bitwise_and", "bitwise_or", "eq", "fmax", "fmin", "fmod", "ge", "gelu", "gt", "heaviside", "isclose", "le", "lerp", "logical_and", "logical_not", "logical_or"]
+
+### 20. 0/156 shipped rules never arm under the stream's rulesets
+
+- **signal:** `coverage_rules` · **target:** `{"domain": "meta-arena", "tier": "corpus"}`
+- **lever:** Unarmed rules need boards whose rulesets carry them AND terms matching their LHS — the fire/saturate payoff dimension stays unmeasured until then.
+- **evidence:**
+  - source: `corpus_cov.coverage_gaps (live census)`
+  - cases: 800
+  - missing: 0
+  - total: 156
+  - covered: 120
+  - missing_sample: []
 
 ## Ledger ingest (human approval required)
 
@@ -379,8 +379,8 @@ myco todo add "Verify-declined law: fold:sdpa_fold_addmul (changed=6, vfail=4)" 
 myco todo add "Verify-declined law: syn_mixed:mul_reshape_r_id__mixed:pow_reshape_l_w_10@RMSNormPerHead (changed=5, vfail=4)" --pri med --label agenda --no-commit
 myco todo add "Verify-declined law: syn_naturality_scalar_rev__slice_mul_0@DilatedBlockAttention (changed=4, vfail=4)" --pri med --label agenda --no-commit
 myco todo add "Verify-declined law: syn_naturality_scalar_rev__slice_mul_1@DilatedBlockAttention (changed=5, vfail=4)" --pri med --label agenda --no-commit
-myco todo add "114/156 shipped rules never arm under the stream's rulesets" --pri med --label agenda --no-commit
-myco todo add "106 expressible ops never occur in the 800-case stream" --pri med --label agenda --no-commit
-myco todo add "38 declared (op, attr) pairs never occur in the stream" --pri med --label agenda --no-commit
+myco todo add "27 declared (op, attr) pairs never occur in the stream" --pri med --label agenda --no-commit
 myco todo add "Pay-declined law near the bar: reshape_reshape (changed=4, exec=0.5x)" --pri med --label agenda,low-confidence --no-commit
+myco todo add "35 expressible ops never occur in the 800-case stream" --pri med --label agenda --no-commit
+myco todo add "0/156 shipped rules never arm under the stream's rulesets" --pri med --label agenda --no-commit
 ```
