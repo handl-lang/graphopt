@@ -1,0 +1,502 @@
+{
+  "generated_at": "2026-11-18T05:49:00.122549+00:00",
+  "generator": "scripts/zoo_artifact_manifest.py",
+  "zoo_dir": "/home/luis/tmp/arch-zoo",
+  "note": "Binaries live outside git (ephemeral /tmp store). This manifest pins name+size+hash for re-verification. Sidecars >64 MiB carry head/tail 1 MiB SHA-256, not full.",
+  "hash_policy": {
+    "full_sha256_max_bytes": 67108864,
+    "partial": "sha256 of first+last 1048576 bytes"
+  },
+  "specs": [
+    {
+      "spec": "bert-minilm-l6",
+      "export_rc": 0,
+      "export_wall_s": 9,
+      "search_s": 0.1,
+      "lower_s": 0.3,
+      "lower_verify": true,
+      "hnl_check": true,
+      "verify_run": true,
+      "verify_max_abs": "6.384e-16",
+      "verify_values": 384,
+      "artifacts": {
+        "hnl": {
+          "path": "/home/luis/tmp/arch-zoo/arch-bert-minilm-l6.hnl",
+          "bytes": 709869,
+          "sha256": "2e4d3bcc5e6dcba296348b8c7f55f2f5948f149eee7d70192d02e8347e215856"
+        },
+        "sidecar": {
+          "path": "/home/luis/tmp/arch-zoo/arch-bert-minilm-l6.safetensors",
+          "bytes": 90729777,
+          "sha256_head_1mib": "718104220a0ed9dc1dab04dc3e0fa3610d08b076ebaabc3ee92118c2e073e2de",
+          "sha256_tail_1mib": "d8492bc1da4e968492a19529bf9297b2b810afeb75da1cdafa70813714f62597",
+          "hash": "head_tail_1mib"
+        }
+      },
+      "speed_bench": {
+        "status": "benchmarked",
+        "note": "",
+        "result": {
+          "result_json": "/home/luis/tmp/zoo_bench/result-bert-minilm-l6.json",
+          "rounds": 5,
+          "iters": 10,
+          "wall_s": 186.0368583202362,
+          "arms_ms": {
+            "hnl": {
+              "min_of_mins_ms": 5694.522797003931,
+              "med_of_meds_ms": 5919.686352009497
+            },
+            "torch_ir": {
+              "min_of_mins_ms": 12.15253898408264,
+              "med_of_meds_ms": 14.739005506271496
+            },
+            "torch_opt": {
+              "min_of_mins_ms": 11.920064018340781,
+              "med_of_meds_ms": 14.94954047666397
+            },
+            "compile": {
+              "min_of_mins_ms": 11.938768002437428,
+              "med_of_meds_ms": 16.343538009095937
+            }
+          },
+          "hnl_over_torch_ir": 401.63404169234144
+        }
+      }
+    },
+    {
+      "spec": "gpt2-small",
+      "export_rc": 0,
+      "export_wall_s": 68,
+      "search_s": 0.2,
+      "lower_s": 2.3,
+      "lower_verify": true,
+      "hnl_check": true,
+      "verify_run": true,
+      "verify_max_abs": "1.794e-12",
+      "verify_values": 3216448,
+      "artifacts": {
+        "hnl": {
+          "path": "/home/luis/tmp/arch-zoo/arch-gpt2-small.hnl",
+          "bytes": 2660241,
+          "sha256": "dbb95df89c1e6906262d054c79c70137bc63898d914316f68cc2a304276431aa"
+        },
+        "sidecar": {
+          "path": "/home/luis/tmp/arch-zoo/arch-gpt2-small.safetensors",
+          "bytes": 651668826,
+          "sha256_head_1mib": "55e863616398ab811237fbf1b9cb47abd5eec567b337b8791df6717969b2eea0",
+          "sha256_tail_1mib": "5dd7dd1145a70b23e3f837c009eb927f56f896ed68fe664f472800a211e0afb7",
+          "hash": "head_tail_1mib"
+        }
+      },
+      "speed_bench": {
+        "status": "benchmarked",
+        "note": "",
+        "result": {
+          "result_json": "/home/luis/tmp/zoo_bench/result-gpt2-small.json",
+          "rounds": 3,
+          "iters": 8,
+          "wall_s": 545.7607583999634,
+          "arms_ms": {
+            "hnl": {
+              "min_of_mins_ms": 27985.58354350098,
+              "med_of_meds_ms": 28330.435680501978
+            },
+            "torch_ir": {
+              "min_of_mins_ms": 71.98895499459468,
+              "med_of_meds_ms": 77.99264298228081
+            },
+            "torch_opt": {
+              "min_of_mins_ms": 74.45508500677533,
+              "med_of_meds_ms": 78.6562225111993
+            },
+            "compile": {
+              "min_of_mins_ms": 78.21214100113139,
+              "med_of_meds_ms": 80.01283399062231
+            }
+          },
+          "hnl_over_torch_ir": 363.2449753874655
+        }
+      }
+    },
+    {
+      "spec": "t5-small",
+      "export_rc": 0,
+      "export_wall_s": 57,
+      "search_s": 0.1,
+      "lower_s": 2.2,
+      "lower_verify": true,
+      "hnl_check": true,
+      "verify_run": true,
+      "verify_max_abs": "6.139e-12",
+      "verify_values": 1028096,
+      "artifacts": {
+        "hnl": {
+          "path": "/home/luis/tmp/arch-zoo/arch-t5-small.hnl",
+          "bytes": 248756,
+          "sha256": "85c1deb54512560bc894b519e5a3acd0da90ae5fbb1346cbef0a6af74386c91f"
+        },
+        "sidecar": {
+          "path": "/home/luis/tmp/arch-zoo/arch-t5-small.safetensors",
+          "bytes": 307768834,
+          "sha256_head_1mib": "0c61d885e3a4aacf8eee7b296afa63d83938ed4ef770b9d2d918f86e4edae983",
+          "sha256_tail_1mib": "fe21efd4282ef87b5d2f0b846cc5dc28088dc54f3d3577969d7d6ab795e02bf4",
+          "hash": "head_tail_1mib"
+        }
+      },
+      "speed_bench": {
+        "status": "benchmarked",
+        "note": "",
+        "result": {
+          "result_json": "/home/luis/tmp/zoo_bench/result-t5-small.json",
+          "rounds": 3,
+          "iters": 8,
+          "wall_s": 186.93787264823914,
+          "arms_ms": {
+            "hnl": {
+              "min_of_mins_ms": 7749.272104992997,
+              "med_of_meds_ms": 8056.3350089942105
+            },
+            "torch_ir": {
+              "min_of_mins_ms": 33.867226011352614,
+              "med_of_meds_ms": 35.05050449166447
+            },
+            "torch_opt": {
+              "min_of_mins_ms": 32.60661699459888,
+              "med_of_meds_ms": 36.045647007995285
+            },
+            "compile": {
+              "min_of_mins_ms": 33.15696900244802,
+              "med_of_meds_ms": 34.92724249372259
+            }
+          },
+          "hnl_over_torch_ir": 229.84933101063143
+        }
+      }
+    },
+    {
+      "spec": "tinyllama-1.1b",
+      "export_rc": 0,
+      "export_wall_s": 572,
+      "search_s": 0.6,
+      "lower_s": 7.0,
+      "lower_verify": true,
+      "hnl_check": true,
+      "verify_run": false,
+      "verify_max_abs": null,
+      "verify_values": 0,
+      "artifacts": {
+        "hnl": {
+          "path": "/home/luis/tmp/arch-zoo/arch-tinyllama-1.1b.hnl",
+          "bytes": 1209824,
+          "sha256": "1a9dfdb137caa44b71341d218eb091c73e527ed61398ace8e0283f579de27e67"
+        },
+        "sidecar": {
+          "path": "/home/luis/tmp/arch-zoo/arch-tinyllama-1.1b.safetensors",
+          "bytes": 4399842691,
+          "sha256_head_1mib": "b40c51f238697a1a681c93983cd512b17e04d2a038b1dd6c77530cb9fb47dbd0",
+          "sha256_tail_1mib": "bab24c4704382ea0c95b74c66960c87452c93b0c0146bfb430a6a70425c23392",
+          "hash": "head_tail_1mib"
+        }
+      },
+      "speed_bench": {
+        "status": "skipped",
+        "note": "4.4 GB sidecar, verify_run=False \u2014 memory gates",
+        "result": null
+      }
+    },
+    {
+      "spec": "whisper-base-encoder",
+      "export_rc": 0,
+      "export_wall_s": 8,
+      "search_s": 0.1,
+      "lower_s": 1.5,
+      "lower_verify": true,
+      "hnl_check": true,
+      "verify_run": true,
+      "verify_max_abs": "1.014e-12",
+      "verify_values": 768000,
+      "artifacts": {
+        "hnl": {
+          "path": "/home/luis/tmp/arch-zoo/arch-whisper-base-encoder.hnl",
+          "bytes": 613338,
+          "sha256": "86b7fb7d5765a687721aac002f809b1f48cba9127888a0f0539d0d0cd4931c6d"
+        },
+        "sidecar": {
+          "path": "/home/luis/tmp/arch-zoo/arch-whisper-base-encoder.safetensors",
+          "bytes": 82211132,
+          "sha256_head_1mib": "23d0811f0740efa2059c686676702653b4a9775890da32f85f9e50278379869d",
+          "sha256_tail_1mib": "543bff03201f40c5e658848fbf98a908f98fe21af31444d9989175e27a20b32e",
+          "hash": "head_tail_1mib"
+        }
+      },
+      "speed_bench": {
+        "status": "partial",
+        "note": "40-min timeout killed the run at round 3/5; hnl n=3 paired rounds, JSON not written",
+        "result": null
+      }
+    },
+    {
+      "spec": "whisper-large-v3-turbo-encoder",
+      "export_rc": 0,
+      "export_wall_s": 286,
+      "search_s": 0.5,
+      "lower_s": 26.2,
+      "lower_verify": true,
+      "hnl_check": true,
+      "verify_run": false,
+      "verify_max_abs": null,
+      "verify_values": 0,
+      "artifacts": {
+        "hnl": {
+          "path": "/home/luis/tmp/arch-zoo/arch-whisper-large-v3-turbo-encoder.hnl",
+          "bytes": 6559017,
+          "sha256": "d23e79a45c80832fd2b5f7dbdf2586a29319eba5d13ac81d956bc6fc51102e2b"
+        },
+        "sidecar": {
+          "path": "/home/luis/tmp/arch-zoo/arch-whisper-large-v3-turbo-encoder.safetensors",
+          "bytes": 2546571283,
+          "sha256_head_1mib": "bdf665f16fa2549e10f2765775328c251ddfe71270a3e6d367086bd491f3a612",
+          "sha256_tail_1mib": "3b4d41d11d9205d6d9d49dd9ec11f864fb9a2ef86fc4907f0e44333e2bf994c1",
+          "hash": "head_tail_1mib"
+        }
+      },
+      "speed_bench": {
+        "status": "skipped",
+        "note": "2.5 GB sidecar, verify_run=False \u2014 memory gates",
+        "result": null
+      }
+    },
+    {
+      "spec": "whisper-small-encoder",
+      "export_rc": 0,
+      "export_wall_s": 39,
+      "search_s": 0.1,
+      "lower_s": 7.2,
+      "lower_verify": true,
+      "hnl_check": true,
+      "verify_run": true,
+      "verify_max_abs": "1.297e-12",
+      "verify_values": 1152000,
+      "artifacts": {
+        "hnl": {
+          "path": "/home/luis/tmp/arch-zoo/arch-whisper-small-encoder.hnl",
+          "bytes": 1880141,
+          "sha256": "4eec25ee326357d615221f3f814dd727674616bb9e1d8a28c95fd2223e5aad84"
+        },
+        "sidecar": {
+          "path": "/home/luis/tmp/arch-zoo/arch-whisper-small-encoder.safetensors",
+          "bytes": 352170445,
+          "sha256_head_1mib": "1c71ad4aa785739e04e4c73b784d2e56b1cc5eb5a38662d83ba0cc604a4ea7a8",
+          "sha256_tail_1mib": "bef0631f481e32be96a668e4ae24211707a1edde1b323c67ce2b9667cffb0ef6",
+          "hash": "head_tail_1mib"
+        }
+      },
+      "speed_bench": {
+        "status": "pending",
+        "note": "bench run did not reach this spec",
+        "result": null
+      }
+    },
+    {
+      "spec": "whisper-tiny-decoder",
+      "export_rc": 0,
+      "export_wall_s": 7,
+      "search_s": 0.1,
+      "lower_s": 0.3,
+      "lower_verify": true,
+      "hnl_check": true,
+      "verify_run": true,
+      "verify_max_abs": "1.599e-13",
+      "verify_values": 1659680,
+      "artifacts": {
+        "hnl": {
+          "path": "/home/luis/tmp/arch-zoo/arch-whisper-tiny-decoder.hnl",
+          "bytes": 445077,
+          "sha256": "7f962f8305f2145fb60be251f6ec00a8f017e1ac337ddbbac6859bf73763343a"
+        },
+        "sidecar": {
+          "path": "/home/luis/tmp/arch-zoo/arch-whisper-tiny-decoder.safetensors",
+          "bytes": 197771191,
+          "sha256_head_1mib": "d0e91b43327b1d1897130cba94993d5923d7afdd6026c37b2df33a5215ce27ef",
+          "sha256_tail_1mib": "15fe722d33a351e77ac2c4f46e1ab20ff0e5e4ad0b6b2b28e07ab2b6d6cae5be",
+          "hash": "head_tail_1mib"
+        }
+      },
+      "speed_bench": {
+        "status": "benchmarked",
+        "note": "",
+        "result": {
+          "result_json": "/home/luis/tmp/zoo_bench/result-whisper-tiny-decoder.json",
+          "rounds": 3,
+          "iters": 8,
+          "wall_s": 183.89025616645813,
+          "arms_ms": {
+            "hnl": {
+              "min_of_mins_ms": 9261.93375699222,
+              "med_of_meds_ms": 9313.629420488724
+            },
+            "torch_ir": {
+              "min_of_mins_ms": 24.10339398193173,
+              "med_of_meds_ms": 24.87343350367155
+            },
+            "torch_opt": {
+              "min_of_mins_ms": 24.023789999773726,
+              "med_of_meds_ms": 25.5976125044981
+            },
+            "compile": {
+              "min_of_mins_ms": 23.810846003470942,
+              "med_of_meds_ms": 25.07132301980164
+            }
+          },
+          "hnl_over_torch_ir": 374.44084344503324
+        }
+      }
+    },
+    {
+      "spec": "whisper-tiny-encoder",
+      "export_rc": 0,
+      "export_wall_s": 9,
+      "search_s": 0.1,
+      "lower_s": 2.9,
+      "lower_verify": true,
+      "hnl_check": true,
+      "verify_run": true,
+      "verify_max_abs": "3.277e-13",
+      "verify_values": 576000,
+      "artifacts": {
+        "hnl": {
+          "path": "/home/luis/tmp/arch-zoo/arch-whisper-tiny-encoder.hnl",
+          "bytes": 313440,
+          "sha256": "e13f3b257a3f47bcc14ba10cfd4c70aa35cbd5376dedd957631c55d4d46d62fc"
+        },
+        "sidecar": {
+          "path": "/home/luis/tmp/arch-zoo/arch-whisper-tiny-encoder.safetensors",
+          "bytes": 32756700,
+          "sha256": "35d790782f752c8c2d07bb0485e1a638796cc10079d1dbf352edd05129287575"
+        }
+      },
+      "speed_bench": {
+        "status": "benchmarked",
+        "note": "",
+        "result": {
+          "result_json": "/home/luis/tmp/zoo_bench/result-whisper-tiny-encoder.json",
+          "rounds": 5,
+          "iters": 10,
+          "wall_s": 1755.1762068271637,
+          "arms_ms": {
+            "hnl": {
+              "min_of_mins_ms": 68519.81786348915,
+              "med_of_meds_ms": 70233.98137900222
+            },
+            "torch_ir": {
+              "min_of_mins_ms": 303.61434898804873,
+              "med_of_meds_ms": 322.89919450704474
+            },
+            "torch_opt": {
+              "min_of_mins_ms": 249.85356201068498,
+              "med_of_meds_ms": 268.3354790060548
+            },
+            "compile": {
+              "min_of_mins_ms": 232.1919469977729,
+              "med_of_meds_ms": 257.7879700111225
+            }
+          },
+          "hnl_over_torch_ir": 217.5105499604147
+        }
+      }
+    },
+    {
+      "spec": "whisper-tiny-full",
+      "export_rc": 0,
+      "export_wall_s": 35,
+      "search_s": 2.0,
+      "lower_s": 3.3,
+      "lower_verify": true,
+      "hnl_check": true,
+      "verify_run": true,
+      "verify_max_abs": "1.581e-13",
+      "verify_values": 1659680,
+      "artifacts": {
+        "hnl": {
+          "path": "/home/luis/tmp/arch-zoo/arch-whisper-tiny-full.hnl",
+          "bytes": 758074,
+          "sha256": "4fb90ad6a1bc0c83e3f24b42b811a4bd5850755eaebb49c830c756419b67b357"
+        },
+        "sidecar": {
+          "path": "/home/luis/tmp/arch-zoo/arch-whisper-tiny-full.safetensors",
+          "bytes": 230527965,
+          "sha256_head_1mib": "86ed0900920a1269b0ec0c19b9fd6b7d2505df527b81f073ceecbff1accb6524",
+          "sha256_tail_1mib": "15fe722d33a351e77ac2c4f46e1ab20ff0e5e4ad0b6b2b28e07ab2b6d6cae5be",
+          "hash": "head_tail_1mib"
+        }
+      },
+      "speed_bench": {
+        "status": "benchmarked",
+        "note": "",
+        "result": {
+          "result_json": "/home/luis/tmp/zoo_bench/result-whisper-tiny-full.json",
+          "rounds": 3,
+          "iters": 8,
+          "wall_s": 1338.1031301021576,
+          "arms_ms": {
+            "hnl": {
+              "min_of_mins_ms": 78117.38021700876,
+              "med_of_meds_ms": 79688.1065589987
+            },
+            "torch_ir": {
+              "min_of_mins_ms": 304.05534399324097,
+              "med_of_meds_ms": 312.22108998917975
+            },
+            "torch_opt": {
+              "min_of_mins_ms": 256.3253770058509,
+              "med_of_meds_ms": 264.31593600136694
+            },
+            "compile": {
+              "min_of_mins_ms": 253.51218998548575,
+              "med_of_meds_ms": 263.77896999474615
+            }
+          },
+          "hnl_over_torch_ir": 255.22973660030573
+        }
+      }
+    }
+  ],
+  "auxiliary_inputs": [
+    {
+      "path": "/home/luis/tmp/arch-zoo/arch-whisper-large-v3-turbo-encoder.verify-inputs.safetensors",
+      "role": "arch-whisper-large-v3-turbo-encoder.verify-inputs.safetensors",
+      "bytes": 3072090,
+      "sha256": "9b6375254dfe3cf84f7b1e8e660e81f92fc85331e0f28a81290a9c7e3268133b"
+    },
+    {
+      "path": "/home/luis/tmp/arch-zoo/zoo-inputs-whisper-base-encoder.safetensors",
+      "role": "zoo-inputs-whisper-base-encoder.safetensors",
+      "bytes": 1920089,
+      "sha256": "042a1d5dec7de6d1a12f56b33725914a7a4fe0cb25a876e9d3f6e8c43a55564f"
+    },
+    {
+      "path": "/home/luis/tmp/arch-zoo/zoo-inputs-whisper-small-encoder.safetensors",
+      "role": "zoo-inputs-whisper-small-encoder.safetensors",
+      "bytes": 1920089,
+      "sha256": "042a1d5dec7de6d1a12f56b33725914a7a4fe0cb25a876e9d3f6e8c43a55564f"
+    },
+    {
+      "path": "/home/luis/tmp/arch-zoo/zoo-inputs-whisper-tiny-decoder.safetensors",
+      "role": "zoo-inputs-whisper-tiny-decoder.safetensors",
+      "bytes": 4608097,
+      "sha256": "1ae50ec1c69cc5a901d796687e9b170d8472224c007230d2bc84c3073f0dd565"
+    },
+    {
+      "path": "/home/luis/tmp/arch-zoo/zoo-inputs-whisper-tiny-encoder.safetensors",
+      "role": "zoo-inputs-whisper-tiny-encoder.safetensors",
+      "bytes": 1920089,
+      "sha256": "042a1d5dec7de6d1a12f56b33725914a7a4fe0cb25a876e9d3f6e8c43a55564f"
+    },
+    {
+      "path": "/home/luis/tmp/arch-zoo/zoo-inputs-whisper-tiny-full.safetensors",
+      "role": "zoo-inputs-whisper-tiny-full.safetensors",
+      "bytes": 1920089,
+      "sha256": "042a1d5dec7de6d1a12f56b33725914a7a4fe0cb25a876e9d3f6e8c43a55564f"
+    }
+  ]
+}
