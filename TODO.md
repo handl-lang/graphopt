@@ -8,6 +8,7 @@
 - [ ] T-040 agenda frontier\_delivery\_gap-uncaptured-headroom-on-zoo-chunkedssd-1751-576us: Uncaptured headroom on zoo:ChunkedSSD: 1751.576us ceiling, captured=-0.0615, vs\_compile=0.286 · pri:high · created:2026-11-14 · #agenda
 - [ ] T-041 agenda frontier\_delivery\_gap-uncaptured-headroom-on-zoo-decoupledmla-140-084u: Uncaptured headroom on zoo:DecoupledMLA: 140.084us ceiling, captured=-0.2396, vs\_compile=0.6241 · pri:high · created:2026-11-14 · #agenda
 - [ ] T-042 agenda frontier\_delivery\_gap-uncaptured-headroom-on-zoo-deltaruleblock-163-41: Uncaptured headroom on zoo:DeltaRuleBlock: 163.416us ceiling, captured=0.0055, vs\_compile=0.7611 · pri:high · created:2026-11-14 · #agenda
+- [ ] T-043 host-tensor weight cache: per-process safetensors tensor cache keyed by (path,name,dtype,offset); opt-in flag/env first · pri:high · created:2026-11-18 · #hnl-perf · links:PL-036
 
 ## HIGH — ADR-0159: dissolve the optimizer domains into ext tools
 
