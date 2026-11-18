@@ -12,6 +12,7 @@
 - [ ] T-044 host-tensor f32 compute path alongside f64; tensor.load decodes F32 sidecars without f64 upcast; f64 stays default · pri:high · created:2026-11-18 · #hnl-perf · links:PL-036
 - [ ] T-045 f32 verify-run tolerance arm + re-verify promoted artifacts under f32 before shipping · pri:high · created:2026-11-18 · #hnl-perf · links:PL-036
 - [ ] T-046 re-run zoo\_bench.py after each perf phase; update zoo\_speed\_report.md · created:2026-11-18 · #hnl-perf · links:PL-036
+- [ ] T-047 product-proof round 2: re-bench whisper specs on fast path vs eager/compile CPU (gated on A) · created:2026-11-18 · #hnl-perf · links:PL-036
 
 ## HIGH — ADR-0159: dissolve the optimizer domains into ext tools
 
