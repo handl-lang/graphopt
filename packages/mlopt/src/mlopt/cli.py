@@ -474,19 +474,72 @@ def _verify_run_export(
                 "hnl": (f"tensor.load({_json.dumps(feed_path.name)}, {_json.dumps(name)})")
             }
         tensor_load_dir = feed_dir
+    # Chunked arm: when the bound weight set exceeds the per-chunk
+    # byte budget (``$MLOPT_VERIFY_CHUNK_BYTES``, default 1 GiB), split
+    # the term DAG into sequential segments evaluated through separate
+    # hnl-run invocations with F64 safetensors handoffs — the
+    # monolithic do-block would hold every weight live at once
+    # (earlyoom on arch-scale exports; ADR-0179 option (c)).  Any
+    # planning failure falls back to the monolithic eval below — the
+    # status quo, never a silent partial verification.
+    from mlopt.verify_chunks import (
+        chunk_byte_budget,
+        emit_chunk_programs,
+        estimate_feed_bytes,
+        run_chunk_programs,
+    )
+
     try:
-        # sidecar= re-emits the SAME tensor.load spelling the artifact
-        # carries (deterministic rewrite of the same file) so the gate
-        # exercises the shipped weight channel, not just the term.
-        src = emit_program(
-            term,
-            run_feed,
-            sidecar=sidecar,
-            sidecar_dtype=sidecar_dtype,
-        )
-    except UnsupportedOpError as e:
+        chunk_budget = chunk_byte_budget()
+    except ValueError as e:
         print(f"verify-run: declined — {e}", file=sys.stderr)
         return 1
+    chunk_specs = None
+    chunk_dir: Path | None = None
+    if chunk_budget > 0:
+        weight_bytes = 0
+        if sidecar is not None:
+            try:
+                weight_bytes = Path(sidecar).stat().st_size
+            except OSError:
+                weight_bytes = 0
+        if weight_bytes <= 0:
+            pitem = {"F64": 8, "F32": 4}.get(sidecar_dtype, 8) if sidecar is not None else 8
+            weight_bytes = estimate_feed_bytes(run_feed, leaf_kinds(term), param_itemsize=pitem)
+        if weight_bytes > chunk_budget:
+            try:
+                chunk_specs = emit_chunk_programs(
+                    term,
+                    run_feed,
+                    sidecar=sidecar,
+                    sidecar_dtype=sidecar_dtype,
+                    budget=chunk_budget,
+                )
+            except Exception as e:  # noqa: BLE001 — monolithic is the fallback
+                print(
+                    f"verify-run: chunked plan unavailable "
+                    f"({type(e).__name__}: {e}); monolithic eval",
+                    file=sys.stderr,
+                )
+                chunk_specs = None
+            if not chunk_specs:
+                # Single segment — the monolithic path is identical.
+                chunk_specs = None
+    src: str | None = None
+    if chunk_specs is None:
+        try:
+            # sidecar= re-emits the SAME tensor.load spelling the artifact
+            # carries (deterministic rewrite of the same file) so the gate
+            # exercises the shipped weight channel, not just the term.
+            src = emit_program(
+                term,
+                run_feed,
+                sidecar=sidecar,
+                sidecar_dtype=sidecar_dtype,
+            )
+        except UnsupportedOpError as e:
+            print(f"verify-run: declined — {e}", file=sys.stderr)
+            return 1
     if var_feed:
         assert feed_path is not None  # set in the var_feed branch above  # nosec B101
         try:
@@ -494,6 +547,20 @@ def _verify_run_export(
         except Exception as e:  # noqa: BLE001 — feed write failure is a gate failure
             print(f"verify-run: feed safetensors write failed: {e}", file=sys.stderr)
             return 1
+    # Chunked arm workdir: every ``tensor.load`` in the chunk programs
+    # (weight sidecar, staged Var feed, inter-chunk handoffs) resolves
+    # against ONE ``TENSOR_LOAD_DIR``, so the handoff dir must be the
+    # same directory the weight/feed channel already uses — or a
+    # scratch dir when there is none (no sidecar, no staged feed).
+    written: list[Path] = []
+    chunk_dir_created = False
+    if chunk_specs is not None:
+        if tensor_load_dir is not None:
+            chunk_dir = Path(tensor_load_dir)
+        else:
+            chunk_dir = Path(tempfile.mkdtemp(prefix="mlopt-verify-chunks-"))
+            tensor_load_dir = chunk_dir
+            chunk_dir_created = True
     try:
         runner = KitRunner(tensor_load_dir=tensor_load_dir)
     except FileNotFoundError as e:
@@ -501,19 +568,32 @@ def _verify_run_export(
         return 1
     try:
         try:
-            out = runner.run(src)
+            if chunk_specs is not None:
+                assert chunk_dir is not None  # set above with chunk_specs  # nosec B101
+                out = run_chunk_programs(runner, chunk_specs, chunk_dir, written)
+            else:
+                assert src is not None  # set unless the chunked arm engaged  # nosec B101
+                out = runner.run(src)
         except Exception as e:  # noqa: BLE001 — hnl-run failure is a gate failure
             print(f"verify-run: hnl-run rejected the program: {e}", file=sys.stderr)
             return 1
     finally:
-        if feed_path is not None:
-            import contextlib
+        import contextlib
 
+        # Inter-chunk handoffs are gate scratch — never left beside
+        # the artifact (or inside a temp feed dir) after the run.
+        for p in written:
+            with contextlib.suppress(OSError):
+                p.unlink()
+        if feed_path is not None:
             with contextlib.suppress(OSError):
                 feed_path.unlink()
             if sidecar is None and feed_dir is not None:
                 with contextlib.suppress(OSError):
                     feed_dir.rmdir()
+        if chunk_dir_created and chunk_dir is not None:
+            with contextlib.suppress(OSError):
+                chunk_dir.rmdir()
     wire = out.get("__tensor__") if isinstance(out, dict) else None
     if wire is None:
         print(
@@ -653,8 +733,9 @@ def _verify_run_export(
         getattr(ref_t, "dtype", None), payload_dtype=payload_dtype
     )
     ref_dtype = getattr(ref_t, "dtype", "?")
+    chunk_note = f"chunks={len(chunk_specs)} " if chunk_specs else ""
     tol_note = (
-        f"ref={ref_label} dtype={ref_dtype} payload={payload_dtype} "
+        f"{chunk_note}ref={ref_label} dtype={ref_dtype} payload={payload_dtype} "
         f"atol={atol:.1e} rtol={rtol:.1e} — {tol_why}"
     )
     bad = [
