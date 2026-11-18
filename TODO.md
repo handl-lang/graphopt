@@ -15,6 +15,7 @@
 - [ ] T-047 product-proof round 2: re-bench whisper specs on fast path vs eager/compile CPU (gated on A) · created:2026-11-18 · #hnl-perf · links:PL-036
 - [ ] T-048 permanent home + manifest for verified .hnl zoo artifacts (8.3GB in /tmp/arch-zoo is ephemeral) · created:2026-11-18 · #hnl-perf · links:PL-036
 - [ ] T-049 docs/reports entry: honest .hnl speed table, correctness-verified vs speed-promising · created:2026-11-18 · #hnl-perf · links:PL-036
+- [ ] T-050 agenda v3 frontier: ChunkedSSD/GatedDeltaRule/MambaSelectiveScan/DecoupledMLA/CapsuleRouting/RotaryPair carrier+lowering · created:2026-11-18 · #hnl-perf · links:PL-036
 
 ## HIGH — ADR-0159: dissolve the optimizer domains into ext tools
 
