@@ -7,6 +7,7 @@ name = "mlopt-meta"
 version = "0.1.0dev"
 description = "mlopt meta-dist: verified model optimization — the product member is packages/mlopt (domain packages in packages/)"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.13"
 dependencies = [
     "mlopt-core",
