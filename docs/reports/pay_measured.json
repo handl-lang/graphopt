@@ -4,75 +4,77 @@
    "module": "GatedDeltaRule",
    "size": "small",
    "ms": {
-    "spelled": 0.10273400039295666,
-    "tape": 0.13369649968808517,
-    "noprim": 0.4155864990025293,
-    "noprim_ir": 0.12473800052248407,
-    "synop": 0.15312100185838062
+    "spelled": 0.10886001109611243,
+    "tape": 0.15392400382552296,
+    "noprim": 0.14258199371397495,
+    "noprim_ir": 0.14441199891734868,
+    "synop": 0.1926600089063868
    },
-   "marginal": 0.36844556362127806,
-   "marginal_pinned": 1.2275409355369657,
-   "pay": 1.2275409355369657,
-   "executor_confounded": true,
-   "e2e": 1.4904608140702602,
+   "marginal": 1.351222576483748,
+   "marginal_pinned": 1.3340997309832399,
+   "pay": 1.3340997309832399,
+   "executor_confounded": false,
+   "e2e": 1.7697959697642085,
    "verdict": "loses",
    "synops": [
+    "synop_4c5296b3ba",
     "synop_bb8c54c201"
    ],
    "executors": {
     "spelled": "_GatedDeltaRule",
     "tape": "IRModule",
-    "noprim": "BatchedScanModule",
+    "noprim": "IRModule",
     "synop": "IRModule",
     "noprim_ir": "IRModule"
    },
    "verified": true,
-   "note": "executor confound: synop routes to IRModule, noprim to BatchedScanModule \u2014 the marginal compares different executors, not just the fold."
+   "note": ""
   },
   {
    "module": "GatedDeltaRule",
    "size": "large",
    "ms": {
-    "spelled": 0.2615470002638176,
-    "tape": 0.2870839998649899,
-    "noprim": 0.9171130004688166,
-    "noprim_ir": 0.2783489999274025,
-    "synop": 0.3012115012097638
+    "spelled": 0.329826507368125,
+    "tape": 0.3556259907782078,
+    "noprim": 0.3362769930390641,
+    "noprim_ir": 0.34061100450344384,
+    "synop": 0.4533260071184486
    },
-   "marginal": 0.32843444707008657,
-   "marginal_pinned": 1.0821360999620053,
-   "pay": 1.0821360999620053,
-   "executor_confounded": true,
-   "e2e": 1.1516534347782132,
+   "marginal": 1.348073214945714,
+   "marginal_pinned": 1.3309200264369765,
+   "pay": 1.3309200264369765,
+   "executor_confounded": false,
+   "e2e": 1.3744377634647893,
    "verdict": "loses",
    "synops": [
+    "synop_4c5296b3ba",
     "synop_bb8c54c201"
    ],
    "executors": {
     "spelled": "_GatedDeltaRule",
     "tape": "IRModule",
-    "noprim": "BatchedScanModule",
+    "noprim": "IRModule",
     "synop": "IRModule",
     "noprim_ir": "IRModule"
    },
    "verified": true,
-   "note": "executor confound: synop routes to IRModule, noprim to BatchedScanModule \u2014 the marginal compares different executors, not just the fold."
+   "note": ""
   },
   {
    "module": "GatedLinearAttention",
    "size": "small",
    "ms": {
-    "spelled": 0.14564550110662822,
-    "tape": 0.1813569997466402,
-    "noprim": 0.18114449812856037,
-    "noprim_ir": 0.18240899953525513,
-    "synop": 0.2777664994937368
+    "spelled": 0.18056099361274391,
+    "tape": 0.23271999089047313,
+    "noprim": 0.23016250634100288,
+    "noprim_ir": 0.23133050126489252,
+    "synop": 0.3510944952722639
    },
-   "marginal": 1.5333973836544714,
-   "marginal_pinned": 1.522767518057964,
-   "pay": 1.522767518057964,
+   "marginal": 1.5254200210702054,
+   "marginal_pinned": 1.5177181277545053,
+   "pay": 1.5177181277545053,
    "executor_confounded": false,
-   "e2e": 1.9071409510300064,
+   "e2e": 1.944464794125301,
    "verdict": "loses",
    "synops": [
     "synop_4c657cb2c0"
@@ -91,235 +93,230 @@
    "module": "GatedLinearAttention",
    "size": "large",
    "ms": {
-    "spelled": 2.310992002094281,
-    "tape": 8.120741998936865,
-    "noprim": 7.907133498520125,
-    "noprim_ir": 7.766415999867604,
-    "synop": 8.115512500808109
+    "spelled": 5.10389098781161,
+    "tape": 9.854070493020117,
+    "noprim": 10.0082904973533,
+    "noprim_ir": 9.108901504077949,
+    "synop": 11.085665013524704
    },
-   "marginal": 1.0263532925461525,
-   "marginal_pinned": 1.044949498062743,
-   "pay": 1.044949498062743,
+   "marginal": 1.1076482059005297,
+   "marginal_pinned": 1.217014478481492,
+   "pay": 1.217014478481492,
    "executor_confounded": false,
-   "e2e": 3.51170081655567,
+   "e2e": 2.172002701467943,
+   "verdict": "loses",
+   "synops": [
+    "synop_4c657cb2c0"
+   ],
+   "executors": {
+    "spelled": "_GatedLinearAttention",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule",
+    "noprim_ir": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "MambaSelectiveScan",
+   "size": "small",
+   "ms": {
+    "spelled": 0.17518749518785626,
+    "tape": 0.22163550602272153,
+    "noprim": 0.21998400916345417,
+    "noprim_ir": 0.21921300503890961,
+    "synop": 0.33242799690924585
+   },
+   "marginal": 1.5111461881860817,
+   "marginal_pinned": 1.5164611098243963,
+   "pay": 1.5164611098243963,
+   "executor_confounded": false,
+   "e2e": 1.897555510755937,
+   "verdict": "loses",
+   "synops": [
+    "synop_4c657cb2c0"
+   ],
+   "executors": {
+    "spelled": "_MambaSelectiveScan",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule",
+    "noprim_ir": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "MambaSelectiveScan",
+   "size": "large",
+   "ms": {
+    "spelled": 3.2610380003461614,
+    "tape": 4.049295996082947,
+    "noprim": 4.066278488608077,
+    "noprim_ir": 4.041876498376951,
+    "synop": 5.896232498344034
+   },
+   "marginal": 1.4500316480690347,
+   "marginal_pinned": 1.4587859131053895,
+   "pay": 1.4587859131053895,
+   "executor_confounded": false,
+   "e2e": 1.8080845723717862,
+   "verdict": "loses",
+   "synops": [
+    "synop_4c657cb2c0"
+   ],
+   "executors": {
+    "spelled": "_MambaSelectiveScan",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule",
+    "noprim_ir": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "RealGatedLRU",
+   "size": "small",
+   "ms": {
+    "spelled": 0.1576155045768246,
+    "tape": 0.17570950149092823,
+    "noprim": 0.16115749895107,
+    "noprim_ir": 0.16292749205604196,
+    "synop": 0.3856905095744878
+   },
+   "marginal": 2.3932520179628103,
+   "marginal_pinned": 2.3672524796602303,
+   "pay": 2.3672524796602303,
+   "executor_confounded": false,
+   "e2e": 2.4470340694591717,
+   "verdict": "loses",
+   "synops": [
+    "synop2_35bbd03301",
+    "synop3_0fa19d1ff8",
+    "synop3_21b9729f32",
+    "synop_5e58f26875",
+    "synop_bb8c54c201"
+   ],
+   "executors": {
+    "spelled": "_RealGatedLRU",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule",
+    "noprim_ir": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "RealGatedLRU",
+   "size": "large",
+   "ms": {
+    "spelled": 0.7174979837145656,
+    "tape": 0.82753250899259,
+    "noprim": 0.8944555011112243,
+    "noprim_ir": 0.8934865036280826,
+    "synop": 1.9673325004987419
+   },
+   "marginal": 2.1994749856808213,
+   "marginal_pinned": 2.2018603442919513,
+   "pay": 2.2018603442919513,
+   "executor_confounded": false,
+   "e2e": 2.7419345352214735,
+   "verdict": "loses",
+   "synops": [
+    "synop2_35bbd03301",
+    "synop3_0fa19d1ff8",
+    "synop3_21b9729f32",
+    "synop_5e58f26875",
+    "synop_bb8c54c201"
+   ],
+   "executors": {
+    "spelled": "_RealGatedLRU",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule",
+    "noprim_ir": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "HighwayGate",
+   "size": "small",
+   "ms": {
+    "spelled": 0.018261998775415123,
+    "tape": 0.022093503503128886,
+    "noprim": 0.021630999981425703,
+    "noprim_ir": 0.021841988200321794,
+    "synop": 0.028057998861186206
+   },
+   "marginal": 1.297119822721062,
+   "marginal_pinned": 1.2845899651558659,
+   "pay": 1.2845899651558659,
+   "executor_confounded": false,
+   "e2e": 1.5364144531078803,
+   "verdict": "loses",
+   "synops": [
+    "synop_bb8c54c201"
+   ],
+   "executors": {
+    "spelled": "_HighwayGate",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule",
+    "noprim_ir": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "HighwayGate",
+   "size": "large",
+   "ms": {
+    "spelled": 0.023374013835564256,
+    "tape": 0.026750509277917445,
+    "noprim": 0.026392503059469163,
+    "noprim_ir": 0.026548499590717256,
+    "synop": 0.033276010071858764
+   },
+   "marginal": 1.2608129663518186,
+   "marginal_pinned": 1.253404545825776,
+   "pay": 1.253404545825776,
+   "executor_confounded": false,
+   "e2e": 1.4236326848249028,
+   "verdict": "loses",
+   "synops": [
+    "synop_bb8c54c201"
+   ],
+   "executors": {
+    "spelled": "_HighwayGate",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule",
+    "noprim_ir": "IRModule"
+   },
+   "verified": true,
+   "note": ""
+  },
+  {
+   "module": "RotaryPair",
+   "size": "small",
+   "ms": {
+    "spelled": 0.14815399481449276,
+    "tape": 0.1282565062865615,
+    "noprim": 0.1217860117321834,
+    "noprim_ir": 0.12335351493675262,
+    "synop": 0.12408199836499989
+   },
+   "marginal": 1.0188526301186833,
+   "marginal_pinned": 1.0059056560214015,
+   "pay": 1.0059056560214015,
+   "executor_confounded": false,
+   "e2e": 0.8375204362215545,
    "verdict": "ties",
-   "synops": [
-    "synop_4c657cb2c0"
-   ],
-   "executors": {
-    "spelled": "_GatedLinearAttention",
-    "tape": "IRModule",
-    "noprim": "IRModule",
-    "synop": "IRModule",
-    "noprim_ir": "IRModule"
-   },
-   "verified": true,
-   "note": ""
-  },
-  {
-   "module": "MambaSelectiveScan",
-   "size": "small",
-   "ms": {
-    "spelled": 0.1757494992489228,
-    "tape": 0.2171004998672288,
-    "noprim": 0.215224499697797,
-    "noprim_ir": 0.21650500093528535,
-    "synop": 0.3328974999021739
-   },
-   "marginal": 1.5467453768953114,
-   "marginal_pinned": 1.5375972770332402,
-   "pay": 1.5375972770332402,
-   "executor_confounded": false,
-   "e2e": 1.8941590236378114,
-   "verdict": "loses",
-   "synops": [
-    "synop_4c657cb2c0"
-   ],
-   "executors": {
-    "spelled": "_MambaSelectiveScan",
-    "tape": "IRModule",
-    "noprim": "IRModule",
-    "synop": "IRModule",
-    "noprim_ir": "IRModule"
-   },
-   "verified": true,
-   "note": ""
-  },
-  {
-   "module": "MambaSelectiveScan",
-   "size": "large",
-   "ms": {
-    "spelled": 2.615609000713448,
-    "tape": 3.0211329994926928,
-    "noprim": 3.17026049742708,
-    "noprim_ir": 3.1047319989738753,
-    "synop": 4.0795105014694855
-   },
-   "marginal": 1.2868060857397474,
-   "marginal_pinned": 1.3139654252984727,
-   "pay": 1.3139654252984727,
-   "executor_confounded": false,
-   "e2e": 1.5596790270857515,
-   "verdict": "loses",
-   "synops": [
-    "synop_4c657cb2c0"
-   ],
-   "executors": {
-    "spelled": "_MambaSelectiveScan",
-    "tape": "IRModule",
-    "noprim": "IRModule",
-    "synop": "IRModule",
-    "noprim_ir": "IRModule"
-   },
-   "verified": true,
-   "note": ""
-  },
-  {
-   "module": "RealGatedLRU",
-   "size": "small",
-   "ms": {
-    "spelled": 0.1483905016357312,
-    "tape": 0.15267399976437446,
-    "noprim": 0.12862649964517914,
-    "noprim_ir": 0.1299720024690032,
-    "synop": 0.26864900064538233
-   },
-   "marginal": 2.0885976170265095,
-   "marginal_pinned": 2.0669759297541943,
-   "pay": 2.0669759297541943,
-   "executor_confounded": false,
-   "e2e": 1.810419114997411,
-   "verdict": "loses",
-   "synops": [
-    "synop2_35bbd03301",
-    "synop3_0fa19d1ff8",
-    "synop3_21b9729f32",
-    "synop_5e58f26875",
-    "synop_bb8c54c201"
-   ],
-   "executors": {
-    "spelled": "_RealGatedLRU",
-    "tape": "IRModule",
-    "noprim": "IRModule",
-    "synop": "IRModule",
-    "noprim_ir": "IRModule"
-   },
-   "verified": true,
-   "note": ""
-  },
-  {
-   "module": "RealGatedLRU",
-   "size": "large",
-   "ms": {
-    "spelled": 0.7707169988862006,
-    "tape": 0.8099509996100096,
-    "noprim": 0.7090499984769849,
-    "noprim_ir": 0.7140159996197326,
-    "synop": 2.0908089991280576
-   },
-   "marginal": 2.9487469199901892,
-   "marginal_pinned": 2.9282383031214585,
-   "pay": 2.9282383031214585,
-   "executor_confounded": false,
-   "e2e": 2.7128102820485136,
-   "verdict": "loses",
-   "synops": [
-    "synop2_35bbd03301",
-    "synop3_0ca31bf1e5",
-    "synop3_0fa19d1ff8",
-    "synop3_21b9729f32",
-    "synop3_24c5153e5e",
-    "synop3_4cdc06b88f",
-    "synop_5e58f26875",
-    "synop_bb8c54c201"
-   ],
-   "executors": {
-    "spelled": "_RealGatedLRU",
-    "tape": "IRModule",
-    "noprim": "IRModule",
-    "synop": "IRModule",
-    "noprim_ir": "IRModule"
-   },
-   "verified": true,
-   "note": ""
-  },
-  {
-   "module": "HighwayGate",
-   "size": "small",
-   "ms": {
-    "spelled": 0.01678650005487725,
-    "tape": 0.017065500287571922,
-    "noprim": 0.018848500985768624,
-    "noprim_ir": 0.017278001905651763,
-    "synop": 0.022920998162589967
-   },
-   "marginal": 1.2160647777717837,
-   "marginal_pinned": 1.326600048301438,
-   "pay": 1.326600048301438,
-   "executor_confounded": true,
-   "e2e": 1.3654423547289931,
-   "verdict": "loses",
-   "synops": [
-    "synop_bb8c54c201"
-   ],
-   "executors": {
-    "spelled": "_HighwayGate",
-    "tape": "IRModule",
-    "noprim": "BatchedScanModule",
-    "synop": "IRModule",
-    "noprim_ir": "IRModule"
-   },
-   "verified": true,
-   "note": "executor confound: synop routes to IRModule, noprim to BatchedScanModule \u2014 the marginal compares different executors, not just the fold."
-  },
-  {
-   "module": "HighwayGate",
-   "size": "large",
-   "ms": {
-    "spelled": 0.01916799919854384,
-    "tape": 0.01975049963220954,
-    "noprim": 0.021405499865068123,
-    "noprim_ir": 0.019745999452425167,
-    "synop": 0.025763500161701813
-   },
-   "marginal": 1.2035925497701438,
-   "marginal_pinned": 1.3047453092346555,
-   "pay": 1.3047453092346555,
-   "executor_confounded": true,
-   "e2e": 1.3440891714800898,
-   "verdict": "loses",
-   "synops": [
-    "synop_bb8c54c201"
-   ],
-   "executors": {
-    "spelled": "_HighwayGate",
-    "tape": "IRModule",
-    "noprim": "BatchedScanModule",
-    "synop": "IRModule",
-    "noprim_ir": "IRModule"
-   },
-   "verified": true,
-   "note": "executor confound: synop routes to IRModule, noprim to BatchedScanModule \u2014 the marginal compares different executors, not just the fold."
-  },
-  {
-   "module": "RotaryPair",
-   "size": "small",
-   "ms": {
-    "spelled": 0.07504500172217377,
-    "tape": 0.05744499867432751,
-    "noprim": 0.054829999498906545,
-    "noprim_ir": 0.05489249997481238,
-    "synop": 0.06810350168962032
-   },
-   "marginal": 1.2420846673722563,
-   "marginal_pinned": 1.2406704325886022,
-   "pay": 1.2406704325886022,
-   "executor_confounded": false,
-   "e2e": 0.9075021670563514,
-   "verdict": "loses",
-   "synops": [
-    "synop_bb8c54c201"
-   ],
+   "synops": [],
    "executors": {
     "spelled": "_RotaryPair",
     "tape": "IRModule",
@@ -328,29 +325,56 @@
     "noprim_ir": "IRModule"
    },
    "verified": true,
-   "note": ""
+   "note": "extracted term carries no synop \u2014 folds fired but lost the tie."
   },
   {
    "module": "RotaryPair",
    "size": "large",
    "ms": {
-    "spelled": 0.24278000091726426,
-    "tape": 0.20791600036318414,
-    "noprim": 0.20242000027792528,
-    "noprim_ir": 0.19990300097560976,
-    "synop": 0.22152100063976832
+    "spelled": 0.35100300738122314,
+    "tape": 0.3102115006186068,
+    "noprim": 0.3065625060116872,
+    "noprim_ir": 0.30280600185506046,
+    "synop": 0.3042424941668287
    },
-   "marginal": 1.0943632068748992,
-   "marginal_pinned": 1.1081424468800054,
-   "pay": 1.1081424468800054,
+   "marginal": 0.9924321735392844,
+   "marginal_pinned": 1.0047439360612667,
+   "pay": 1.0047439360612667,
    "executor_confounded": false,
-   "e2e": 0.9124351256397734,
+   "e2e": 0.8667803060627113,
+   "verdict": "ties",
+   "synops": [],
+   "executors": {
+    "spelled": "_RotaryPair",
+    "tape": "IRModule",
+    "noprim": "IRModule",
+    "synop": "IRModule",
+    "noprim_ir": "IRModule"
+   },
+   "verified": true,
+   "note": "extracted term carries no synop \u2014 folds fired but lost the tie."
+  },
+  {
+   "module": "GRUFusedGate",
+   "size": "small",
+   "ms": {
+    "spelled": 0.03125749935861677,
+    "tape": 0.05681951006408781,
+    "noprim": 0.055886004702188075,
+    "noprim_ir": 0.05633148248307407,
+    "synop": 0.06374850636348128
+   },
+   "marginal": 1.1406882045548226,
+   "marginal_pinned": 1.131667471784287,
+   "pay": 1.131667471784287,
+   "executor_confounded": false,
+   "e2e": 2.0394627744240106,
    "verdict": "loses",
    "synops": [
     "synop_bb8c54c201"
    ],
    "executors": {
-    "spelled": "_RotaryPair",
+    "spelled": "_GRUFusedGate",
     "tape": "IRModule",
     "noprim": "IRModule",
     "synop": "IRModule",
@@ -361,48 +385,19 @@
   },
   {
    "module": "GRUFusedGate",
-   "size": "small",
-   "ms": {
-    "spelled": 0.02797699926304631,
-    "tape": 0.045375498302746564,
-    "noprim": 0.04713549969892483,
-    "noprim_ir": 0.0452900021628011,
-    "synop": 0.051682000048458576
-   },
-   "marginal": 1.0964559700984235,
-   "marginal_pinned": 1.1411348549439357,
-   "pay": 1.1411348549439357,
-   "executor_confounded": true,
-   "e2e": 1.8473031922591945,
-   "verdict": "loses",
-   "synops": [
-    "synop_bb8c54c201"
-   ],
-   "executors": {
-    "spelled": "_GRUFusedGate",
-    "tape": "IRModule",
-    "noprim": "BatchedScanModule",
-    "synop": "IRModule",
-    "noprim_ir": "IRModule"
-   },
-   "verified": true,
-   "note": "executor confound: synop routes to IRModule, noprim to BatchedScanModule \u2014 the marginal compares different executors, not just the fold."
-  },
-  {
-   "module": "GRUFusedGate",
    "size": "large",
    "ms": {
-    "spelled": 0.036711500797537155,
-    "tape": 0.05337000038707629,
-    "noprim": 0.054743000873713754,
-    "noprim_ir": 0.05288849934004247,
-    "synop": 0.059977999626426026
+    "spelled": 0.04182750126346946,
+    "tape": 0.06664851389359683,
+    "noprim": 0.06543150811921805,
+    "noprim_ir": 0.0658109929645434,
+    "synop": 0.07366298814304173
    },
-   "marginal": 1.095628640541443,
-   "marginal_pinned": 1.1340461607882304,
-   "pay": 1.1340461607882304,
-   "executor_confounded": true,
-   "e2e": 1.6337659404665292,
+   "marginal": 1.1258030001207628,
+   "marginal_pinned": 1.119311300814572,
+   "pay": 1.119311300814572,
+   "executor_confounded": false,
+   "e2e": 1.7611137629054636,
    "verdict": "loses",
    "synops": [
     "synop_bb8c54c201"
@@ -410,12 +405,12 @@
    "executors": {
     "spelled": "_GRUFusedGate",
     "tape": "IRModule",
-    "noprim": "BatchedScanModule",
+    "noprim": "IRModule",
     "synop": "IRModule",
     "noprim_ir": "IRModule"
    },
    "verified": true,
-   "note": "executor confound: synop routes to IRModule, noprim to BatchedScanModule \u2014 the marginal compares different executors, not just the fold."
+   "note": ""
   }
  ],
  "folds": {
@@ -424,39 +419,23 @@
     {
      "module": "RealGatedLRU",
      "size": "small",
-     "marginal": 2.0885976170265095,
-     "marginal_pinned": 2.0669759297541943,
-     "pay": 2.0669759297541943,
+     "marginal": 2.3932520179628103,
+     "marginal_pinned": 2.3672524796602303,
+     "pay": 2.3672524796602303,
      "verdict": "loses"
     },
     {
      "module": "RealGatedLRU",
      "size": "large",
-     "marginal": 2.9487469199901892,
-     "marginal_pinned": 2.9282383031214585,
-     "pay": 2.9282383031214585,
+     "marginal": 2.1994749856808213,
+     "marginal_pinned": 2.2018603442919513,
+     "pay": 2.2018603442919513,
      "verdict": "loses"
     }
    ],
-   "worst": 2.9282383031214585,
-   "best": 2.0669759297541943,
-   "mean": 2.4976071164378264,
-   "verdict": "loses"
-  },
-  "synop3_0ca31bf1e5": {
-   "modules": [
-    {
-     "module": "RealGatedLRU",
-     "size": "large",
-     "marginal": 2.9487469199901892,
-     "marginal_pinned": 2.9282383031214585,
-     "pay": 2.9282383031214585,
-     "verdict": "loses"
-    }
-   ],
-   "worst": 2.9282383031214585,
-   "best": 2.9282383031214585,
-   "mean": 2.9282383031214585,
+   "worst": 2.3672524796602303,
+   "best": 2.2018603442919513,
+   "mean": 2.284556411976091,
    "verdict": "loses"
   },
   "synop3_0fa19d1ff8": {
@@ -464,23 +443,23 @@
     {
      "module": "RealGatedLRU",
      "size": "small",
-     "marginal": 2.0885976170265095,
-     "marginal_pinned": 2.0669759297541943,
-     "pay": 2.0669759297541943,
+     "marginal": 2.3932520179628103,
+     "marginal_pinned": 2.3672524796602303,
+     "pay": 2.3672524796602303,
      "verdict": "loses"
     },
     {
      "module": "RealGatedLRU",
      "size": "large",
-     "marginal": 2.9487469199901892,
-     "marginal_pinned": 2.9282383031214585,
-     "pay": 2.9282383031214585,
+     "marginal": 2.1994749856808213,
+     "marginal_pinned": 2.2018603442919513,
+     "pay": 2.2018603442919513,
      "verdict": "loses"
     }
    ],
-   "worst": 2.9282383031214585,
-   "best": 2.0669759297541943,
-   "mean": 2.4976071164378264,
+   "worst": 2.3672524796602303,
+   "best": 2.2018603442919513,
+   "mean": 2.284556411976091,
    "verdict": "loses"
   },
   "synop3_21b9729f32": {
@@ -488,55 +467,47 @@
     {
      "module": "RealGatedLRU",
      "size": "small",
-     "marginal": 2.0885976170265095,
-     "marginal_pinned": 2.0669759297541943,
-     "pay": 2.0669759297541943,
+     "marginal": 2.3932520179628103,
+     "marginal_pinned": 2.3672524796602303,
+     "pay": 2.3672524796602303,
      "verdict": "loses"
     },
     {
      "module": "RealGatedLRU",
      "size": "large",
-     "marginal": 2.9487469199901892,
-     "marginal_pinned": 2.9282383031214585,
-     "pay": 2.9282383031214585,
+     "marginal": 2.1994749856808213,
+     "marginal_pinned": 2.2018603442919513,
+     "pay": 2.2018603442919513,
      "verdict": "loses"
     }
    ],
-   "worst": 2.9282383031214585,
-   "best": 2.0669759297541943,
-   "mean": 2.4976071164378264,
+   "worst": 2.3672524796602303,
+   "best": 2.2018603442919513,
+   "mean": 2.284556411976091,
    "verdict": "loses"
   },
-  "synop3_24c5153e5e": {
+  "synop_4c5296b3ba": {
    "modules": [
     {
-     "module": "RealGatedLRU",
+     "module": "GatedDeltaRule",
+     "size": "small",
+     "marginal": 1.351222576483748,
+     "marginal_pinned": 1.3340997309832399,
+     "pay": 1.3340997309832399,
+     "verdict": "loses"
+    },
+    {
+     "module": "GatedDeltaRule",
      "size": "large",
-     "marginal": 2.9487469199901892,
-     "marginal_pinned": 2.9282383031214585,
-     "pay": 2.9282383031214585,
+     "marginal": 1.348073214945714,
+     "marginal_pinned": 1.3309200264369765,
+     "pay": 1.3309200264369765,
      "verdict": "loses"
     }
    ],
-   "worst": 2.9282383031214585,
-   "best": 2.9282383031214585,
-   "mean": 2.9282383031214585,
-   "verdict": "loses"
-  },
-  "synop3_4cdc06b88f": {
-   "modules": [
-    {
-     "module": "RealGatedLRU",
-     "size": "large",
-     "marginal": 2.9487469199901892,
-     "marginal_pinned": 2.9282383031214585,
-     "pay": 2.9282383031214585,
-     "verdict": "loses"
-    }
-   ],
-   "worst": 2.9282383031214585,
-   "best": 2.9282383031214585,
-   "mean": 2.9282383031214585,
+   "worst": 1.3340997309832399,
+   "best": 1.3309200264369765,
+   "mean": 1.3325098787101082,
    "verdict": "loses"
   },
   "synop_4c657cb2c0": {
@@ -544,39 +515,39 @@
     {
      "module": "GatedLinearAttention",
      "size": "small",
-     "marginal": 1.5333973836544714,
-     "marginal_pinned": 1.522767518057964,
-     "pay": 1.522767518057964,
+     "marginal": 1.5254200210702054,
+     "marginal_pinned": 1.5177181277545053,
+     "pay": 1.5177181277545053,
      "verdict": "loses"
     },
     {
      "module": "GatedLinearAttention",
      "size": "large",
-     "marginal": 1.0263532925461525,
-     "marginal_pinned": 1.044949498062743,
-     "pay": 1.044949498062743,
-     "verdict": "ties"
+     "marginal": 1.1076482059005297,
+     "marginal_pinned": 1.217014478481492,
+     "pay": 1.217014478481492,
+     "verdict": "loses"
     },
     {
      "module": "MambaSelectiveScan",
      "size": "small",
-     "marginal": 1.5467453768953114,
-     "marginal_pinned": 1.5375972770332402,
-     "pay": 1.5375972770332402,
+     "marginal": 1.5111461881860817,
+     "marginal_pinned": 1.5164611098243963,
+     "pay": 1.5164611098243963,
      "verdict": "loses"
     },
     {
      "module": "MambaSelectiveScan",
      "size": "large",
-     "marginal": 1.2868060857397474,
-     "marginal_pinned": 1.3139654252984727,
-     "pay": 1.3139654252984727,
+     "marginal": 1.4500316480690347,
+     "marginal_pinned": 1.4587859131053895,
+     "pay": 1.4587859131053895,
      "verdict": "loses"
     }
    ],
-   "worst": 1.5375972770332402,
-   "best": 1.044949498062743,
-   "mean": 1.354819929613105,
+   "worst": 1.5177181277545053,
+   "best": 1.217014478481492,
+   "mean": 1.4274949072914458,
    "verdict": "loses"
   },
   "synop_5e58f26875": {
@@ -584,23 +555,23 @@
     {
      "module": "RealGatedLRU",
      "size": "small",
-     "marginal": 2.0885976170265095,
-     "marginal_pinned": 2.0669759297541943,
-     "pay": 2.0669759297541943,
+     "marginal": 2.3932520179628103,
+     "marginal_pinned": 2.3672524796602303,
+     "pay": 2.3672524796602303,
      "verdict": "loses"
     },
     {
      "module": "RealGatedLRU",
      "size": "large",
-     "marginal": 2.9487469199901892,
-     "marginal_pinned": 2.9282383031214585,
-     "pay": 2.9282383031214585,
+     "marginal": 2.1994749856808213,
+     "marginal_pinned": 2.2018603442919513,
+     "pay": 2.2018603442919513,
      "verdict": "loses"
     }
    ],
-   "worst": 2.9282383031214585,
-   "best": 2.0669759297541943,
-   "mean": 2.4976071164378264,
+   "worst": 2.3672524796602303,
+   "best": 2.2018603442919513,
+   "mean": 2.284556411976091,
    "verdict": "loses"
   },
   "synop_bb8c54c201": {
@@ -608,87 +579,71 @@
     {
      "module": "GatedDeltaRule",
      "size": "small",
-     "marginal": 0.36844556362127806,
-     "marginal_pinned": 1.2275409355369657,
-     "pay": 1.2275409355369657,
+     "marginal": 1.351222576483748,
+     "marginal_pinned": 1.3340997309832399,
+     "pay": 1.3340997309832399,
      "verdict": "loses"
     },
     {
      "module": "GatedDeltaRule",
      "size": "large",
-     "marginal": 0.32843444707008657,
-     "marginal_pinned": 1.0821360999620053,
-     "pay": 1.0821360999620053,
+     "marginal": 1.348073214945714,
+     "marginal_pinned": 1.3309200264369765,
+     "pay": 1.3309200264369765,
      "verdict": "loses"
     },
     {
      "module": "RealGatedLRU",
      "size": "small",
-     "marginal": 2.0885976170265095,
-     "marginal_pinned": 2.0669759297541943,
-     "pay": 2.0669759297541943,
+     "marginal": 2.3932520179628103,
+     "marginal_pinned": 2.3672524796602303,
+     "pay": 2.3672524796602303,
      "verdict": "loses"
     },
     {
      "module": "RealGatedLRU",
      "size": "large",
-     "marginal": 2.9487469199901892,
-     "marginal_pinned": 2.9282383031214585,
-     "pay": 2.9282383031214585,
+     "marginal": 2.1994749856808213,
+     "marginal_pinned": 2.2018603442919513,
+     "pay": 2.2018603442919513,
      "verdict": "loses"
     },
     {
      "module": "HighwayGate",
      "size": "small",
-     "marginal": 1.2160647777717837,
-     "marginal_pinned": 1.326600048301438,
-     "pay": 1.326600048301438,
+     "marginal": 1.297119822721062,
+     "marginal_pinned": 1.2845899651558659,
+     "pay": 1.2845899651558659,
      "verdict": "loses"
     },
     {
      "module": "HighwayGate",
      "size": "large",
-     "marginal": 1.2035925497701438,
-     "marginal_pinned": 1.3047453092346555,
-     "pay": 1.3047453092346555,
-     "verdict": "loses"
-    },
-    {
-     "module": "RotaryPair",
-     "size": "small",
-     "marginal": 1.2420846673722563,
-     "marginal_pinned": 1.2406704325886022,
-     "pay": 1.2406704325886022,
-     "verdict": "loses"
-    },
-    {
-     "module": "RotaryPair",
-     "size": "large",
-     "marginal": 1.0943632068748992,
-     "marginal_pinned": 1.1081424468800054,
-     "pay": 1.1081424468800054,
+     "marginal": 1.2608129663518186,
+     "marginal_pinned": 1.253404545825776,
+     "pay": 1.253404545825776,
      "verdict": "loses"
     },
     {
      "module": "GRUFusedGate",
      "size": "small",
-     "marginal": 1.0964559700984235,
-     "marginal_pinned": 1.1411348549439357,
-     "pay": 1.1411348549439357,
+     "marginal": 1.1406882045548226,
+     "marginal_pinned": 1.131667471784287,
+     "pay": 1.131667471784287,
      "verdict": "loses"
     },
     {
      "module": "GRUFusedGate",
      "size": "large",
-     "marginal": 1.095628640541443,
-     "marginal_pinned": 1.1340461607882304,
-     "pay": 1.1340461607882304,
+     "marginal": 1.1258030001207628,
+     "marginal_pinned": 1.119311300814572,
+     "pay": 1.119311300814572,
      "verdict": "loses"
     }
    ],
-   "worst": 2.9282383031214585,
-   "best": 1.0821360999620053,
-   "mean": 1.456023052111149,
+   "worst": 2.3672524796602303,
+   "best": 1.119311300814572,
+   "mean": 1.5028882331191125,
    "verdict": "loses"
   }
  },

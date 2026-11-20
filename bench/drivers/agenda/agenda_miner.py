@@ -31,8 +31,18 @@ re-runnable, no torch):
   is unmeasured headroom.
 * ``frontier_delivery_gap`` — ``frontier*.json`` rows with material
   algebraic headroom (``headroom_us``) the delivered body fails to
-  capture (``captured`` null/low, or ``beats_compile`` false).  The
-  ceiling is real; the delivery is the gap.
+  capture (``captured`` null/low, or ``beats_compile`` false) *and*
+  the graph arm has not answered the question: rows whose
+  ``beats_graph_compile`` is true are skipped — the shipped
+  ``CudaGraphRunner`` replay already prices the dispatch share, so
+  re-proposing them would re-ask an answered question.  The ceiling
+  is real; the delivery is the gap.
+* ``frontier_graph_gap`` — ``frontier*.json`` rows where graph-arm
+  data exists and *neither* the per-leaf lowering nor
+  ``CudaGraphRunner`` replay beats ``torch.compile``
+  (``beats_graph_compile`` false, ``beats_compile`` not true).  The
+  residual is device time, not dispatch — a different, harder lever
+  than the delivery gap.
 * ``sweep_straddle`` — ``zoo_chain_sweep*.json`` rows whose per-run
   speedups straddle 1.0: the keep/drop outcome is decided by
   referee noise, not by the workload.  Measurement-integrity
@@ -486,8 +496,36 @@ def _sig_ledgers(reports_dir: Path) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
+def _graph_metrics(r: dict) -> dict:
+    """The graph-arm fields ``frontier*.json`` rows already emit."""
+    return {
+        "delivered_graph_us": r.get("delivered_graph_us"),
+        "graph_speedup": r.get("graph_speedup"),
+        "graph_vs_compile": r.get("graph_vs_compile"),
+        "beats_graph_compile": r.get("beats_graph_compile"),
+    }
+
+
 def _sig_frontier(reports_dir: Path) -> list[dict]:
-    """Mine ``frontier*.json`` for uncaptured algebraic headroom."""
+    """Mine ``frontier*.json`` for uncaptured algebraic headroom.
+
+    Emits two proposal kinds (see the module docstring):
+
+    * ``frontier_delivery_gap`` — rows the lowering leaves uncaptured
+      that the graph arm has *not* answered (no graph data, or graph
+      replay also loses while the lowering itself beats compile).
+      Rows with ``beats_graph_compile`` true are skipped entirely —
+      the shipped ``CudaGraphRunner`` arm already prices the dispatch
+      share, so the gap proposal would re-ask an answered question.
+    * ``frontier_graph_gap`` — rows where graph-arm data exists and
+      neither arm beats ``torch.compile``: the residual is device
+      time, which wants a kernel/carrier lever, not dispatch work.
+
+    The same case can appear in both ``frontier.json`` and
+    ``frontier_fp32.json`` (and across sweep dtypes); candidates are
+    deduped by case — the highest-scored row wins and the sources
+    union, so one case files one proposal.
+    """
     out: list[dict] = []
     rows: list[tuple[str, dict]] = []
     for path in _reports(reports_dir, "frontier*.json"):
@@ -509,9 +547,48 @@ def _sig_frontier(reports_dir: Path) -> list[dict]:
         if not (uncaptured or loses_compile):
             continue
         deficit = 1.0 - cap if isinstance(cap, (int, float)) else 1.0
-        cands.append((hu * max(deficit, 0.2), src, r, cap))
-    cands.sort(key=lambda t: -t[0])
-    for score, src, r, cap in cands[:8]:
+        cands.append(
+            {
+                "score": hu * max(deficit, 0.2),
+                "src": src,
+                "row": r,
+                "cap": cap,
+            }
+        )
+    # dedupe by case across the fp64/fp32 frontier docs — keep the
+    # highest-scored row, union the sources it was mined from.
+    best: dict[str, dict] = {}
+    for c in cands:
+        case = str(c["row"].get("case"))
+        cur = best.get(case)
+        if cur is None:
+            c = dict(c)
+            c["sources"] = {c["src"]}
+            best[case] = c
+        elif c["score"] > cur["score"]:
+            c = dict(c)
+            c["sources"] = set(cur["sources"]) | {c["src"]}
+            best[case] = c
+        else:
+            cur["sources"].add(c["src"])
+    cands = sorted(best.values(), key=lambda c: -c["score"])
+
+    gap_rows: list[dict] = []
+    graph_rows: list[dict] = []
+    for c in cands:
+        r = c["row"]
+        beats_graph = r.get("beats_graph_compile")
+        if beats_graph is True:
+            # the graph arm already beats compile — the dispatch
+            # question is answered; do not re-propose it.
+            continue
+        if beats_graph is False and r.get("beats_compile") is not True:
+            graph_rows.append(c)
+        else:
+            gap_rows.append(c)
+
+    for c in gap_rows[:8]:
+        score, r, cap = c["score"], c["row"], c["cap"]
         regime = r.get("regime") or "?"
         out.append(
             _proposal(
@@ -525,7 +602,7 @@ def _sig_frontier(reports_dir: Path) -> list[dict]:
                     "op": r.get("case"),
                 },
                 evidence={
-                    "sources": [src],
+                    "sources": sorted(c["sources"]),
                     "metrics": {
                         "case": r.get("case"),
                         "regime": regime,
@@ -536,6 +613,7 @@ def _sig_frontier(reports_dir: Path) -> list[dict]:
                         "vs_compile": r.get("vs_compile"),
                         "beats_compile": r.get("beats_compile"),
                         "kernels": r.get("kernels"),
+                        **_graph_metrics(r),
                     },
                 },
                 lever=(
@@ -544,6 +622,47 @@ def _sig_frontier(reports_dir: Path) -> list[dict]:
                     "module against the ceiling decomposition "
                     "(dispatch vs device share) and attack the "
                     "largest residual term, not the rewrite bank."
+                ),
+                headroom=min(1.0, 0.25 + score / 200.0),
+                confidence="medium",
+            )
+        )
+    for c in graph_rows[:6]:
+        score, r, cap = c["score"], c["row"], c["cap"]
+        regime = r.get("regime") or "?"
+        out.append(
+            _proposal(
+                "frontier_graph_gap",
+                f"Graph arm loses to compile on {r.get('case')}: "
+                f"graph_vs_compile={r.get('graph_vs_compile')}, "
+                f"vs_compile={r.get('vs_compile')}",
+                target={
+                    "domain": "gen",
+                    "tier": regime,
+                    "op": r.get("case"),
+                },
+                evidence={
+                    "sources": sorted(c["sources"]),
+                    "metrics": {
+                        "case": r.get("case"),
+                        "regime": regime,
+                        "headroom_us": r.get("headroom_us"),
+                        "ceiling": r.get("ceiling"),
+                        "speedup": r.get("speedup"),
+                        "captured": cap,
+                        "vs_compile": r.get("vs_compile"),
+                        "beats_compile": r.get("beats_compile"),
+                        "kernels": r.get("kernels"),
+                        **_graph_metrics(r),
+                    },
+                },
+                lever=(
+                    "Neither the per-leaf lowering nor "
+                    "CudaGraphRunner replay beats torch.compile — "
+                    "the residual is device time (Inductor fuses "
+                    "better), not dispatch.  Attack the device-side "
+                    "kernel/carrier for this module, not the "
+                    "delivery path."
                 ),
                 headroom=min(1.0, 0.25 + score / 200.0),
                 confidence="medium",
