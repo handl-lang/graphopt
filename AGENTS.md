@@ -1,6 +1,6 @@
 # Agent guide — mlopt (graphopt)
 
-The GitHub repo is `handl-lang/mlopt` (renamed from `handl-lang/graphopt`,
+The GitHub repo is `handl-lang/research-mlopt` (renamed from `handl-lang/graphopt`,
 itself renamed from `research-mlopt`; the `mlopt-*` package names and the
 "mlopt" project name below are unchanged).
 

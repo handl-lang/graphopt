@@ -25,7 +25,7 @@ build:
 # committed copy.
 artifact:
 	@if [ -f packages/mlopt-kit/hnl/conv_bn.hnl ] || \
-	    [ -f ../mlopt/packages/mlopt-kit/hnl/conv_bn.hnl ] || \
+	    [ -f ../research-mlopt/packages/mlopt-kit/hnl/conv_bn.hnl ] || \
 	    [ -f "$$HOME/.handl/pkg/mlopt-kit/hnl/conv_bn.hnl" ] || \
 	    [ -f "$(ARTIFACT)" ]; then \
 	  : local resolution arm present — no fetch needed; \

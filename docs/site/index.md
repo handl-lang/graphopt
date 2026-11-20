@@ -31,4 +31,4 @@ The [tutorial track](./tutorials/) walks install → first `search()` →
 first minted law → the scorecard. The contract surface is [the frozen
 API reference](./reference/frozen-api); upstream, the repository's own
 docs live at
-[`handl-lang/mlopt/docs/`](https://github.com/handl-lang/mlopt/tree/main/docs).
+[`handl-lang/research-mlopt/docs/`](https://github.com/handl-lang/mlopt/tree/main/docs).

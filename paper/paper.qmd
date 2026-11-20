@@ -96,7 +96,7 @@ establishes is the *pipeline*: that a law can travel from measured
 need to a shipped, certified, runtime-priced rule without a human
 writing it.
 
-The repository is `handl-lang/mlopt`; every number below
+The repository is `handl-lang/research-mlopt`; every number below
 cites the artifact that produced it (§@sec-repro).
 
 # Background {#sec-background}

@@ -1,7 +1,7 @@
 # mlopt
 
 > **P3 Step D-2**: this package now lives at `packages/mlopt` inside
-> the merged `handl-lang/mlopt` repo (formerly `handl-lang/graphopt`).
+> the merged `handl-lang/research-mlopt` repo (formerly `handl-lang/graphopt`).
 > Run all commands from the **repo root** — `mlopt` is a uv workspace
 > member and the root `mlopt-meta` dist depends on it, so
 > `.venv/bin/mlopt` exists after a plain `uv sync`.

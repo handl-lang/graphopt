@@ -11,7 +11,7 @@
 *Draft.  Every number in this paper is sourced to the retro, baseline or
 artifact that produced it; where a claim is a rediscovery rather than a
 discovery it is labelled as such.  Naming: "Catopt" is the
-product/paper name — the repo is `handl-lang/mlopt` (formerly
+product/paper name — the repo is `handl-lang/research-mlopt` (formerly
 `handl-lang/graphopt`) and the code keeps its `mlopt_*` package names.*
 
 ## Abstract

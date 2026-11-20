@@ -14,7 +14,7 @@ rewrite.
 
 This track is the learn-by-doing path for **mlopt** — the categorical
 optimizer + law-discovery engine in
-[`handl-lang/mlopt`](https://github.com/handl-lang/mlopt):
+[`handl-lang/research-mlopt`](https://github.com/handl-lang/mlopt):
 a model graph goes in, equality saturation explores its equivalence
 class, and a cheaper, *certified* form comes out — while a separate
 loop mints new rewrite laws and admits them through a measured

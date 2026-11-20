@@ -1,4 +1,4 @@
-# bupha.toml — committed CI manifest for handl-lang/mlopt (the merged
+# bupha.toml — committed CI manifest for handl-lang/research-mlopt (the merged
 # repo; packages/mlopt is the product member — P3 Step D-2).
 #
 # Runner is the member-scoped packages/mlopt/ci.sh (uv sync +
@@ -7,12 +7,12 @@
 # bupha watch --config bupha.toml
 #
 # NOTE: name/dir below assume the post-rename layout
-# (handl-lang/mlopt @ ~/GitHub/handl-lang/mlopt).  Pre-rename the dir
+# (handl-lang/research-mlopt @ ~/GitHub/handl-lang/research-mlopt).  Pre-rename the dir
 # is .../graphopt — update `dir` (and this file's path) at execution.
 
 [[repos]]
-name = "handl-lang/mlopt"
-dir = "/home/luis/GitHub/handl-lang/mlopt"
+name = "handl-lang/research-mlopt"
+dir = "/home/luis/GitHub/handl-lang/research-mlopt"
 branch = "refs/heads/main"
   [repos.runner]
   kind = "script"
