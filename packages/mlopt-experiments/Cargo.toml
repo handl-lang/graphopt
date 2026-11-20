@@ -3,7 +3,7 @@ name = "mlopt-experiments"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-repository = "https://github.com/handl-lang/mlopt"
+repository = "https://github.com/handl-lang/research-mlopt"
 description = "graphopt evidence generation — the paper's experiments, composed from declared git deps on the handl stack; nothing vendored"
 
 # Deliberately *not* a member of the root workspace (`exclude` in the

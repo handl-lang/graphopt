@@ -47,8 +47,8 @@ bin resolves it by this ladder, first hit wins:
 2. `packages/mlopt-kit/hnl/conv_bn.hnl` — in-tree (this repo);
 3. `$MLOPT_DIR/packages/mlopt-kit/hnl/conv_bn.hnl` — a named mlopt
    checkout (standalone arm);
-4. the `.handl.toml` `[patch]` dir — `../../../mlopt/packages/mlopt-kit`
-   sibling dev-link (inert where mlopt isn't an org sibling);
+4. the `.handl.toml` `[patch]` dir — `../../../research-mlopt/packages/mlopt-kit`
+   sibling dev-link (inert where research-mlopt isn't an org sibling);
 5. the `.handl.toml` git-dep arm's package-cache slot —
    `$HANDL_PKG_DIR/mlopt-kit` else `~/.handl/pkg/mlopt-kit` (the dir
    the ADR-0010 fetch hook will populate; a checkout/symlink is today's

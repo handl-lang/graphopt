@@ -92,7 +92,7 @@ role = "the ported domain-free half of `kit_discovery` — the `term_to_data`/`t
 
 [[component]]
 name = "mlopt-kit"
-repo = "handl-lang/mlopt"
+repo = "handl-lang/research-mlopt"
 path = "packages/mlopt-kit"
 float = "main"
 kind = "cargo-git"
@@ -105,7 +105,7 @@ role = "mlopt's composition seam — the intended direct dep (it assembles this 
 
 [[component]]
 name = "mlopt"
-repo = "handl-lang/mlopt"
+repo = "handl-lang/research-mlopt"
 path = "packages/"
 float = "main"
 kind = "python-git"

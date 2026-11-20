@@ -44,8 +44,8 @@ fn project_dir() -> PathBuf {
 /// 3. `$MLOPT_DIR/packages/mlopt-kit/hnl/conv_bn.hnl` — a mlopt
 ///    checkout the caller names (standalone-checkout arm).
 /// 4. The `.handl.toml` `[patch]` arm — the sibling-checkout dev-link:
-///    `<repo>/../mlopt/packages/mlopt-kit` (exists wherever mlopt is
-///    an org sibling of a standalone graphopt checkout).
+///    `<repo>/../research-mlopt/packages/mlopt-kit` (exists wherever
+///    research-mlopt is an org sibling of a standalone checkout).
 /// 5. The package-cache slot the `[dependencies]` git arm resolves to:
 ///    `$HANDL_PKG_DIR/mlopt-kit` else `~/.handl/pkg/mlopt-kit` — the
 ///    directory the ADR-0010 fetch hook will populate (a checkout or
@@ -63,7 +63,7 @@ fn resolve_conv_bn(overrides: &cli::Args) -> Result<PathBuf, String> {
         std::env::var("MLOPT_DIR")
             .ok()
             .map(|d| PathBuf::from(d).join("packages/mlopt-kit/hnl/conv_bn.hnl")),
-        Some(project_dir().join("../../../mlopt/packages/mlopt-kit/hnl/conv_bn.hnl")),
+        Some(project_dir().join("../../../research-mlopt/packages/mlopt-kit/hnl/conv_bn.hnl")),
         Some(pkg_dir().join("mlopt-kit/hnl/conv_bn.hnl")),
         Some(project_dir().join(".cache/mlopt-kit/hnl/conv_bn.hnl")),
     ]

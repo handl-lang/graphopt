@@ -1,6 +1,6 @@
 # mlopt — landing page
 
-*Naming: the repo is `handl-lang/mlopt` (formerly `handl-lang/graphopt`),
+*Naming: the repo is `handl-lang/research-mlopt` (formerly `handl-lang/graphopt`),
 the engine/packages keep their `mlopt_*` names, and the product/paper
 name is **Catopt**.*
 
